@@ -42,7 +42,7 @@ import torch
 from rsl_rl.runners import OnPolicyRunner
 
 # Import extensions to set up environment tasks
-import ext_template.tasks  # noqa: F401
+import MARL_mav_carry_ext.tasks  # noqa: F401
 
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
