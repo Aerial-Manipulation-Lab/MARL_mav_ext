@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import MISSING
 import torch
 
+from omni.isaac.lab.markers import VisualizationMarkers
+from omni.isaac.lab.markers.config import CUBOID_MARKER_CFG
+
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.envs import ManagerBasedRLEnv
@@ -57,6 +60,31 @@ class LowLevelAction(ActionTerm):
     """
 
     # TODO: create markers to visualize the waypoints/trajectory and the forces/torques applied to the robot 
+
+    # def _set_debug_vis_impl(self, debug_vis: bool):
+    # # set visibility of markers
+    # # note: parent only deals with callbacks. not their visibility
+    #     if debug_vis:
+    #         # create markers if necessary for the first tome
+    #         if not hasattr(self, "payload_pose_goal_visualizer"):
+    #             # -- goal
+    #             marker_cfg = CUBOID_MARKER_CFG.copy()
+    #             marker_cfg.prim_path = "/Visuals/Actions/payload_pose_goal"
+    #             marker_cfg.markers["cuboid"].size = (0.55, 0.45, 0.15)
+    #             self.payload_pose_goal_visualizer = VisualizationMarkers(marker_cfg)
+    #         # set their visibility to true
+    #         self.payload_pose_goal_visualizer.set_visibility(True)
+    #     else:
+    #         if hasattr(self, "payload_pose_goal_visualizer"):
+    #             self.payload_pose_goal_visualizer.set_visibility(False)
+
+    # def _debug_vis_callback(self, event):
+    #     # check if robot is initialized
+    #     # note: this is needed in-case the robot is de-initialized. we can't access the data
+    #     if not self.robot.is_initialized:
+    #         return
+    #     # display markers
+    #     self.payload_pose_goal_visualizer.visualize(self._env.command_manager.get_command("pose_command"))
 
 @configclass
 class LowLevelActionCfg(ActionTermCfg):

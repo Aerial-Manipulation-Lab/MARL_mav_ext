@@ -41,16 +41,17 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class CommandsCfg:
-    """Commands for the hovering task, TODO: make the flycrane hover at different positions"""
+    """Commands for the hovering task"""
     # null = mdp.NullCommandCfg()
-    # This is in world frame!!
-    pose_command = mdp.UniformPoseCommandCfg(
+    # This is in base frame of the robot, not the world frame TODO: the debugging visualization is in base frame,
+    # but the command is fixed so the reward is calculated correctly with a fixed goal.
+
+    pose_command = mdp.UniformPoseCommandGlobalCfg(
     asset_name="robot",
     body_name="load_link",
     resampling_time_range=(8.0, 8.0),
     debug_vis=True,
-    # ranges=mdp.UniformPoseCommandCfg.Ranges(pos_x=(-3.0, 3.0), pos_y=(-3.0, 3.0), heading=(-math.pi, math.pi)),
-    ranges=mdp.UniformPoseCommandCfg.Ranges(pos_x=(-1.0, 1.0), pos_y=(-1.0, 1.0), 
+    ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(pos_x=(-1.0, 1.0), pos_y=(-1.0, 1.0), 
                                             pos_z=(0.5, 1.5), roll=(-0.0, 0.0),
                                             pitch=(-0.0, 0.0), yaw=(-math.pi, math.pi)),    
 )
@@ -125,12 +126,12 @@ class RewardsCfg:
 
     track_payload_pos = RewTerm(
         func=mdp.track_payload_pos,
-        weight=3.0,
+        weight=-3.0, # negative reward for larger error
         params={"std": 0.1, "command_name": "pose_command"},
     )
     track_payload_orientation = RewTerm(
         func=mdp.track_payload_orientation,
-        weight=3.0,
+        weight=-3.0, # negative reward for larger error
         params={"std": 0.1, "command_name": "pose_command"},
     )
 
@@ -180,4 +181,3 @@ class HoverEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
         self.sim.disable_contact_processing = True
-        # self.sim.physics_material = self.scene.terrain.physics_material

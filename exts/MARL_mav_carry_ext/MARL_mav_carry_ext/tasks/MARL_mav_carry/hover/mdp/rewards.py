@@ -25,6 +25,7 @@ def track_payload_pos(
         torch.square(payload_pos - desired_pos),
         dim=1,
     )
+    # print("positional reward", positional_error.sum())
     return positional_error.sum()
 
 def track_payload_orientation(
