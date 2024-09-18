@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import omni.isaac.lab.sim as sim_utils
 import math
 
 from omni.isaac.lab.scene import InteractiveSceneCfg
+from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
@@ -10,7 +13,11 @@ import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.mdp as mdp
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
 from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
 from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
+from omni.isaac.lab.managers import RewardTermCfg as RewTerm
+from omni.isaac.lab.managers import EventTermCfg as EventTerm
+from omni.isaac.lab.managers import SceneEntityCfg
 
+from omni.isaac.lab.sensors import ContactSensorCfg
 
 # Define the scene configuration
 
@@ -28,6 +35,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane") #TODO: add joint constraints, either in URDF or here
+    # contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/falcon.*/base_link", history_length=3, track_air_time=True)
 
 # MDP settings
 
@@ -35,7 +43,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Commands for the hovering task, TODO: make the flycrane hover at different positions"""
     # null = mdp.NullCommandCfg()
-
+    # This is in world frame!!
     pose_command = mdp.UniformPoseCommandCfg(
     asset_name="robot",
     body_name="load_link",
@@ -66,7 +74,12 @@ class ObservationsCfg:
         """Observation terms for the policy."""
         payload_pose = ObsTerm(func=mdp.payload_pose) # can add noise later
         drone_poses = ObsTerm(func=mdp.drone_poses) # can add noise later
+        # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
         pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = False
 
     # Observation group
     policy: PolicyCfg = PolicyCfg()
@@ -84,7 +97,7 @@ class EventCfg:
             "pose_range": {
                 "x": (-0.5, 0.5), 
                 "y": (-0.5, 0.5), 
-                "z": (0.5, 1.5),
+                "z": (-0.0, 0.0),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
                 "yaw": (-3.14, 3.14)
@@ -103,16 +116,42 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Rewards for the hovering task.
+    """Rewards for the hovering task."""
 
-    Pose of payload, angle between strings"""
-    
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400.0)
+    alive_reward = RewTerm(func=mdp.is_alive, weight=1.0)
+
+    # reward for tracking the payload command position
+
+    track_payload_pos = RewTerm(
+        func=mdp.track_payload_pos,
+        weight=3.0,
+        params={"std": 0.1, "command_name": "pose_command"},
+    )
+    track_payload_orientation = RewTerm(
+        func=mdp.track_payload_orientation,
+        weight=3.0,
+        params={"std": 0.1, "command_name": "pose_command"},
+    )
+
 @configclass
 class TerminationsCfg:
     """Terminal conditions for the hovering task.
 
     When the payload reaches a certain height, etc."""
+
+    # end when sim times out
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
+    # end when falcons crash
+    # falcon_base_contact = DoneTerm(
+    # func=mdp.illegal_contact,
+    # params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="Falcon.*base_link"), "threshold": 1.0},
+    # )
+    # # end when payload crashes
+    # falcon_base_contact = DoneTerm(
+    # func=mdp.illegal_contact,
+    # params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="load_link"), "threshold": 1.0},
+    # )
 
 @configclass
 class CurriculumCfg:
@@ -121,9 +160,9 @@ class CurriculumCfg:
     pass
 
 @configclass
-class HoverEnvCfg:
+class HoverEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the hovering task."""
-
+    scene: CarryingSceneCfg = CarryingSceneCfg(num_envs=1, env_spacing=2.5)
     commands: CommandsCfg = CommandsCfg()
     actions: ActionsCfg = ActionsCfg()
     observations: ObservationsCfg = ObservationsCfg()
@@ -131,3 +170,14 @@ class HoverEnvCfg:
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
+
+    def __post_init__(self):
+        """Post initialization."""
+        # general settings
+        self.decimation = 4
+        self.episode_length_s = 20.0
+        # simulation settings
+        self.sim.dt = 0.005
+        self.sim.render_interval = self.decimation
+        self.sim.disable_contact_processing = True
+        # self.sim.physics_material = self.scene.terrain.physics_material
