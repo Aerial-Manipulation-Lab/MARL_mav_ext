@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import MISSING
 import torch
+from dataclasses import MISSING
 
+from omni.isaac.lab.envs import ManagerBasedRLEnv
+from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.markers.config import CUBOID_MARKER_CFG
-
-from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.envs import ManagerBasedRLEnv
+
 
 class LowLevelAction(ActionTerm):
     """Low level action term for the hover task."""
@@ -18,23 +18,26 @@ class LowLevelAction(ActionTerm):
     def __init__(self, cfg: LowLevelActionCfg, env: ManagerBasedRLEnv):
         super().__init__(cfg, env)
         self._env = env
-        self._robot = env.scene[cfg.asset_name]        
+        self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
-        self._high_level_action = torch.zeros(len(self._body_ids) * 3, device=self.device) # now dim is 3 drones * xyz waypoint
+        self._high_level_action = torch.zeros(
+            len(self._body_ids) * 3, device=self.device
+        )  # now dim is 3 drones * xyz waypoint
         self._forces = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
         self._torques = torch.zeros_like(self._forces)
 
     """
     properties
     """
+
     @property
     def action_dim(self) -> int:
-        return len(self._body_ids) * 3 # xyz coordinates
-    
+        return len(self._body_ids) * 3  # xyz coordinates
+
     @property
     def raw_actions(self) -> torch.Tensor:
         return self._high_level_action
-    
+
     @property
     def processed_actions(self) -> torch.Tensor:
         return [self._forces, self._torques]
@@ -45,11 +48,11 @@ class LowLevelAction(ActionTerm):
             waypoint: The waypoints to be processed (will be trajectory later).
         Returns:
             The processed external forces to be applied to the rotors/falcon bodies."""
-        self._high_level_action = waypoint # vector with 3 waypoints for 3 drones
+        self._high_level_action = waypoint  # vector with 3 waypoints for 3 drones
 
         # low level controller, for now just something random, later agilicious
         # Calculate error between waypoint and current state # TODO: figure out in which frame each term has to be
-        falcon_pos = self._robot.data.body_state_w[:, self._body_ids, :3] 
+        falcon_pos = self._robot.data.body_state_w[:, self._body_ids, :3]
         self._high_level_action = self._high_level_action.reshape(self._env.scene.num_envs, len(self._body_ids), 3)
         error = self._high_level_action - falcon_pos
 
@@ -60,7 +63,7 @@ class LowLevelAction(ActionTerm):
         # Calculate forces and torques using PD controller
         self._forces = Kp * error
         self._torques = Kd * error
-        
+
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
@@ -69,7 +72,7 @@ class LowLevelAction(ActionTerm):
     visualizations
     """
 
-    # TODO: create markers to visualize the waypoints/trajectory and the forces/torques applied to the robot 
+    # TODO: create markers to visualize the waypoints/trajectory and the forces/torques applied to the robot
 
     # def _set_debug_vis_impl(self, debug_vis: bool):
     # # set visibility of markers
@@ -96,6 +99,7 @@ class LowLevelAction(ActionTerm):
     #     # display markers
     #     self.payload_pose_goal_visualizer.visualize(self._env.command_manager.get_command("pose_command"))
 
+
 @configclass
 class LowLevelActionCfg(ActionTermCfg):
     """Configuration for the low level action term."""
@@ -114,5 +118,3 @@ class LowLevelActionCfg(ActionTermCfg):
     # """Low level observation configuration."""
     debug_vis: bool = True
     """Whether to visualize debug information. Defaults to False."""
-
-

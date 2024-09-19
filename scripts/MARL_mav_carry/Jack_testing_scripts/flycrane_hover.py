@@ -30,10 +30,12 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover import CarryingSceneCfg
+
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.scene import InteractiveScene
 from omni.isaac.lab.sim import SimulationContext
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover import CarryingSceneCfg
+
 
 def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     """Runs the simulator"""
@@ -101,6 +103,7 @@ def main():
     # Play the simulator
     sim.reset()
     run_simulator(sim, scene)
+
 
 if __name__ == "__main__":
     # run the main function

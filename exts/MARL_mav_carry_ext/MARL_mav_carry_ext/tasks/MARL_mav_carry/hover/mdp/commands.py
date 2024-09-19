@@ -9,19 +9,19 @@ from __future__ import annotations
 
 import torch
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
 from dataclasses import MISSING
-from omni.isaac.lab.utils import configclass
+from typing import TYPE_CHECKING
 
 from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.managers import CommandTerm
+from omni.isaac.lab.managers import CommandTerm, CommandTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.markers.config import FRAME_MARKER_CFG
+from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.math import combine_frame_transforms, compute_pose_error, quat_from_euler_xyz, quat_unique
-from omni.isaac.lab.managers import CommandTermCfg
 
 if TYPE_CHECKING:
     from omni.isaac.lab.envs import ManagerBasedEnv
+
 
 class UniformPoseCommandGlobal(CommandTerm):
     """Command generator for generating pose commands uniformly.
@@ -161,6 +161,7 @@ class UniformPoseCommandGlobal(CommandTerm):
         # -- current body pose
         body_pose_w = self.robot.data.body_state_w[:, self.body_idx]
         self.body_pose_visualizer.visualize(body_pose_w[:, :3], body_pose_w[:, 3:7])
+
 
 @configclass
 class UniformPoseCommandGlobalCfg(CommandTermCfg):

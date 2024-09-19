@@ -44,7 +44,9 @@ if __name__ == "__main__":
             os.path.join(root_dir_path, "exts", "MARL_mav_carry_ext", "MARL_mav_carry_ext"),
             os.path.join(root_dir_path, "exts", "MARL_mav_carry_ext", new_name),
         )
-        os.rename(os.path.join(root_dir_path, "exts", "MARL_mav_carry_ext"), os.path.join(root_dir_path, "exts", new_name))
+        os.rename(
+            os.path.join(root_dir_path, "exts", "MARL_mav_carry_ext"), os.path.join(root_dir_path, "exts", new_name)
+        )
         # rename the file contents
         rename_file_contents(root_dir_path, old_name, new_name, exclude_dirs=[".git"])
     else:

@@ -35,7 +35,7 @@ from omni.isaac.lab.sim import SimulationContext
 ##
 # Pre-defined configs
 ##
-from MARL_mav_carry_ext.assets import FALCON_CFG # isort:skip
+from MARL_mav_carry_ext.assets import FALCON_CFG  # isort:skip
 
 
 def main():

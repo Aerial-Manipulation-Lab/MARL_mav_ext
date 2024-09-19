@@ -30,9 +30,11 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.envs import ManagerBasedRLEnv
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+
 
 def main():
     """Main function."""
