@@ -54,20 +54,35 @@ class CommandsCfg:
     # This is in base frame of the robot, not the world frame TODO: the debugging visualization is in base frame,
     # but the command is fixed so the reward is calculated correctly with a fixed goal.
 
+    # pose_command = mdp.UniformPoseCommandGlobalCfg(
+    #     asset_name="robot",
+    #     body_name="load_link",
+    #     resampling_time_range=(8.0, 8.0),
+    #     debug_vis=True,
+    #     ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
+    #         pos_x=(-1.0, 1.0),
+    #         pos_y=(-1.0, 1.0),
+    #         pos_z=(0.5, 1.5),
+    #         roll=(-0.0, 0.0),
+    #         pitch=(-0.0, 0.0),
+    #         yaw=(-math.pi, math.pi),
+    #     ),
+    # )
+
     pose_command = mdp.UniformPoseCommandGlobalCfg(
-        asset_name="robot",
-        body_name="load_link",
-        resampling_time_range=(8.0, 8.0),
-        debug_vis=True,
-        ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-            pos_x=(-1.0, 1.0),
-            pos_y=(-1.0, 1.0),
-            pos_z=(0.5, 1.5),
-            roll=(-0.0, 0.0),
-            pitch=(-0.0, 0.0),
-            yaw=(-math.pi, math.pi),
-        ),
-    )
+    asset_name="robot",
+    body_name="load_link",
+    resampling_time_range=(8.0, 8.0),
+    debug_vis=True,
+    ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
+        pos_x=(-0.0, 0.0),
+        pos_y=(-0.0, 0.0),
+        pos_z=(0.0, 0.0),
+        roll=(-0.0, 0.0),
+        pitch=(-0.0, 0.0),
+        yaw=(-0.0, 0.0),
+    ),
+)
 
 
 @configclass
@@ -88,14 +103,17 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observation terms for the policy."""
 
-        payload_pose = ObsTerm(func=mdp.payload_pose)  # can add noise later
-        drone_poses = ObsTerm(func=mdp.drone_poses)  # can add noise later
+        # payload_pose = ObsTerm(func=mdp.payload_pose)  # can add noise later
+        drone_positions = ObsTerm(func=mdp.drone_positions)  # can add noise later
+        drone_orientations = ObsTerm(func=mdp.drone_orientations)  # can add noise later
+        drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)  # can add noise later
+        drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)  # can add noise later
         # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
         # pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
 
         def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = False
+            self.enable_corruption = True # for adding noise to the observations
+            self.concatenate_terms = True
 
     # Observation group
     policy: PolicyCfg = PolicyCfg()
@@ -115,7 +133,7 @@ class EventCfg:
             "pose_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
-                "z": (-0.0, 0.0),
+                "z": (1.0, 1.5),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
                 "yaw": (-3.14, 3.14),
@@ -131,6 +149,24 @@ class EventCfg:
         },
     )
 
+    base_external_force_torque = EventTerm(
+    func=mdp.apply_external_force_torque,
+    mode="reset",
+    params={
+        "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+        "force_range": (0.0, 0.0),
+        "torque_range": (-0.0, 0.0),
+    },
+    )
+
+    reset_robot_joints = EventTerm(
+    func=mdp.reset_joints_by_scale,
+    mode="reset",
+    params={
+        "position_range": (0.0, 0.0),
+        "velocity_range": (0.0, 0.0),
+    },
+    )
 
 @configclass
 class RewardsCfg:

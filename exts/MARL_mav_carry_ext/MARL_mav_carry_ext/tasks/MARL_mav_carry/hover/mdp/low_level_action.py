@@ -54,15 +54,17 @@ class LowLevelAction(ActionTerm):
         # Calculate error between waypoint and current state # TODO: figure out in which frame each term has to be
         falcon_pos = self._robot.data.body_state_w[:, self._body_ids, :3]
         self._high_level_action = self._high_level_action.reshape(self._env.scene.num_envs, len(self._body_ids), 3)
-        error = self._high_level_action - falcon_pos
+        # error = self._high_level_action - falcon_pos
 
         # Proportional and derivative gains
-        Kp = 1.0
-        Kd = 0.1
+        # Kp = 1.0
+        # Kd = 0.1
 
         # Calculate forces and torques using PD controller
-        self._forces = Kp * error
-        self._torques = Kd * error
+        # self._forces = Kp * error
+        self._forces = self._high_level_action
+
+        # self._torques = Kd * error
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
