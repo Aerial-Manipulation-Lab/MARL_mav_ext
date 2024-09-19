@@ -8,3 +8,4 @@ from .low_level_action import *
 from .observations import *
 from .rewards import *
 from .commands import *
+from .terminations import *

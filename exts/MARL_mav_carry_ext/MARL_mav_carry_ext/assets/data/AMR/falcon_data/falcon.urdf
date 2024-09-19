@@ -16,7 +16,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="iris.dae" scale="0.5 0.5 0.5"  />
+        <mesh filename="falcon_without_rotors.dae" scale="1.0 1.0 1.0"  />
         <box size="0.1 0.1 0.05"/>
         <!-- [m] [m] [m] -->
       </geometry>
@@ -46,7 +46,7 @@
     <visual>
     <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="propeller_ccw.dae" scale="0.127 0.127 0.127"/>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <box size="0.254 0.01 0.005"/>
       </geometry>
@@ -76,7 +76,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="propeller_ccw.dae" scale="0.127 0.127 0.127"/>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <box size="0.254 0.01 0.005"/>
       </geometry>
@@ -106,7 +106,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="propeller_cw.dae" scale="0.127 0.127 0.127"/>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <box size="0.254 0.01 0.005"/>
       </geometry>
@@ -136,7 +136,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="propeller_cw.dae" scale="0.127 0.127 0.127"/>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <box size="0.254 0.01 0.005"/>
       </geometry>

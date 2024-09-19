@@ -19,9 +19,9 @@ class LowLevelAction(ActionTerm):
         super().__init__(cfg, env)
         self._env = env
         self._robot = env.scene[cfg.asset_name]        
-        self._high_level_action = torch.zeros(self._robot.num_instances, 3, device=self.device) # now dim is 3, xyz waypoint
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
-        self._forces = torch.zeros(self._robot.num_instances, self.action_dim, 3, device=self.device)
+        self._high_level_action = torch.zeros(len(self._body_ids) * 3, device=self.device) # now dim is 3 drones * xyz waypoint
+        self._forces = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
         self._torques = torch.zeros_like(self._forces)
 
     """
@@ -29,7 +29,7 @@ class LowLevelAction(ActionTerm):
     """
     @property
     def action_dim(self) -> int:
-        return len(self._body_ids)
+        return len(self._body_ids) * 3 # xyz coordinates
     
     @property
     def raw_actions(self) -> torch.Tensor:
@@ -45,11 +45,21 @@ class LowLevelAction(ActionTerm):
             waypoint: The waypoints to be processed (will be trajectory later).
         Returns:
             The processed external forces to be applied to the rotors/falcon bodies."""
-        self._high_level_action = waypoint
+        self._high_level_action = waypoint # vector with 3 waypoints for 3 drones
 
         # low level controller, for now just something random, later agilicious
-        self._forces = torch.zeros_like(self._forces)
-        self._torques = torch.zeros_like(self._torques)
+        # Calculate error between waypoint and current state # TODO: figure out in which frame each term has to be
+        falcon_pos = self._robot.data.body_state_w[:, self._body_ids, :3] 
+        self._high_level_action = self._high_level_action.reshape(self._env.scene.num_envs, len(self._body_ids), 3)
+        error = self._high_level_action - falcon_pos
+
+        # Proportional and derivative gains
+        Kp = 1.0
+        Kd = 0.1
+
+        # Calculate forces and torques using PD controller
+        self._forces = Kp * error
+        self._torques = Kd * error
         
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""

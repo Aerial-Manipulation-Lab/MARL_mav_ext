@@ -76,7 +76,7 @@ class ObservationsCfg:
         payload_pose = ObsTerm(func=mdp.payload_pose) # can add noise later
         drone_poses = ObsTerm(func=mdp.drone_poses) # can add noise later
         # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
-        pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+        # pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -126,12 +126,12 @@ class RewardsCfg:
 
     track_payload_pos = RewTerm(
         func=mdp.track_payload_pos,
-        weight=-3.0, # negative reward for larger error
+        weight=3.0,
         params={"std": 0.1, "command_name": "pose_command"},
     )
     track_payload_orientation = RewTerm(
         func=mdp.track_payload_orientation,
-        weight=-3.0, # negative reward for larger error
+        weight=3.0,
         params={"std": 0.1, "command_name": "pose_command"},
     )
 
@@ -144,6 +144,11 @@ class TerminationsCfg:
     # end when sim times out
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     # end when falcons crash
+    falcon_fly_low = DoneTerm(func=mdp.falcon_fly_low, params={"asset_cfg": SceneEntityCfg("robot"),
+                                                               "threshold": 0.1})
+    payload_fly_low = DoneTerm(func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"),
+                                                               "threshold": 0.1})
+
     # falcon_base_contact = DoneTerm(
     # func=mdp.illegal_contact,
     # params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="Falcon.*base_link"), "threshold": 1.0},

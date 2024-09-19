@@ -53,7 +53,7 @@ def main():
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
             # sample random actions
-            waypoint = torch.zeros_like(env.action_manager.action)
+            waypoint = torch.randn_like(env.action_manager.action)
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # print current orientation of pole
