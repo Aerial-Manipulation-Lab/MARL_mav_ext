@@ -25,7 +25,7 @@ def track_payload_pos(
         torch.square(payload_pos - desired_pos),
         dim=1,
     )
-    return -positional_error.sum()
+    return -positional_error
 
 
 def track_payload_orientation(
@@ -41,7 +41,7 @@ def track_payload_orientation(
         torch.abs(payload_quat - desired_quat),
         dim=1,
     )
-    return -orientation_error.sum()
+    return -orientation_error
 
 
 """ TODO: rewards for:
