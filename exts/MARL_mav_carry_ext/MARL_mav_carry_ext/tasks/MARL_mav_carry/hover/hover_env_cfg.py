@@ -218,7 +218,7 @@ class RewardsCfg:
 
     action_penalty = RewTerm(
         func=mdp.action_penalty, 
-        weight=0.01,
+        weight=0.05,
         params={"std": 0.1},
     )
 
