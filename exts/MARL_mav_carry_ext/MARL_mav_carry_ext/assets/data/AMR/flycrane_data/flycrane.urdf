@@ -1603,7 +1603,7 @@
   <joint name="rope_1_sphere_joint_0_joint_x" type="continuous">
     <parent link="load_link"/>
     <child link="rope_1_sphere_joint_0_link_1"/>
-    <origin rpy="-1 0 0" xyz="0.24 0.22 0.14"/>
+    <origin rpy="0 0 0" xyz="0.24 0.22 0.14"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0.005"/>
   </joint>
@@ -1634,7 +1634,7 @@
   <joint name="rope_2_sphere_joint_0_joint_x" type="continuous">
     <parent link="load_link"/>
     <child link="rope_2_sphere_joint_0_link_1"/>
-    <origin rpy="1 0 0" xyz="0.24 -0.22 0.14"/>
+    <origin rpy="0 0 0" xyz="0.24 -0.22 0.14"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0.005"/>
   </joint>
@@ -1665,7 +1665,7 @@
   <joint name="rope_3_sphere_joint_0_joint_x" type="continuous">
     <parent link="load_link"/>
     <child link="rope_3_sphere_joint_0_link_1"/>
-    <origin rpy="0 -1 0" xyz="-0.28 0.018 0.14"/>
+    <origin rpy="0 0 0" xyz="-0.28 0.018 0.14"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0.005"/>
   </joint>

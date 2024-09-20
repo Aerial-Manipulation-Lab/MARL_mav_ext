@@ -39,9 +39,11 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(
         prim_path="{ENV_REGEX_NS}/flycrane"
-    )  # TODO: add joint constraints, either in URDF or here
-    # contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/falcon.*/base_link", history_length=3, track_air_time=True)
-
+    )
+    robot.spawn.activate_contact_sensors = True
+    
+    # TODO: add joint constraints, either in URDF or here
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=True)
 
 # MDP settings
 
@@ -77,7 +79,7 @@ class CommandsCfg:
     ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
         pos_x=(-0.0, 0.0),
         pos_y=(-0.0, 0.0),
-        pos_z=(0.0, 0.0),
+        pos_z=(1.0, 1.0),
         roll=(-0.0, 0.0),
         pitch=(-0.0, 0.0),
         yaw=(-0.0, 0.0),
@@ -103,13 +105,13 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observation terms for the policy."""
 
-        # payload_pose = ObsTerm(func=mdp.payload_pose)  # can add noise later
+        payload_pose = ObsTerm(func=mdp.payload_pose)  # can add noise later
         drone_positions = ObsTerm(func=mdp.drone_positions)  # can add noise later
         drone_orientations = ObsTerm(func=mdp.drone_orientations)  # can add noise later
         drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)  # can add noise later
         drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)  # can add noise later
         # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
-        # pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+        pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
 
         def __post_init__(self):
             self.enable_corruption = True # for adding noise to the observations
@@ -203,15 +205,25 @@ class TerminationsCfg:
         func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
-    # falcon_base_contact = DoneTerm(
-    # func=mdp.illegal_contact,
-    # params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="Falcon.*base_link"), "threshold": 1.0},
-    # )
-    # # end when payload crashes
+    falcon_base_contact = DoneTerm(
+    func=mdp.illegal_contact,
+    params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
+    )
+    # end when payload crashes
     # falcon_base_contact = DoneTerm(
     # func=mdp.illegal_contact,
     # params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="load_link"), "threshold": 1.0},
     # )
+
+    # end when angular velocity of payload is too high
+    payload_spin = DoneTerm(
+        func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0}
+    )
+
+    payload_angle = DoneTerm(
+        func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9}
+    )
+
 
 
 @configclass
