@@ -1,7 +1,9 @@
+from torch import abs, sin, stack
+
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils.math import euler_xyz_from_quat
-from torch import stack, sin, abs
+
 
 def falcon_fly_low(
     env: ManagerBasedRLEnv, threshold: float = 0.1, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -22,6 +24,7 @@ def payload_fly_low(
     payload_pos = robot.data.body_state_w[:, payload_idx, :3]
     return (payload_pos[..., 2] < threshold).any()
 
+
 def payload_spin(
     env: ManagerBasedRLEnv, threshold: float = 0.1, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> bool:
@@ -30,6 +33,7 @@ def payload_spin(
     payload_idx = robot.find_bodies("load_link")[0]
     payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:]
     return (payload_ang_vel > threshold).any()
+
 
 def payload_angle_sine(
     env: ManagerBasedRLEnv, threshold: float = 0.9, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

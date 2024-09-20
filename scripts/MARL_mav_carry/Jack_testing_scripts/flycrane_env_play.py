@@ -62,7 +62,7 @@ def main():
             waypoint[:, 3:6] = torch.tensor([0.0, 0.0, (gravity * robot_mass) / 4])
             waypoint[:, 6:] = torch.tensor([0.0, 0.0, (gravity * robot_mass) / 2])
             # step the environment
-            obs, rew, terminated, truncated, info = env.step(waypoint*1)
+            obs, rew, terminated, truncated, info = env.step(waypoint * 1)
             # print current orientation of pole
             # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
             # update counter

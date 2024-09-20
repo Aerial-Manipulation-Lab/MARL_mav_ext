@@ -20,7 +20,6 @@ from omni.isaac.lab.utils import configclass
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
 
 
-
 # Define the scene configuration
 
 
@@ -37,14 +36,15 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     )
 
     # Drones
-    robot: ArticulationCfg = FLYCRANE_CFG.replace(
-        prim_path="{ENV_REGEX_NS}/flycrane"
-    )
+    robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
     robot.spawn.activate_contact_sensors = True
-    
+
     # TODO: add joint constraints, either in URDF or here
-    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=True)
+    contact_forces = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=True
+    )
     # frame_transformer = FrameTransformerCfg(prim_path="/World/defaultGroundPlane", target_frames={ENV_REGEX_NS})
+
 
 # MDP settings
 
@@ -73,19 +73,19 @@ class CommandsCfg:
     # )
 
     pose_command = mdp.UniformPoseCommandGlobalCfg(
-    asset_name="robot",
-    body_name="load_link",
-    resampling_time_range=(8.0, 8.0),
-    debug_vis=False, # visualizes always in robot root frame
-    ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-        pos_x=(-0.0, 0.0),
-        pos_y=(-0.0, 0.0),
-        pos_z=(1.0, 1.0),
-        roll=(-0.0, 0.0),
-        pitch=(-0.0, 0.0),
-        yaw=(-0.0, 0.0),
-    ),
-)
+        asset_name="robot",
+        body_name="load_link",
+        resampling_time_range=(8.0, 8.0),
+        debug_vis=False,  # visualizes always in robot root frame
+        ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
+            pos_x=(-0.0, 0.0),
+            pos_y=(-0.0, 0.0),
+            pos_z=(1.0, 1.0),
+            roll=(-0.0, 0.0),
+            pitch=(-0.0, 0.0),
+            yaw=(-0.0, 0.0),
+        ),
+    )
 
 
 @configclass
@@ -115,7 +115,7 @@ class ObservationsCfg:
         pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
 
         def __post_init__(self):
-            self.enable_corruption = True # for adding noise to the observations
+            self.enable_corruption = True  # for adding noise to the observations
             self.concatenate_terms = True
 
     # Observation group
@@ -153,23 +153,24 @@ class EventCfg:
     )
 
     base_external_force_torque = EventTerm(
-    func=mdp.apply_external_force_torque,
-    mode="reset",
-    params={
-        "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-        "force_range": (0.0, 0.0),
-        "torque_range": (-0.0, 0.0),
-    },
+        func=mdp.apply_external_force_torque,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+            "force_range": (0.0, 0.0),
+            "torque_range": (-0.0, 0.0),
+        },
     )
 
     reset_robot_joints = EventTerm(
-    func=mdp.reset_joints_by_scale,
-    mode="reset",
-    params={
-        "position_range": (0.0, 0.0),
-        "velocity_range": (0.0, 0.0),
-    },
+        func=mdp.reset_joints_by_scale,
+        mode="reset",
+        params={
+            "position_range": (0.0, 0.0),
+            "velocity_range": (0.0, 0.0),
+        },
     )
+
 
 @configclass
 class RewardsCfg:
@@ -207,8 +208,8 @@ class TerminationsCfg:
     )
 
     falcon_base_contact = DoneTerm(
-    func=mdp.illegal_contact,
-    params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
+        func=mdp.illegal_contact,
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
     )
     # end when payload crashes
     # falcon_base_contact = DoneTerm(
@@ -217,14 +218,11 @@ class TerminationsCfg:
     # )
 
     # end when angular velocity of payload is too high
-    payload_spin = DoneTerm(
-        func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0}
-    )
+    payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
 
     payload_angle = DoneTerm(
         func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9}
     )
-
 
 
 @configclass

@@ -1,13 +1,15 @@
 import gymnasium as gym
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+
 from . import agents
 
 gym.register(
     id="Isaac-flycrane-payload-hovering-v0",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=False,
-    kwargs={"env_cfg_entry_point": HoverEnvCfg,
-    "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
+    kwargs={
+        "env_cfg_entry_point": HoverEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
     },
 )

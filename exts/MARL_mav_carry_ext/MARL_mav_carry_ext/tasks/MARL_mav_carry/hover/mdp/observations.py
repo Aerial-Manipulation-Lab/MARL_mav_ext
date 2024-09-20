@@ -34,17 +34,20 @@ def drone_positions(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     return robot.data.body_state_w[:, drone_idx, :3].view(env.num_envs, -1)
 
+
 def drone_orientations(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     return robot.data.body_state_w[:, drone_idx, 3:7].view(env.num_envs, -1)
 
+
 def drone_linear_velocities(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone linear velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     return robot.data.body_state_w[:, drone_idx, 7:10].view(env.num_envs, -1)
+
 
 def drone_angular_velocities(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone angular velocity in world frame."""
