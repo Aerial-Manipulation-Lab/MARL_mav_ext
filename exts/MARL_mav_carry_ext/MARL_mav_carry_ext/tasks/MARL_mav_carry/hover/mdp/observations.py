@@ -42,10 +42,6 @@ def drone_positions(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
     drone_pos_env_frame = drone_pos_world_frame - env.scene.env_origins.unsqueeze(1)
-    print("PRINTING NOW")
-    print(drone_pos_world_frame)
-    print(env.scene.env_origins)
-    print(drone_pos_env_frame)
     return drone_pos_env_frame.view(env.num_envs, -1)
 
 
