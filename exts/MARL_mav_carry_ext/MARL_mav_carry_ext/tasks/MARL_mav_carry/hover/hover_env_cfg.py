@@ -106,7 +106,8 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observation terms for the policy."""
 
-        payload_pose = ObsTerm(func=mdp.payload_pose)  # can add noise later
+        payload_pose = ObsTerm(func=mdp.payload_position)  # can add noise later
+        payload_orientation = ObsTerm(func=mdp.payload_orientation)  # can add noise later
         drone_positions = ObsTerm(func=mdp.drone_positions)  # can add noise later
         drone_orientations = ObsTerm(func=mdp.drone_orientations)  # can add noise later
         drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)  # can add noise later
@@ -200,7 +201,7 @@ class RewardsCfg:
     """Rewards for the hovering task."""
 
     termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400.0)
-    alive_reward = RewTerm(func=mdp.is_alive, weight=1.0)
+    alive_reward = RewTerm(func=mdp.is_alive, weight=10.0)
 
     # reward for tracking the payload command position
 
@@ -217,7 +218,7 @@ class RewardsCfg:
 
     action_penalty = RewTerm(
         func=mdp.action_penalty, 
-        weight=0.3,
+        weight=0.05,
         params={"std": 0.1},
     )
 
