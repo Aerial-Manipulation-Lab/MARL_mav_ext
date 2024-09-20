@@ -43,12 +43,14 @@ def track_payload_orientation(
     )
     return -orientation_error
 
+def action_penalty(env: ManagerBasedRLEnv, std: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalty for high action values."""
+    return -torch.sum(env.action_manager.action ** 2, dim=1)
 
 """ TODO: rewards for:
 - Keeping the swarm in a certain seperation distance
 - Minimize angular velocities of payload (spinnage)
 - Minimize linear velocities of payload (swing)
-- Minimize effort (magnitude of forces) exerted on the drones
 - Joint limits (angles between cables) of cable joints
 - Action smoothness: penalize the difference between consecutive actions
 """
