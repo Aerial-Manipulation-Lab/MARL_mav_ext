@@ -14,7 +14,7 @@ from omni.isaac.lab.managers import RewardTermCfg as RewTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
 from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import ContactSensorCfg
+from omni.isaac.lab.sensors import ContactSensorCfg, FrameTransformerCfg
 from omni.isaac.lab.utils import configclass
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
@@ -44,6 +44,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     
     # TODO: add joint constraints, either in URDF or here
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=True)
+    # frame_transformer = FrameTransformerCfg(prim_path="/World/defaultGroundPlane", target_frames={ENV_REGEX_NS})
 
 # MDP settings
 
@@ -75,7 +76,7 @@ class CommandsCfg:
     asset_name="robot",
     body_name="load_link",
     resampling_time_range=(8.0, 8.0),
-    debug_vis=True,
+    debug_vis=False, # visualizes always in robot root frame
     ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
         pos_x=(-0.0, 0.0),
         pos_y=(-0.0, 0.0),
