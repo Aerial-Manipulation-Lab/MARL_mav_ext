@@ -208,19 +208,19 @@ class RewardsCfg:
     track_payload_pos = RewTerm(
         func=mdp.track_payload_pos,
         weight=1000.0,
-        params={"std": 0.1, "command_name": "pose_command"},
+        params={"debug_vis": False, "command_name": "pose_command"},
     )
     track_payload_orientation = RewTerm(
         func=mdp.track_payload_orientation,
         weight=100.0,
-        params={"std": 0.1, "command_name": "pose_command"},
+        params={"debug_vis": False, "command_name": "pose_command"},
     )
 
-    action_penalty = RewTerm(
-        func=mdp.action_penalty, 
-        weight=0.05,
-        params={"std": 0.1},
-    )
+    # action_penalty = RewTerm(
+    #     func=mdp.action_penalty, 
+    #     weight=0.05,
+    #     params={"std": 0.1},
+    # )
 
 
 @configclass
