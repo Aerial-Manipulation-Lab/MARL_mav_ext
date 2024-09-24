@@ -59,7 +59,7 @@ class LowLevelAction(ActionTerm):
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
-        self._forces = torch.clamp(self._forces, -50.0, 50.0)
+        self._forces = torch.clamp(self._forces, 0.0, 25.0)
         self._torques = torch.clamp(self._torques, -0.05, 0.05)
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
         # TODO: check if forces are applied to CoM
@@ -82,7 +82,7 @@ class LowLevelAction(ActionTerm):
                     "force_marker_1": sim_utils.CylinderCfg(
                         radius=0.01,
                         height=0.5,
-                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.5, 0.5)),
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 1.0, 1.0)),
                     ),
                     "force_marker_2": sim_utils.CylinderCfg(
                         radius=0.01,
@@ -116,8 +116,8 @@ class LowLevelAction(ActionTerm):
         drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].squeeze(0)
         forces_to_visualize = (self._forces.squeeze(0))/10
         forces_to_visualize[:, :2] += 0.5 # offset to make the forces visible
-        # drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
-        self.drone_z_force_visualizer.visualize(drone_pos_world_frame, drone_orientation, forces_to_visualize)
+        drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
+        self.drone_z_force_visualizer.visualize(drone_pos_world_frame, drone_orientation)
 
 @configclass
 class LowLevelActionCfg(ActionTermCfg):
