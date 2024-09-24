@@ -14,6 +14,23 @@ def falcon_fly_low(
     falcon_pos = robot.data.body_state_w[:, falcon_idx, :3]
     return (falcon_pos[..., 2] < threshold).any(dim=1)
 
+def falcon_spin(env: ManagerBasedRLEnv, threshold: float = 0.1, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when the falcon spins too fast."""
+    robot = env.scene[asset_cfg.name]
+    falcon_idx = robot.find_bodies("Falcon.*base_link")[0]
+    falcon_ang_vel = robot.data.body_state_w[:, falcon_idx, 10:].reshape(env.scene.num_envs, -1)
+    return (falcon_ang_vel > threshold).any(dim=1)
+
+# def falcon_angle_sine(env: ManagerBasedRLEnv, threshold: float = 0.9, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+# ) -> torch.Tensor:
+#     """Terminate when the falcon angle is too large."""
+#     robot = env.scene[asset_cfg.name]
+#     falcon_idx = robot.find_bodies("Falcon.*base_link")[0]
+#     falcon_quat = robot.data.body_state_w[:, falcon_idx, 3:7]
+#     roll, pitch, yaw = euler_xyz_from_quat(falcon_quat)
+#     mapped_angle = torch.stack((torch.sin(roll), torch.sin(pitch)), dim=2)
+#     return (torch.abs(mapped_angle) > threshold).any(dim=2)
 
 def payload_fly_low(
     env: ManagerBasedRLEnv, threshold: float = 0.1, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

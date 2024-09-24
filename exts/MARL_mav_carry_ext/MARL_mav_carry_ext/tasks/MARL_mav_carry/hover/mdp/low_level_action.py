@@ -3,10 +3,11 @@ from __future__ import annotations
 import torch
 from dataclasses import MISSING
 
+import omni.isaac.lab.sim as sim_utils
+from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.markers.config import CUBOID_MARKER_CFG
+from omni.isaac.lab.markers import VisualizationMarkersCfg, VisualizationMarkers
 from omni.isaac.lab.utils import configclass
 
 
@@ -32,7 +33,7 @@ class LowLevelAction(ActionTerm):
 
     @property
     def action_dim(self) -> int:
-        return len(self._body_ids) * 3  # xyz coordinates
+        return len(self._body_ids) * 4  # for now: z force + 3 torques * 3 drones
 
     @property
     def raw_actions(self) -> torch.Tensor:
@@ -52,25 +53,16 @@ class LowLevelAction(ActionTerm):
 
         # low level controller, for now just something random, later agilicious
         # Calculate error between waypoint and current state # TODO: figure out in which frame each term has to be
-        falcon_pos = self._robot.data.body_state_w[:, self._body_ids, :3]
-        self._high_level_action = self._high_level_action.reshape(self._env.scene.num_envs, len(self._body_ids), 3)
-        # error = self._high_level_action - falcon_pos
-
-        # Proportional and derivative gains
-        # Kp = 1.0
-        # Kd = 0.1
-
-        # Calculate forces and torques using PD controller
-        # self._forces = Kp * error
-        self._forces = self._high_level_action
-
-        # self._torques = Kd * error
+        self._high_level_action = self._high_level_action.reshape(self._env.scene.num_envs, len(self._body_ids), 4) # [force, torques]
+        self._forces[...,2] = self._high_level_action[...,0]  # z force
+        self._torques = self._high_level_action[...,1:]  # torques
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
-        self._forces = torch.clamp(self._forces, -18, 18.0)
-        # self._torques = torch.clamp(self._torques, -10.0, 10.0)
+        self._forces = torch.clamp(self._forces, -50.0, 50.0)
+        self._torques = torch.clamp(self._torques, -0.05, 0.05)
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
+        # TODO: check if forces are applied to CoM
 
     """
     visualizations
@@ -78,31 +70,54 @@ class LowLevelAction(ActionTerm):
 
     # TODO: create markers to visualize the waypoints/trajectory and the forces/torques applied to the robot
 
-    # def _set_debug_vis_impl(self, debug_vis: bool):
-    # # set visibility of markers
-    # # note: parent only deals with callbacks. not their visibility
-    #     if debug_vis:
-    #         # create markers if necessary for the first tome
-    #         if not hasattr(self, "payload_pose_goal_visualizer"):
-    #             # -- goal
-    #             marker_cfg = CUBOID_MARKER_CFG.copy()
-    #             marker_cfg.prim_path = "/Visuals/Actions/payload_pose_goal"
-    #             marker_cfg.markers["cuboid"].size = (0.55, 0.45, 0.15)
-    #             self.payload_pose_goal_visualizer = VisualizationMarkers(marker_cfg)
-    #         # set their visibility to true
-    #         self.payload_pose_goal_visualizer.set_visibility(True)
-    #     else:
-    #         if hasattr(self, "payload_pose_goal_visualizer"):
-    #             self.payload_pose_goal_visualizer.set_visibility(False)
+    def _set_debug_vis_impl(self, debug_vis: bool):
+    # set visibility of markers
+    # note: parent only deals with callbacks. not their visibility
+        if debug_vis:
+            # create markers if necessary for the first tome
+            if not hasattr(self, "drone_z_force_visualizer"):
+                # -- display the z force on the drone
+                FORCE_MARKERS = VisualizationMarkersCfg(
+                markers={
+                    "force_marker_1": sim_utils.CylinderCfg(
+                        radius=0.01,
+                        height=0.5,
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.5, 0.5)),
+                    ),
+                    "force_marker_2": sim_utils.CylinderCfg(
+                        radius=0.01,
+                        height=0.5,
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.5, 0.5)),
+                    ),
+                    "force_marker_3": sim_utils.CylinderCfg(
+                        radius=0.01,
+                        height=0.5,
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.5, 0.5)),
+                    ),
+                }
+            )
+                marker_cfg = FORCE_MARKERS.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_z_forces"
+                self.drone_z_force_visualizer = VisualizationMarkers(marker_cfg)
+            # set their visibility to true
+            self.drone_z_force_visualizer.set_visibility(True)
+        else:
+            if hasattr(self, "drone_z_force_visualizer"):
+                self.drone_z_force_visualizer.set_visibility(False)
 
-    # def _debug_vis_callback(self, event):
-    #     # check if robot is initialized
-    #     # note: this is needed in-case the robot is de-initialized. we can't access the data
-    #     if not self.robot.is_initialized:
-    #         return
-    #     # display markers
-    #     self.payload_pose_goal_visualizer.visualize(self._env.command_manager.get_command("pose_command"))
-
+    def _debug_vis_callback(self, event):
+        # check if robot is initialized
+        # note: this is needed in-case the robot is de-initialized. we can't access the data
+        if not self._robot.is_initialized:
+            return
+        # display markers
+        drone_idx = self._robot.find_bodies("Falcon.*base_link")[0]
+        drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].squeeze(0)
+        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].squeeze(0)
+        forces_to_visualize = (self._forces.squeeze(0))/10
+        forces_to_visualize[:, :2] += 0.5 # offset to make the forces visible
+        # drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
+        self.drone_z_force_visualizer.visualize(drone_pos_world_frame, drone_orientation, forces_to_visualize)
 
 @configclass
 class LowLevelActionCfg(ActionTermCfg):

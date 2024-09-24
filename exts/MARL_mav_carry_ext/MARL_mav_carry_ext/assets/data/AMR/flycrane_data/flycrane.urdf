@@ -2,7 +2,7 @@
 <robot name="flycrane">
   <link name="Falcon1/base_link"/>
   <joint name="Falcon1/base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <origin rpy="0 0 0" xyz="0 0 0.00"/>
     <parent link="Falcon1/base_link"/>
     <child link="Falcon1/base_link_inertia"/>
   </joint>
@@ -165,7 +165,7 @@
   <!-- odometry joint -->
   <joint name="Falcon1/odometry_sensor_joint" type="revolute">
     <parent link="Falcon1/base_link"/>
-    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.03"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
     <child link="Falcon1/odometry_sensor_link"/>
     <limit effort="0" lower="0" upper="0" velocity="0"/>
   </joint>
@@ -183,7 +183,7 @@
   </xacro:macro>-->
   <link name="Falcon2/base_link"/>
   <joint name="Falcon2/base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
     <parent link="Falcon2/base_link"/>
     <child link="Falcon2/base_link_inertia"/>
   </joint>
@@ -356,7 +356,7 @@
   <!-- odometry joint -->
   <joint name="Falcon2/odometry_sensor_joint" type="revolute">
     <parent link="Falcon2/base_link"/>
-    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.03"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
     <child link="Falcon2/odometry_sensor_link"/>
     <limit effort="0" lower="0" upper="0" velocity="0"/>
   </joint>
@@ -375,7 +375,7 @@
   </xacro:macro>-->
   <link name="Falcon3/base_link"/>
   <joint name="Falcon3/base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
     <parent link="Falcon3/base_link"/>
     <child link="Falcon3/base_link_inertia"/>
   </joint>
@@ -548,7 +548,7 @@
   <!-- odometry joint -->
   <joint name="Falcon3/odometry_sensor_joint" type="revolute">
     <parent link="Falcon3/base_link"/>
-    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.03"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
     <child link="Falcon3/odometry_sensor_link"/>
     <limit effort="0" lower="0" upper="0" velocity="0"/>
   </joint>
@@ -1603,7 +1603,7 @@
   <joint name="rope_1_sphere_joint_0_joint_x" type="continuous">
     <parent link="load_link"/>
     <child link="rope_1_sphere_joint_0_link_1"/>
-    <origin rpy="0 0 0" xyz="0.24 0.22 0.14"/>
+    <origin rpy="0 0 0" xyz="0.27 0.22 0.14"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0.005"/>
   </joint>
@@ -1634,7 +1634,7 @@
   <joint name="rope_2_sphere_joint_0_joint_x" type="continuous">
     <parent link="load_link"/>
     <child link="rope_2_sphere_joint_0_link_1"/>
-    <origin rpy="0 0 0" xyz="0.24 -0.22 0.14"/>
+    <origin rpy="0 0 0" xyz="0.27 -0.22 0.14"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0.005"/>
   </joint>
@@ -1665,7 +1665,7 @@
   <joint name="rope_3_sphere_joint_0_joint_x" type="continuous">
     <parent link="load_link"/>
     <child link="rope_3_sphere_joint_0_link_1"/>
-    <origin rpy="0 0 0" xyz="-0.28 0.018 0.14"/>
+    <origin rpy="0 0 0" xyz="-0.27 0.0 0.14"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0.005"/>
   </joint>

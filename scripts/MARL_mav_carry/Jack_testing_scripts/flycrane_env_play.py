@@ -45,22 +45,27 @@ def main():
     env = ManagerBasedRLEnv(cfg=env_cfg)
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
-
+    falcon_mass = 0.6 + 0.0042*4 + 0.00002
+    rope_mass = 0.0033692587500000004 * 7 + 0.001 * 14
+    payload_mass = 1.4 + 0.00001 + 0.006
+    mass_left_side = 2 * falcon_mass + 2 * rope_mass + 0.5 * payload_mass
+    mass_right_side = falcon_mass + rope_mass + 0.5 * payload_mass
+    # print(env.scene["robot"].root_physx_view.get_masses())
     # simulate physics
     count = 0
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
-            if count % 1000 == 0:
+            if count % 500 == 0:
                 count = 0
                 env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
             # sample random actions
             waypoint = torch.zeros_like(env.action_manager.action)
-            waypoint[:, :3] = torch.tensor([0.0, 0.0, (gravity * robot_mass) / 4])
-            waypoint[:, 3:6] = torch.tensor([0.0, 0.0, (gravity * robot_mass) / 4])
-            waypoint[:, 6:] = torch.tensor([0.0, 0.0, (gravity * robot_mass) / 2])
+            waypoint[:, 0] = mass_left_side * gravity / 2
+            waypoint[:, 4] = mass_left_side * gravity / 2
+            waypoint[:, 8] = mass_right_side * gravity
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint * 1)
             # print current orientation of pole
