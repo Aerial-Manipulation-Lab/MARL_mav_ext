@@ -71,8 +71,8 @@ agent:
     write_interval: auto
     checkpoint_interval: auto
 
-    wandb: True
-    
+    # wandb: True
+
     
 
 
