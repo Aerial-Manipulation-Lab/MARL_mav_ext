@@ -3,13 +3,12 @@ from __future__ import annotations
 import torch
 from dataclasses import MISSING
 
-import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.markers import VisualizationMarkersCfg, VisualizationMarkers
 from omni.isaac.lab.utils import configclass
+from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
 
 
 class LowLevelAction(ActionTerm):
@@ -77,34 +76,21 @@ class LowLevelAction(ActionTerm):
         if debug_vis:
             # create markers if necessary for the first tome
             if not hasattr(self, "drone_z_force_visualizer"):
-                # -- display the z force on the drone
-                FORCE_MARKERS = VisualizationMarkersCfg(
-                markers={
-                    "arrow_1": sim_utils.UsdFileCfg(
-                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                        scale=(0.1, 0.1, 1.0),
-                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
-                    ),
-                    "arrow_2": sim_utils.UsdFileCfg(
-                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                        scale=(0.1, 0.1, 1.0),
-                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
-                    ),
-                    "arrow_3": sim_utils.UsdFileCfg(
-                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                        scale=(0.1, 0.1, 1.0),
-                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
-                    ),
-                }
-            )
-                marker_cfg = FORCE_MARKERS.copy()
+                marker_cfg = FORCE_MARKER_Z_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_z_forces"
-                self.drone_z_force_visualizer = VisualizationMarkers(marker_cfg)
+                self.drone_force_z_visualizer = VisualizationMarkers(marker_cfg)
+            if not hasattr(self, "drone_torque_visualizer"):
+                marker_cfg = TORQUE_MARKER_CFG.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_torques"
+                self.drone_torque_visualizer = VisualizationMarkers(marker_cfg)
             # set their visibility to true
-            self.drone_z_force_visualizer.set_visibility(True)
+            self.drone_force_z_visualizer.set_visibility(True)
+            self.drone_torque_visualizer.set_visibility(True)
         else:
-            if hasattr(self, "drone_z_force_visualizer"):
-                self.drone_z_force_visualizer.set_visibility(False)
+            if hasattr(self, "drone_force_z_visualizer"):
+                self.drone_force_z_visualizer.set_visibility(False)
+            if hasattr(self, "drone_torque_visualizer"):
+                self.drone_torque_visualizer.set_visibility(False)
 
     def _debug_vis_callback(self, event):
         # check if robot is initialized
@@ -118,21 +104,27 @@ class LowLevelAction(ActionTerm):
         # get drone positions and orientations
         drone_idx = self._robot.find_bodies("Falcon.*base_link")[0]
         drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].view(-1,3)
-        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7]
+        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
 
         # rotate the arrow to point in the direction of the force
         zeros = torch.zeros(self._env.scene.num_envs, 1)
         arrow_rotation_offset = math_utils.quat_from_euler_xyz(zeros, (-torch.pi/2) * torch.ones(self._env.scene.num_envs, 1), zeros)
-        arrow_rotation_offset = arrow_rotation_offset.repeat(1, 3, 1).to(self.device)
-        arrow_orientation = math_utils.quat_mul(arrow_rotation_offset.view(-1, 4), drone_orientation.view(-1, 4))
+        arrow_rotation_offset = arrow_rotation_offset.repeat(1, 3, 1).to(self.device).view(-1, 4)
+        arrow_orientation = math_utils.quat_mul(arrow_rotation_offset, drone_orientation)
         
         # scale arrows with applied force
         forces_to_visualize = (self._forces.view(-1,3)).clone() 
-        forces_to_visualize[:, :2] += 0.5 # offset to make the forces visible
-        forces_to_visualize[:,2] /= 10 # scale down the forces
+        forces_to_visualize[:, :2] += 1.0 # offset to make the forces visible
+        forces_to_visualize[:,2] /= 15 # scale down the forces
         forces_to_visualize[:, [0, 2]] = forces_to_visualize[:, [2, 0]] # swap around because the arrow prim is oriented in x direction
         # drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
-        self.drone_z_force_visualizer.visualize(drone_pos_world_frame, arrow_orientation, forces_to_visualize, marker_indices)
+        self.drone_force_z_visualizer.visualize(drone_pos_world_frame, arrow_orientation, forces_to_visualize, marker_indices)
+
+        # visualize torques
+        torques_to_visualize = (self._torques.view(-1,3)).clone()
+        torques_to_visualize *= 5 # scale up the torques
+        # print(torques_to_visualize)
+        self.drone_torque_visualizer.visualize(drone_pos_world_frame, drone_orientation, torques_to_visualize, marker_indices)
 
 @configclass
 class LowLevelActionCfg(ActionTermCfg):
