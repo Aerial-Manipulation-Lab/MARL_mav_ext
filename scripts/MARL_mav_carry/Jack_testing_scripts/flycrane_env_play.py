@@ -32,7 +32,6 @@ simulation_app = app_launcher.app
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
 
-import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 
 
@@ -45,7 +44,7 @@ def main():
     env = ManagerBasedRLEnv(cfg=env_cfg)
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
-    falcon_mass = 0.6 + 0.0042*4 + 0.00002
+    falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
     rope_mass = 0.0033692587500000004 * 7 + 0.001 * 14
     payload_mass = 1.4 + 0.00001 + 0.006
     mass_left_side = 2 * falcon_mass + 2 * rope_mass + 0.5 * payload_mass
@@ -65,9 +64,9 @@ def main():
             waypoint = torch.zeros_like(env.action_manager.action)
             waypoint[:, 0] = mass_left_side * gravity / 2
             waypoint[:, 4] = mass_left_side * gravity / 2
-            waypoint[:, 8] = mass_right_side * gravity 
-            waypoint[:, 1] = 0.05
-            
+            waypoint[:, 8] = mass_right_side * gravity
+            # waypoint[:, 1] = 0.05
+
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint * 1)
             # print current orientation of pole

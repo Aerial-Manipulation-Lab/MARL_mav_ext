@@ -156,7 +156,7 @@ class UniformPoseCommandGlobal(CommandTerm):
         # -- goal pose
         self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3], self.pose_command_w[:, 3:])
         # print("The tracking error of the position is ", self.metrics["position_error"])
-        # print("The tracking error of the orietation is ", self.metrics["orientation_error"])
+        # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
 
         # -- current body pose
         body_pose_w = self.robot.data.body_state_w[:, self.body_idx]
