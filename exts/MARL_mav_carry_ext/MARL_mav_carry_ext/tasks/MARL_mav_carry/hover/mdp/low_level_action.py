@@ -4,6 +4,7 @@ import torch
 from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
+import omni.isaac.lab.utils.math as math_utils
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
@@ -79,20 +80,20 @@ class LowLevelAction(ActionTerm):
                 # -- display the z force on the drone
                 FORCE_MARKERS = VisualizationMarkersCfg(
                 markers={
-                    "force_marker_1": sim_utils.CylinderCfg(
-                        radius=0.01,
-                        height=0.5,
-                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 1.0, 1.0)),
+                    "arrow_1": sim_utils.UsdFileCfg(
+                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                        scale=(0.1, 0.1, 1.0),
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
                     ),
-                    "force_marker_2": sim_utils.CylinderCfg(
-                        radius=0.01,
-                        height=0.5,
-                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.5, 0.5)),
+                    "arrow_2": sim_utils.UsdFileCfg(
+                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                        scale=(0.1, 0.1, 1.0),
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
                     ),
-                    "force_marker_3": sim_utils.CylinderCfg(
-                        radius=0.01,
-                        height=0.5,
-                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.5, 0.5)),
+                    "arrow_3": sim_utils.UsdFileCfg(
+                        usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                        scale=(0.1, 0.1, 1.0),
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
                     ),
                 }
             )
@@ -111,13 +112,27 @@ class LowLevelAction(ActionTerm):
         if not self._robot.is_initialized:
             return
         # display markers
+        # marker indices for multiple envs
+        marker_indices = [0] * self._env.scene.num_envs + [1] * self._env.scene.num_envs + [2] * self._env.scene.num_envs
+        
+        # get drone positions and orientations
         drone_idx = self._robot.find_bodies("Falcon.*base_link")[0]
-        drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].squeeze(0)
-        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].squeeze(0)
-        forces_to_visualize = (self._forces.squeeze(0))/10
+        drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].view(-1,3)
+        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7]
+
+        # rotate the arrow to point in the direction of the force
+        zeros = torch.zeros(self._env.scene.num_envs, 1)
+        arrow_rotation_offset = math_utils.quat_from_euler_xyz(zeros, (-torch.pi/2) * torch.ones(self._env.scene.num_envs, 1), zeros)
+        arrow_rotation_offset = arrow_rotation_offset.repeat(1, 3, 1).to(self.device)
+        arrow_orientation = math_utils.quat_mul(arrow_rotation_offset.view(-1, 4), drone_orientation.view(-1, 4))
+        
+        # scale arrows with applied force
+        forces_to_visualize = (self._forces.view(-1,3)).clone() 
         forces_to_visualize[:, :2] += 0.5 # offset to make the forces visible
-        drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
-        self.drone_z_force_visualizer.visualize(drone_pos_world_frame, drone_orientation)
+        forces_to_visualize[:,2] /= 10 # scale down the forces
+        forces_to_visualize[:, [0, 2]] = forces_to_visualize[:, [2, 0]] # swap around because the arrow prim is oriented in x direction
+        # drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
+        self.drone_z_force_visualizer.visualize(drone_pos_world_frame, arrow_orientation, forces_to_visualize, marker_indices)
 
 @configclass
 class LowLevelActionCfg(ActionTermCfg):

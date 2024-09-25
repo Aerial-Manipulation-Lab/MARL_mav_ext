@@ -65,7 +65,7 @@ def main():
             waypoint = torch.zeros_like(env.action_manager.action)
             waypoint[:, 0] = mass_left_side * gravity / 2
             waypoint[:, 4] = mass_left_side * gravity / 2
-            waypoint[:, 8] = mass_right_side * gravity
+            waypoint[:, 8] = mass_right_side * gravity 
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint * 1)
             # print current orientation of pole
