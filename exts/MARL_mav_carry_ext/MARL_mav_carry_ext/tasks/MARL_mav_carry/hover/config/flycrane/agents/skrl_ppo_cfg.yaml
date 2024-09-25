@@ -71,8 +71,8 @@ agent:
     write_interval: auto
     checkpoint_interval: auto
 
-    wandb: True
-    
+    # wandb: True
+
     
 
 
@@ -80,5 +80,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 7200
+  timesteps: 150000000 #150M timesteps, like in OmniDrones
   environment_info: log
