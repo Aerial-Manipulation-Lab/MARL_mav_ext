@@ -122,7 +122,8 @@ class LowLevelAction(ActionTerm):
 
         # visualize torques
         torques_to_visualize = (self._torques.view(-1,3)).clone()
-        torques_to_visualize *= 5 # scale up the torques
+        torques_to_visualize += 0.01 # offset to make the torques visible
+        torques_to_visualize *= 10 # scale up the torques
         # print(torques_to_visualize)
         self.drone_torque_visualizer.visualize(drone_pos_world_frame, drone_orientation, torques_to_visualize, marker_indices)
 
