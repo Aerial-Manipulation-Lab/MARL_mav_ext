@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from omni.isaac.lab.envs import ManagerBasedRLEnv
 
 # TODO: put this somewhere else
-debug_vis_reward = False
+debug_vis_reward = True
 if debug_vis_reward:
     GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
         markers={
@@ -61,7 +61,7 @@ def track_payload_pos(
 
     # desired_pos = env.command_manager.get_command(command_name)[..., :3]  # relative goal generated in robot root frame.
     desired_pos = torch.zeros_like(payload_pos_env)
-    desired_pos[..., 2] = 1.0 # in env frame
+    desired_pos[..., 2] = 1.5 # in env frame
     # compute the error
     positional_error = torch.sum(
         torch.square(payload_pos_env - desired_pos),
@@ -109,7 +109,7 @@ def track_payload_orientation(
         payload_orientation_marker.set_visibility(True)
         orientations = torch.cat((desired_quat, payload_quat), dim=0)
         desired_pos = torch.zeros_like(payload_pos_env)
-        desired_pos[..., 2] = 1.0 # in env frame
+        desired_pos[..., 2] = 1.5    # in env frame
         desired_pos_world = desired_pos + env.scene.env_origins
         positions = torch.cat((desired_pos_world, payload_pos_world), dim=0)
         payload_orientation_marker.visualize(positions, orientations, marker_indices = marker_indices)
