@@ -591,7 +591,7 @@
   </joint>
   <link name="rope_1_link_0">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -604,7 +604,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -612,7 +612,7 @@
   </link>
   <link name="rope_1_link_1">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -625,7 +625,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -633,7 +633,7 @@
   </link>
   <link name="rope_1_link_2">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -646,7 +646,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -654,7 +654,7 @@
   </link>
   <link name="rope_1_link_3">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -667,7 +667,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -675,7 +675,7 @@
   </link>
   <link name="rope_1_link_4">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -688,7 +688,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -696,7 +696,7 @@
   </link>
   <link name="rope_1_link_5">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -709,7 +709,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -717,7 +717,7 @@
   </link>
   <link name="rope_1_link_6">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -730,7 +730,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -924,7 +924,7 @@
   </joint>
   <link name="rope_2_link_0">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -937,7 +937,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -945,7 +945,7 @@
   </link>
   <link name="rope_2_link_1">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -958,7 +958,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -966,7 +966,7 @@
   </link>
   <link name="rope_2_link_2">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -979,7 +979,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -987,7 +987,7 @@
   </link>
   <link name="rope_2_link_3">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1000,7 +1000,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1008,7 +1008,7 @@
   </link>
   <link name="rope_2_link_4">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1021,7 +1021,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1029,7 +1029,7 @@
   </link>
   <link name="rope_2_link_5">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1042,7 +1042,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1050,7 +1050,7 @@
   </link>
   <link name="rope_2_link_6">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1063,7 +1063,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1257,7 +1257,7 @@
   </joint>
   <link name="rope_3_link_0">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1270,7 +1270,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1278,7 +1278,7 @@
   </link>
   <link name="rope_3_link_1">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1291,7 +1291,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1299,7 +1299,7 @@
   </link>
   <link name="rope_3_link_2">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1312,7 +1312,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1320,7 +1320,7 @@
   </link>
   <link name="rope_3_link_3">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1333,7 +1333,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1341,7 +1341,7 @@
   </link>
   <link name="rope_3_link_4">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1354,7 +1354,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1362,7 +1362,7 @@
   </link>
   <link name="rope_3_link_5">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1375,7 +1375,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
@@ -1383,7 +1383,7 @@
   </link>
   <link name="rope_3_link_6">
     <visual>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0.0715"/>
       <geometry>
         <cylinder length="0.143" radius="0.0025"/>
@@ -1396,7 +1396,7 @@
       </geometry>
     </collision>
     <inertial>
-      <!-- Set the origin to the start of the cilinder -->
+      <!-- Set the origin to the start of the cylinder -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.0033692587500000004"/>
       <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>

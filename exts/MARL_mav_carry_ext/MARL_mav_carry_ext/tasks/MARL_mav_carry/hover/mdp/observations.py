@@ -3,7 +3,6 @@ import torch
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import ManagerBasedEnv
 from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import euler_xyz_from_quat
 
 """
 Observations for the payload
@@ -17,6 +16,7 @@ def payload_position(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEnti
     payload_world_frame = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_env_frame = payload_world_frame - env.scene.env_origins
     return payload_env_frame.view(env.num_envs, -1)
+
 
 def payload_orientation(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload orientation, quaternions in world frame."""
