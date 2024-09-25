@@ -97,7 +97,6 @@ class ActionsCfg:
         asset_name="robot", body_name="Falcon.*base_link.*", debug_vis=True
     )
 
-
 @configclass
 class ObservationsCfg:
     """Observations for the hovering task."""
