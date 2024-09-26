@@ -199,7 +199,7 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the hovering task."""
 
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400.0)
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400000.0)
     alive_reward = RewTerm(func=mdp.is_alive, weight=1000.0)
 
     # reward for tracking the payload command position

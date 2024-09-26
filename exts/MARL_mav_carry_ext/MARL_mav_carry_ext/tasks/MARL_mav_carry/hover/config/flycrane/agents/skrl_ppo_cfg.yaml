@@ -68,8 +68,8 @@ agent:
   experiment:
     directory: "flycrane_hover_ppo"
     experiment_name: "hovering_test"
-    write_interval: auto
-    checkpoint_interval: auto
+    write_interval: 100
+    checkpoint_interval: 100000
 
     # wandb: True
 
