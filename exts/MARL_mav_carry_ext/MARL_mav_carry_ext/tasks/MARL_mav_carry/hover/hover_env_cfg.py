@@ -105,14 +105,26 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observation terms for the policy."""
 
+        # payload and drone states
         payload_pose = ObsTerm(func=mdp.payload_position)  # can add noise later
         payload_orientation = ObsTerm(func=mdp.payload_orientation)  # can add noise later
+        payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)  # can add noise later
+        payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)  # can add noise later
         drone_positions = ObsTerm(func=mdp.drone_positions)  # can add noise later
         drone_orientations = ObsTerm(func=mdp.drone_orientations)  # can add noise later
         drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)  # can add noise later
         drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)  # can add noise later
+
+        # goal error terms
+        payload_positional_error = ObsTerm(func=mdp.payload_positional_error)
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)  
+
+        # relative positions terms
+        payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
+        drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
+        drone_pdist = ObsTerm(func=mdp.drone_pdist_obs)
         # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
-        pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+        # pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations
@@ -206,12 +218,12 @@ class RewardsCfg:
 
     track_payload_pos = RewTerm(
         func=mdp.track_payload_pos,
-        weight=1000.0,
+        weight=1.0,
         params={"debug_vis": False, "command_name": "pose_command"},
     )
     track_payload_orientation = RewTerm(
         func=mdp.track_payload_orientation,
-        weight=100.0,
+        weight=1.0,
         params={"debug_vis": False, "command_name": "pose_command"},
     )
 
