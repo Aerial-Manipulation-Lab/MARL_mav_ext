@@ -261,7 +261,7 @@ class TerminationsCfg:
         func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
-    falcon_base_contact = DoneTerm(
+    illegal_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
     )
@@ -272,14 +272,14 @@ class TerminationsCfg:
     # )
 
     # end when angular velocity of payload is too high
-    # payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
+    payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
-    # payload_angle = DoneTerm(
-    #     func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9}
-    # )
+    payload_angle = DoneTerm(
+        func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 1.5}
+    )
 
     # end when angular velocity of falcon is too high
-    # falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
+    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
     # falcon_angle = DoneTerm(func=mdp.falcon_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9})
 
 
