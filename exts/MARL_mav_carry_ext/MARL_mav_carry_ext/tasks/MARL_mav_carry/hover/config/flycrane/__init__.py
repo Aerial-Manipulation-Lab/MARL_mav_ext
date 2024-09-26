@@ -11,6 +11,7 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": HoverEnvCfg,
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}.skrl_ppo_cfg.yaml",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
     },
 )
