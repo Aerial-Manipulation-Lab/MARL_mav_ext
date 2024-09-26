@@ -238,6 +238,11 @@ class RewardsCfg:
     # swing_reward = RewTerm(func=mdp.swing_reward, weight=1.0)
     # action_smoothness_reward = RewTerm(func=mdp.action_smoothness_reward, weight=1.0)
 
+    # falcon_spin = RewTerm(
+    #     func=mdp.spinnage_reward_drones,
+    #     weight=1.0)
+        
+
     omnidrones_reward = RewTerm(
         func=mdp.OmniDrones_reward,
         weight=1.0,

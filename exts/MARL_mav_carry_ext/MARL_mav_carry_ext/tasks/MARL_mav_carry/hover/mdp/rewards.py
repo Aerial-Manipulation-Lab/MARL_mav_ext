@@ -145,13 +145,23 @@ def upright_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
     assert reward_up.shape == (env.scene.num_envs,)
     return reward_up
 
-def spinnage_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def spinnage_reward_payload(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for minimizing the angular velocities of the payload."""
     spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
     payload_angular_velocity = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(payload_angular_velocity))
+    assert reward_spin.shape == (env.scene.num_envs,)
+    return reward_spin
+
+def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Reward for minimizing the angular velocities of the drones."""
+    spinnage_weight = 0.2
+    robot = env.scene[asset_cfg.name]
+    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
+    drone_angular_velocity = robot.data.body_state_w[:, drone_idx, 10:].abs().sum(-1).sum(-1)
+    reward_spin = spinnage_weight * torch.exp(-torch.square(drone_angular_velocity))
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
 
@@ -205,17 +215,19 @@ def OmniDrones_reward(
     
     reward_separation = separation_reward(env)
     reward_up = upright_reward(env)
-    reward_spin = spinnage_reward(env)
+    reward_spin_payload = spinnage_reward_payload(env)
     reward_swing = swing_reward(env)
 
     reward_effort = action_penalty(env)
+    reward_spin_drones = spinnage_reward_drones(env)
 
     # Calculate the total reward
     reward = reward_separation * (
                 reward_pose
-                + reward_pose * (reward_up + reward_spin + reward_swing)
+                + reward_pose * (reward_up + reward_spin_payload + reward_swing)
                 # + reward_joint_limit
                 # + reward_action_smoothness.mean(1, True) # set to 0 in omnidrones
                 + reward_effort
+                + reward_spin_drones
             )
     return reward
