@@ -211,27 +211,40 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the hovering task."""
 
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400000.0)
-    alive_reward = RewTerm(func=mdp.is_alive, weight=1000.0)
+    # termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400000.0)
+    # alive_reward = RewTerm(func=mdp.is_alive, weight=1000.0)
 
     # reward for tracking the payload command position
 
-    track_payload_pos = RewTerm(
-        func=mdp.track_payload_pos,
-        weight=1.0,
-        params={"debug_vis": False, "command_name": "pose_command"},
-    )
-    track_payload_orientation = RewTerm(
-        func=mdp.track_payload_orientation,
+    # track_payload_pos = RewTerm(
+    #     func=mdp.track_payload_pos,
+    #     weight=1.0,
+    #     params={"debug_vis": False, "command_name": "pose_command"},
+    # )
+    # track_payload_orientation = RewTerm(
+    #     func=mdp.track_payload_orientation,
+    #     weight=1.0,
+    #     params={"debug_vis": False, "command_name": "pose_command"},
+    # )
+
+    # action_penalty = RewTerm(
+    #     func=mdp.action_penalty,
+    #     weight=1.0,
+    # )
+
+    # separation_reward = RewTerm(func=mdp.separation_reward, weight=1.0)
+    # upright_reward = RewTerm(func=mdp.upright_reward, weight=1.0)
+    # spinnage_reward = RewTerm(func=mdp.spinnage_reward, weight=1.0)
+    # swing_reward = RewTerm(func=mdp.swing_reward, weight=1.0)
+    # action_smoothness_reward = RewTerm(func=mdp.action_smoothness_reward, weight=1.0)
+
+    omnidrones_reward = RewTerm(
+        func=mdp.OmniDrones_reward,
         weight=1.0,
         params={"debug_vis": False, "command_name": "pose_command"},
     )
 
-    # action_penalty = RewTerm(
-    #     func=mdp.action_penalty,
-    #     weight=0.05,
-    #     params={"std": 0.1},
-    # )
+
 
 
 @configclass
@@ -259,14 +272,14 @@ class TerminationsCfg:
     # )
 
     # end when angular velocity of payload is too high
-    payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
+    # payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
-    payload_angle = DoneTerm(
-        func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9}
-    )
+    # payload_angle = DoneTerm(
+    #     func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9}
+    # )
 
     # end when angular velocity of falcon is too high
-    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
+    # falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
     # falcon_angle = DoneTerm(func=mdp.falcon_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9})
 
 

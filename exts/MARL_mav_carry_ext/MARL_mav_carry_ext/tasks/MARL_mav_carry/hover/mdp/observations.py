@@ -116,7 +116,6 @@ def drone_rpos_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntity
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
-    print(rpos)
     return rpos.view(env.num_envs, -1)
 
 def drone_pdist_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
@@ -125,5 +124,5 @@ def drone_pdist_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
-    pdist = torch.norm(rpos, dim=1)
+    pdist = torch.norm(rpos, dim=-1, keepdim = True)
     return pdist.view(env.num_envs, -1)
