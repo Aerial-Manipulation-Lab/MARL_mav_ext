@@ -105,14 +105,26 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observation terms for the policy."""
 
+        # payload and drone states
         payload_pose = ObsTerm(func=mdp.payload_position)  # can add noise later
         payload_orientation = ObsTerm(func=mdp.payload_orientation)  # can add noise later
+        payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)  # can add noise later
+        payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)  # can add noise later
         drone_positions = ObsTerm(func=mdp.drone_positions)  # can add noise later
         drone_orientations = ObsTerm(func=mdp.drone_orientations)  # can add noise later
         drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)  # can add noise later
         drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)  # can add noise later
+
+        # goal error terms
+        payload_positional_error = ObsTerm(func=mdp.payload_positional_error)
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)  
+
+        # relative positions terms
+        payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
+        drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
+        drone_pdist = ObsTerm(func=mdp.drone_pdist_obs)
         # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
-        pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+        # pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations
@@ -199,27 +211,45 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the hovering task."""
 
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400.0)
-    alive_reward = RewTerm(func=mdp.is_alive, weight=1000.0)
+    # termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400000.0)
+    # alive_reward = RewTerm(func=mdp.is_alive, weight=1000.0)
 
     # reward for tracking the payload command position
 
-    track_payload_pos = RewTerm(
-        func=mdp.track_payload_pos,
-        weight=1000.0,
-        params={"debug_vis": False, "command_name": "pose_command"},
-    )
-    track_payload_orientation = RewTerm(
-        func=mdp.track_payload_orientation,
-        weight=100.0,
-        params={"debug_vis": False, "command_name": "pose_command"},
-    )
+    # track_payload_pos = RewTerm(
+    #     func=mdp.track_payload_pos,
+    #     weight=1.0,
+    #     params={"debug_vis": False, "command_name": "pose_command"},
+    # )
+    # track_payload_orientation = RewTerm(
+    #     func=mdp.track_payload_orientation,
+    #     weight=1.0,
+    #     params={"debug_vis": False, "command_name": "pose_command"},
+    # )
 
     # action_penalty = RewTerm(
     #     func=mdp.action_penalty,
-    #     weight=0.05,
-    #     params={"std": 0.1},
+    #     weight=1.0,
     # )
+
+    # separation_reward = RewTerm(func=mdp.separation_reward, weight=1.0)
+    # upright_reward = RewTerm(func=mdp.upright_reward, weight=1.0)
+    # spinnage_reward = RewTerm(func=mdp.spinnage_reward, weight=1.0)
+    # swing_reward = RewTerm(func=mdp.swing_reward, weight=1.0)
+    # action_smoothness_reward = RewTerm(func=mdp.action_smoothness_reward, weight=1.0)
+
+    # falcon_spin = RewTerm(
+    #     func=mdp.spinnage_reward_drones,
+    #     weight=1.0)
+        
+
+    omnidrones_reward = RewTerm(
+        func=mdp.OmniDrones_reward,
+        weight=1.0,
+        params={"debug_vis": False, "command_name": "pose_command"},
+    )
+
+
 
 
 @configclass
@@ -236,7 +266,7 @@ class TerminationsCfg:
         func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
-    falcon_base_contact = DoneTerm(
+    illegal_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
     )
@@ -250,7 +280,7 @@ class TerminationsCfg:
     payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
     payload_angle = DoneTerm(
-        func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9}
+        func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 1.5}
     )
 
     # end when angular velocity of falcon is too high
