@@ -66,3 +66,21 @@ def payload_angle_sine(
     roll, pitch, yaw = euler_xyz_from_quat(payload_quat)  # yaw can be whatever
     mapped_angle = torch.stack((torch.sin(roll), torch.sin(pitch)), dim=1)
     return (torch.abs(mapped_angle) > threshold).any(dim=1)
+
+def drone_states_nan(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when the drone states are NaN."""
+    robot = env.scene[asset_cfg.name]
+    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
+    drone_state = robot.data.body_state_w[:, drone_idx, :]
+    return torch.isnan(drone_state).any(dim=-1).any(dim=-1)
+
+def payload_states_nan(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when the payload states are NaN."""
+    robot = env.scene[asset_cfg.name]
+    payload_idx = robot.find_bodies("load_link")[0]
+    payload_state = robot.data.body_state_w[:, payload_idx, :].squeeze(1)
+    return torch.isnan(payload_state).any(dim=-1)

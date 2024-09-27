@@ -13,7 +13,7 @@ from omni.isaac.lab.managers import RewardTermCfg as RewTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
 from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import ContactSensorCfg, FrameTransformerCfg
+from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
@@ -287,6 +287,9 @@ class TerminationsCfg:
     # end when angular velocity of falcon is too high
     falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
     # falcon_angle = DoneTerm(func=mdp.falcon_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9})
+
+    drone_states_nan = DoneTerm(func=mdp.drone_states_nan, params={"asset_cfg": SceneEntityCfg("robot")})
+    payload_states_nan = DoneTerm(func=mdp.payload_states_nan, params={"asset_cfg": SceneEntityCfg("robot")})
 
 
 @configclass

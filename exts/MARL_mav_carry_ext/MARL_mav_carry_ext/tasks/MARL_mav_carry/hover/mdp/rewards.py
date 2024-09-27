@@ -154,7 +154,7 @@ def spinnage_reward_payload(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = 
 
 def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for minimizing the angular velocities of the drones."""
-    spinnage_weight = 0.4
+    spinnage_weight = 0.5
     robot = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_angular_velocity = robot.data.body_state_w[:, drone_idx, 10:].square().sum(-1).sum(-1)
