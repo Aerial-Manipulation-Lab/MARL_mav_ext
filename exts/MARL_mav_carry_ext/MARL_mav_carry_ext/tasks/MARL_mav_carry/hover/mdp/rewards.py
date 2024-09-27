@@ -59,9 +59,7 @@ def track_payload_pos(
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
 
-    # desired_pos = env.command_manager.get_command(command_name)[..., :3]  # relative goal generated in robot root frame.
-    desired_pos = torch.zeros_like(payload_pos_env)
-    desired_pos[..., 2] = 1.5  # in env frame
+    desired_pos = env.command_manager.get_command(command_name)[..., :3]  # relative goal generated in robot root frame, use a goal in env frame
     # compute the error
     positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
     reward_distance_scale= 1.2
@@ -109,8 +107,7 @@ def track_payload_orientation(
     if debug_vis:
         payload_orientation_marker.set_visibility(True)
         orientations = torch.cat((desired_quat, payload_quat), dim=0)
-        desired_pos = torch.zeros_like(payload_pos_env)
-        desired_pos[..., 2] = 1.5  # in env frame
+        desired_pos = env.command_manager.get_command(command_name)[..., :3]  # relative goal generated in robot root frame, use a goal in env frame
         desired_pos_world = desired_pos + env.scene.env_origins
         positions = torch.cat((desired_pos_world, payload_pos_world), dim=0)
         payload_orientation_marker.visualize(positions, orientations, marker_indices=marker_indices)

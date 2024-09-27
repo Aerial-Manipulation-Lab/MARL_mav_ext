@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.mdp as mdp
+import math
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
@@ -55,35 +56,35 @@ class CommandsCfg:
     # This is in base frame of the robot, not the world frame TODO: the debugging visualization is in base frame,
     # but the command is fixed so the reward is calculated correctly with a fixed goal.
 
-    # pose_command = mdp.UniformPoseCommandGlobalCfg(
-    #     asset_name="robot",
-    #     body_name="load_link",
-    #     resampling_time_range=(8.0, 8.0),
-    #     debug_vis=True,
-    #     ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-    #         pos_x=(-1.0, 1.0),
-    #         pos_y=(-1.0, 1.0),
-    #         pos_z=(0.5, 1.5),
-    #         roll=(-0.0, 0.0),
-    #         pitch=(-0.0, 0.0),
-    #         yaw=(-math.pi, math.pi),
-    #     ),
-    # )
-
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(8.0, 8.0),
-        debug_vis=False,  # visualizes always in robot root frame
+        resampling_time_range=(5.0, 5.0),
+        debug_vis=False,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-            pos_x=(-0.0, 0.0),
-            pos_y=(-0.0, 0.0),
-            pos_z=(1.0, 1.0),
+            pos_x=(-1.0, 1.0),
+            pos_y=(-1.0, 1.0),
+            pos_z=(1.0, 2.0),
             roll=(-0.0, 0.0),
             pitch=(-0.0, 0.0),
-            yaw=(-0.0, 0.0),
+            yaw=(-math.pi, math.pi),
         ),
     )
+
+    # pose_command = mdp.UniformPoseCommandGlobalCfg(
+    #     asset_name="robot",
+    #     body_name="load_link",
+    #     resampling_time_range=(5.0, 5.0),
+    #     debug_vis=False,  # visualizes always in robot root frame
+    #     ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
+    #         pos_x=(-0.0, 0.0),
+    #         pos_y=(-0.0, 0.0),
+    #         pos_z=(1.0, 1.0),
+    #         roll=(-0.0, 0.0),
+    #         pitch=(-0.0, 0.0),
+    #         yaw=(-0.0, 0.0),
+    #     ),
+    # )
 
 
 @configclass
@@ -141,40 +142,17 @@ class EventCfg:
     Resetting states on resets, disturbances, etc.
     """
 
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (-0.5, 0.5),
-    #             "y": (-0.5, 0.5),
-    #             "z": (1.0, 1.5),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-3.14, 3.14),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (-0.0, 0.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #     },
-    # )
-
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.0, 0.0),
-                "y": (-0.0, 0.0),
-                "z": (1.0, 1.0),
+                "x": (-1.0, 1.0),
+                "y": (-1.0, 1.0),
+                "z": (0.5, 1.5),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
-                "yaw": (0.0, 0.0),
+                "yaw": (-math.pi, math.pi),
             },
             "velocity_range": {
                 "x": (-0.0, 0.0),
@@ -186,6 +164,29 @@ class EventCfg:
             },
         },
     )
+
+    # reset_base = EventTerm(
+    #     func=mdp.reset_root_state_uniform,
+    #     mode="reset",
+    #     params={
+    #         "pose_range": {
+    #             "x": (-0.0, 0.0),
+    #             "y": (-0.0, 0.0),
+    #             "z": (1.0, 1.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (0.0, 0.0),
+    #         },
+    #         "velocity_range": {
+    #             "x": (-0.0, 0.0),
+    #             "y": (-0.0, 0.0),
+    #             "z": (-0.0, 0.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (-0.0, 0.0),
+    #         },
+    #     },
+    # )
 
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
@@ -246,7 +247,7 @@ class RewardsCfg:
     omnidrones_reward = RewTerm(
         func=mdp.OmniDrones_reward,
         weight=1.0,
-        params={"debug_vis": False, "command_name": "pose_command"},
+        params={"debug_vis": True, "command_name": "pose_command"},
     )
 
 
@@ -299,7 +300,7 @@ class CurriculumCfg:
 class HoverEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the hovering task."""
 
-    scene: CarryingSceneCfg = CarryingSceneCfg(num_envs=1, env_spacing=2.5)
+    scene: CarryingSceneCfg = CarryingSceneCfg(num_envs=1, env_spacing=4.0)
     commands: CommandsCfg = CommandsCfg()
     actions: ActionsCfg = ActionsCfg()
     observations: ObservationsCfg = ObservationsCfg()
