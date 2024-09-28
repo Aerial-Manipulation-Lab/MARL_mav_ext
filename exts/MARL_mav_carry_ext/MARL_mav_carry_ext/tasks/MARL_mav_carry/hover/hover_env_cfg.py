@@ -52,14 +52,10 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Commands for the hovering task"""
 
-    # null = mdp.NullCommandCfg()
-    # This is in base frame of the robot, not the world frame TODO: the debugging visualization is in base frame,
-    # but the command is fixed so the reward is calculated correctly with a fixed goal.
-
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(30, 30),
+        resampling_time_range=(30, 30), # out of range of max episode length for now
         debug_vis=False,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
             pos_x=(-1.0, 1.0),
