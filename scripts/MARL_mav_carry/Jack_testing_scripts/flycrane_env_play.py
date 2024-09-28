@@ -65,7 +65,6 @@ def main():
             waypoint[:, 0] = mass_left_side * gravity / 2
             waypoint[:, 4] = mass_left_side * gravity / 2
             waypoint[:, 8] = mass_right_side * gravity
-            # waypoint[:, 1] = 0.05
 
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint * 1)

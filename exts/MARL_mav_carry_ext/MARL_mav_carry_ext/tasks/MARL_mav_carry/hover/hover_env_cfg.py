@@ -59,7 +59,7 @@ class CommandsCfg:
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(5.0, 5.0),
+        resampling_time_range=(30, 30),
         debug_vis=False,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
             pos_x=(-1.0, 1.0),
@@ -124,8 +124,7 @@ class ObservationsCfg:
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
         drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
         drone_pdist = ObsTerm(func=mdp.drone_pdist_obs)
-        # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
-        # pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+        cable_angle = ObsTerm(func=mdp.cable_angle)
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations

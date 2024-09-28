@@ -92,8 +92,7 @@ def track_payload_orientation(
     payload_idx = robot.find_bodies("load_link")[0]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
-    payload_pos_env = payload_pos_world - env.scene.env_origins
-    desired_quat = env.command_manager.get_command(command_name)[..., 3:]  # 1 0 0 0
+    desired_quat = env.command_manager.get_command(command_name)[..., 3:]
     # compute the error
     orientation_error = torch.norm(desired_quat - payload_quat, dim=-1)
     reward_distance_scale= 1.2
@@ -190,9 +189,6 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     return reward_action_smoothness
 
 """ TODO: rewards for:
-- Keeping the swarm in a certain separation distance
-- Minimize angular velocities of payload (spinnage)
-- Minimize linear velocities of payload (swing)
 - Joint limits (angles between cables) of cable joints
 - Action smoothness: penalize the difference between consecutive actions
 """
