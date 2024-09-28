@@ -8,6 +8,7 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.utils.math import quat_mul, quat_inv
 
 from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
 
@@ -53,7 +54,6 @@ class LowLevelAction(ActionTerm):
         self._high_level_action = waypoint  # vector with 3 waypoints for 3 drones
 
         # low level controller, for now just something random, later agilicious
-        # Calculate error between waypoint and current state # TODO: figure out in which frame each term has to be
         self._high_level_action = self._high_level_action.reshape(
             self._env.scene.num_envs, len(self._body_ids), 4
         )  # [force, torques]
@@ -70,8 +70,6 @@ class LowLevelAction(ActionTerm):
     """
     visualizations
     """
-
-    # TODO: create markers to visualize the waypoints/trajectory and the forces/torques applied to the robot
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         # set visibility of markers
@@ -106,18 +104,20 @@ class LowLevelAction(ActionTerm):
             [0] * self._env.scene.num_envs + [1] * self._env.scene.num_envs + [2] * self._env.scene.num_envs
         )
 
-        # get drone positions and orientations
+        # Get drone positions and orientations
         drone_idx = self._robot.find_bodies("Falcon.*base_link")[0]
         drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].view(-1, 3)
         drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
 
-        # rotate the arrow to point in the direction of the force
+        # Rotate the arrow to point in the direction of the force
         zeros = torch.zeros(self._env.scene.num_envs, 1)
         arrow_rotation_offset = math_utils.quat_from_euler_xyz(
             zeros, (-torch.pi / 2) * torch.ones(self._env.scene.num_envs, 1), zeros
-        )
+        )  # rotate -90 degrees around y-axis in the world frame
+
+        # Correct approach: Apply the offset in the drone's local frame by multiplying with drone's orientation
         arrow_rotation_offset = arrow_rotation_offset.repeat(1, 3, 1).to(self.device).view(-1, 4)
-        arrow_orientation = math_utils.quat_mul(arrow_rotation_offset, drone_orientation)
+        arrow_orientation = math_utils.quat_mul(drone_orientation, arrow_rotation_offset)
 
         # scale arrows with applied force
         forces_to_visualize = (self._forces.view(-1, 3)).clone()
