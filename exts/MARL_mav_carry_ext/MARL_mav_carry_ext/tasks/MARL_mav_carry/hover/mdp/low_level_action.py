@@ -115,7 +115,7 @@ class LowLevelAction(ActionTerm):
             zeros, (-torch.pi / 2) * torch.ones(self._env.scene.num_envs, 1), zeros
         )  # rotate -90 degrees around y-axis in the world frame
 
-        # Correct approach: Apply the offset in the drone's local frame by multiplying with drone's orientation
+        # Apply the offset in the drone's local frame by multiplying with drone's orientation
         arrow_rotation_offset = arrow_rotation_offset.repeat(1, 3, 1).to(self.device).view(-1, 4)
         arrow_orientation = math_utils.quat_mul(drone_orientation, arrow_rotation_offset)
 

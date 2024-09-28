@@ -4,6 +4,7 @@ from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import ManagerBasedEnv
 from omni.isaac.lab.managers import SceneEntityCfg
 from .utils import get_drone_rpos, get_drone_pdist
+from omni.isaac.lab.utils.math import quat_mul, quat_inv
 
 """
 Observations for the payload
@@ -43,8 +44,7 @@ def payload_positional_error(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = S
     payload_idx = robot.find_bodies("load_link")[0]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
-    desired_pos = torch.zeros_like(payload_pos_env, device=payload_pos_env.device)
-    desired_pos[..., 2] = 1.5  # in env frame # TODO: unhardcode the goal position
+    desired_pos = env.command_manager.get_command("pose_command")[..., :3]
     positional_error = desired_pos - payload_pos_env
     return positional_error
 
@@ -53,16 +53,20 @@ def payload_orientation_error(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = 
     robot: Articulation = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
-    desired_quat = torch.tensor([1., 0., 0., 0.], device=payload_quat.device) # TODO: unhardcode the goal orientation
+    desired_quat = env.command_manager.get_command("pose_command")[..., 3:]
     orientation_error = payload_quat - desired_quat
     return orientation_error
 
-
-# def cable_angle(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
-#     """Cable angle between drone and payload."""
-#     robot: Articulation = env.scene[asset_cfg.name]
-#     #TODO
-#     return pass
+def cable_angle(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Cable angle between drone and payload."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    base_rope_idx = robot.find_bodies("rope_.*_link_0")[0]
+    payload_idx = robot.find_bodies("load_link")[0]
+    rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
+    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].view(-1, 4).repeat(3,1)
+    payload_orientation_inv = quat_inv(payload_orientation_world)
+    rope_orientations_payload= quat_mul(payload_orientation_inv, rope_orientations_world) # cable angles relative to payload
+    return rope_orientations_payload.view(env.num_envs, -1)
 
 """
 Observations for the drones
