@@ -120,7 +120,14 @@ To play with the learned agent, you can run the `play.py` script. This will load
 `python3 scripts/rsl_rl/play.py --task=Isaac-flycrane-payload-hovering-v0 --num_envs=1`
 
 To enable debug visualizations of the executed forces and torques, as well as goal poses, enable the debug_vis parameter. (more on this soon)
-To gather data and plot results of the played episode, add the `--plot_data` flag. (coming soon)
+To gather data and plot results of the played episode, add the `--plot_data=True` flag, this will plot several statistics against time: (coming soon)
+
+- Payload pose: positions, orientations, linear velocities, angular velocities
+- Drone poses: positions, orientations, linear velocities, angular velocities
+- Drone actions: forces and torques on each on each drone body
+- Cable angles (orientation of the link attached to the payload)
+- Payload positional error to goal
+- Payload orientation error to goal
 
 ## Code formatting
 
