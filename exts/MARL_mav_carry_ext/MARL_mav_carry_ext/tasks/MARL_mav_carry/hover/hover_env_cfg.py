@@ -280,7 +280,7 @@ class TerminationsCfg:
     )
 
     # end when angular velocity of falcon is too high
-    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
+    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 6.0})
     # falcon_angle = DoneTerm(func=mdp.falcon_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9})
 
     drone_states_nan = DoneTerm(func=mdp.drone_states_nan, params={"asset_cfg": SceneEntityCfg("robot")})
