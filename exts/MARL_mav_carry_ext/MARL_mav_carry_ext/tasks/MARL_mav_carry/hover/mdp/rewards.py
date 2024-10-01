@@ -172,7 +172,7 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     return reward_swing
 
 def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Penalty for high action values."""
+    """Penalty for high force values."""
     reward_effort_weight= 0.2
     action_forces = env.action_manager.action[:, [0, 4, 8]]
     effort_norm = torch.norm(action_forces, dim=-1)
@@ -181,7 +181,7 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     return reward_effort
 
 def action_penalty_torque(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Penalty for high action values."""
+    """Penalty for high torque values."""
     reward_effort_weight= 0.2
     action_torques = env.action_manager.action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]]
     effort_norm = torch.norm(action_torques, dim=-1)
@@ -189,17 +189,24 @@ def action_penalty_torque(env: ManagerBasedRLEnv) -> torch.Tensor:
     assert reward_effort.shape == (env.scene.num_envs,)
     return reward_effort
 
-def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Penalty for high action values."""
-    reward_action_smoothness_weight = 0.2
-    action_smoothness = torch.norm(env.action_manager.action - env.action_manager.prev_action, dim=-1)
+def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high variation in force values."""
+    reward_action_smoothness_weight = 0.4
+    action_smoothness = torch.norm(env.action_manager.action[:, [0, 4, 8]] - env.action_manager.prev_action[:, [0, 4, 8]], dim=-1)
+    reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness)
+    assert reward_action_smoothness.shape == (env.scene.num_envs,)
+    return reward_action_smoothness
+
+def action_smoothness_torque_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high variation in torque values."""
+    reward_action_smoothness_weight = 0.4
+    action_smoothness = torch.norm(env.action_manager.action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]] - env.action_manager.prev_action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]], dim=-1)
     reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness)
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
 
 """ TODO: rewards for:
 - Joint limits (angles between cables) of cable joints
-- Action smoothness: penalize the difference between consecutive actions
 """
 
 def OmniDrones_reward(
@@ -223,13 +230,16 @@ def OmniDrones_reward(
     reward_force_effort = action_penalty_force(env)
     reward_torque_effort = action_penalty_torque(env)
     reward_spin_drones = spinnage_reward_drones(env)
+    reward_action_force_smoothness = action_smoothness_force_reward(env)
+    reward_action_torque_smoothness = action_smoothness_torque_reward(env)
 
     # Calculate the total reward
     reward = reward_separation * (
                 reward_pose
                 + reward_pose * (reward_up + reward_spin_payload + reward_swing)
                 # + reward_joint_limit
-                # + reward_action_smoothness.mean(1, True) # set to 0 in omnidrones
+                + reward_action_force_smoothness
+                + reward_action_torque_smoothness
                 + reward_force_effort
                 + reward_torque_effort
                 + reward_spin_drones
