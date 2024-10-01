@@ -14,6 +14,7 @@ class FlycraneHoverPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     experiment_name = "Flycrane_hover"
     empirical_normalization = False
     # logger = "wandb"
+    # resume = True
     wandb_project = "Flycrane_hover"
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,

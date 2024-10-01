@@ -63,9 +63,8 @@ class LowLevelAction(ActionTerm):
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
         self._forces = torch.clamp(self._forces, 0.0, 25.0)
-        self._torques = torch.clamp(self._torques, -0.05, 0.05)
+        # self._torques = torch.clamp(self._torques, -0.05, 0.05)
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
-        # TODO: check if forces are applied to CoM
 
     """
     visualizations

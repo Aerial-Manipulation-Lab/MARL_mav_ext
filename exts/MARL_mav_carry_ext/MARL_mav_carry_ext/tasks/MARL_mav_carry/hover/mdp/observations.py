@@ -58,7 +58,7 @@ def payload_orientation_error(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = 
     return orientation_error
 
 def cable_angle(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
-    """Cable angle between drone and payload."""
+    """Angle of cable between cable and payload."""
     robot: Articulation = env.scene[asset_cfg.name]
     base_rope_idx = robot.find_bodies("rope_.*_link_0")[0]
     payload_idx = robot.find_bodies("load_link")[0]

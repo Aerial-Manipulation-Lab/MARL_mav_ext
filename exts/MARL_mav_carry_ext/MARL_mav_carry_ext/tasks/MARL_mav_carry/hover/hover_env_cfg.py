@@ -144,7 +144,7 @@ class EventCfg:
             "pose_range": {
                 "x": (-1.0, 1.0),
                 "y": (-1.0, 1.0),
-                "z": (0.5, 1.5),
+                "z": (1.0, 2.0),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
                 "yaw": (-math.pi, math.pi),
@@ -276,16 +276,16 @@ class TerminationsCfg:
     payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
     payload_angle = DoneTerm(
-        func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 1.5}
+        func=mdp.payload_angle_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
     # end when angular velocity of falcon is too high
-    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 6.0})
+    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
     # falcon_angle = DoneTerm(func=mdp.falcon_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9})
 
-    drone_states_nan = DoneTerm(func=mdp.drone_states_nan, params={"asset_cfg": SceneEntityCfg("robot")})
-    payload_states_nan = DoneTerm(func=mdp.payload_states_nan, params={"asset_cfg": SceneEntityCfg("robot")})
-
+    nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
+    angle_drones_cable = DoneTerm(func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0})
+    bounding_box_payload = DoneTerm(func=mdp.bounding_box_payload, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 3.0})
 
 @configclass
 class CurriculumCfg:
