@@ -171,13 +171,22 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     assert reward_swing.shape == (env.scene.num_envs,)
     return reward_swing
 
-def action_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
+def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high action values."""
     reward_effort_weight= 0.2
-    effort_norm = torch.norm(env.action_manager.action, dim=-1)
+    action_forces = env.action_manager.action[:, [0, 4, 8]]
+    effort_norm = torch.norm(action_forces, dim=-1)
     reward_effort = reward_effort_weight * torch.exp(-effort_norm)
     assert reward_effort.shape == (env.scene.num_envs,)
+    return reward_effort
 
+def action_penalty_torque(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high action values."""
+    reward_effort_weight= 0.2
+    action_torques = env.action_manager.action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]]
+    effort_norm = torch.norm(action_torques, dim=-1)
+    reward_effort = reward_effort_weight * torch.exp(-effort_norm)
+    assert reward_effort.shape == (env.scene.num_envs,)
     return reward_effort
 
 def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
@@ -211,7 +220,8 @@ def OmniDrones_reward(
     reward_spin_payload = spinnage_reward_payload(env)
     reward_swing = swing_reward(env)
 
-    reward_effort = action_penalty(env)
+    reward_force_effort = action_penalty_force(env)
+    reward_torque_effort = action_penalty_torque(env)
     reward_spin_drones = spinnage_reward_drones(env)
 
     # Calculate the total reward
@@ -220,7 +230,8 @@ def OmniDrones_reward(
                 + reward_pose * (reward_up + reward_spin_payload + reward_swing)
                 # + reward_joint_limit
                 # + reward_action_smoothness.mean(1, True) # set to 0 in omnidrones
-                + reward_effort
+                + reward_force_effort
+                + reward_torque_effort
                 + reward_spin_drones
             )
     return reward
