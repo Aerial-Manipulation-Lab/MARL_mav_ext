@@ -286,7 +286,7 @@ class TerminationsCfg:
     nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
     angle_drones_cable = DoneTerm(func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0})
-    bounding_box_payload = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
+    bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
 
 @configclass
 class CurriculumCfg:

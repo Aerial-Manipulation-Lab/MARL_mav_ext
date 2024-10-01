@@ -175,7 +175,9 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high force values."""
     reward_effort_weight= 0.2
     action_forces = env.action_manager.action[:, [0, 4, 8]]
-    effort_norm = torch.norm(action_forces, dim=-1)
+    max_force = 25.0 # N
+    normalized_actions = action_forces / max_force
+    effort_norm = torch.norm(normalized_actions, dim=-1)
     reward_effort = reward_effort_weight * torch.exp(-effort_norm)
     assert reward_effort.shape == (env.scene.num_envs,)
     return reward_effort
@@ -184,23 +186,35 @@ def action_penalty_torque(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high torque values."""
     reward_effort_weight= 0.2
     action_torques = env.action_manager.action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]]
-    effort_norm = torch.norm(action_torques, dim=-1)
+    max_torque = 0.9375 # ((25 / 4) * 0.075) * 2
+    normalized_actions = action_torques / max_torque
+    effort_norm = torch.norm(normalized_actions, dim=-1)
     reward_effort = reward_effort_weight * torch.exp(-effort_norm)
     assert reward_effort.shape == (env.scene.num_envs,)
     return reward_effort
 
 def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
-    reward_action_smoothness_weight = 0.4
-    action_smoothness = torch.norm(env.action_manager.action[:, [0, 4, 8]] - env.action_manager.prev_action[:, [0, 4, 8]], dim=-1)
+    reward_action_smoothness_weight = 0.2
+    action_forces = env.action_manager.action[:, [0, 4, 8]]
+    action_prev_forces = env.action_manager.prev_action[:, [0, 4, 8]]
+    max_force = 25.0 # N
+    normalized_action_forces = action_forces / max_force
+    normalized_action_prev_forces = action_prev_forces / max_force
+    action_smoothness = torch.norm(normalized_action_forces - normalized_action_prev_forces, dim=-1)
     reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness)
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
 
 def action_smoothness_torque_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in torque values."""
-    reward_action_smoothness_weight = 0.4
-    action_smoothness = torch.norm(env.action_manager.action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]] - env.action_manager.prev_action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]], dim=-1)
+    reward_action_smoothness_weight = 0.2
+    action_torques = env.action_manager.action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]]
+    action_prev_torques = env.action_manager.prev_action[:, [1, 2, 3, 5, 6, 7, 9, 10, 11]]
+    max_torque = 0.9375 # ((25 / 4) * 0.075) * 2
+    normalized_action_torques = action_torques / max_torque
+    normalized_action_prev_torques = action_prev_torques / max_torque
+    action_smoothness = torch.norm(normalized_action_torques - normalized_action_prev_torques, dim=-1)
     reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness)
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
