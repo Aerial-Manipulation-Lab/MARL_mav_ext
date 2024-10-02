@@ -31,6 +31,7 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+from gymnasium.spaces import Box
 
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 
@@ -42,6 +43,7 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
     # setup RL environment
     env = ManagerBasedRLEnv(cfg=env_cfg)
+    env.action_space = Box(-1.0, 1.0, shape=(env.scene.num_envs, 12), dtype="float32")
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
@@ -52,6 +54,7 @@ def main():
     # print(env.scene["robot"].root_physx_view.get_masses())
     # simulate physics
     count = 0
+    print("action space", env.action_space)
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset

@@ -18,7 +18,6 @@ from omni.isaac.lab.utils import configclass
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
 
-
 # Define the scene configuration
 
 
@@ -66,22 +65,6 @@ class CommandsCfg:
             yaw=(-math.pi, math.pi),
         ),
     )
-
-    # pose_command = mdp.UniformPoseCommandGlobalCfg(
-    #     asset_name="robot",
-    #     body_name="load_link",
-    #     resampling_time_range=(5.0, 5.0),
-    #     debug_vis=False,  # visualizes always in robot root frame
-    #     ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-    #         pos_x=(-0.0, 0.0),
-    #         pos_y=(-0.0, 0.0),
-    #         pos_z=(1.0, 1.0),
-    #         roll=(-0.0, 0.0),
-    #         pitch=(-0.0, 0.0),
-    #         yaw=(-0.0, 0.0),
-    #     ),
-    # )
-
 
 @configclass
 class ActionsCfg:
@@ -160,29 +143,6 @@ class EventCfg:
         },
     )
 
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (1.0, 1.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (0.0, 0.0),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (-0.0, 0.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #     },
-    # )
-
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="reset",
@@ -206,38 +166,6 @@ class EventCfg:
 @configclass
 class RewardsCfg:
     """Rewards for the hovering task."""
-
-    # termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400000.0)
-    # alive_reward = RewTerm(func=mdp.is_alive, weight=1000.0)
-
-    # reward for tracking the payload command position
-
-    # track_payload_pos = RewTerm(
-    #     func=mdp.track_payload_pos,
-    #     weight=1.0,
-    #     params={"debug_vis": False, "command_name": "pose_command"},
-    # )
-    # track_payload_orientation = RewTerm(
-    #     func=mdp.track_payload_orientation,
-    #     weight=1.0,
-    #     params={"debug_vis": False, "command_name": "pose_command"},
-    # )
-
-    # action_penalty = RewTerm(
-    #     func=mdp.action_penalty,
-    #     weight=1.0,
-    # )
-
-    # separation_reward = RewTerm(func=mdp.separation_reward, weight=1.0)
-    # upright_reward = RewTerm(func=mdp.upright_reward, weight=1.0)
-    # spinnage_reward = RewTerm(func=mdp.spinnage_reward, weight=1.0)
-    # swing_reward = RewTerm(func=mdp.swing_reward, weight=1.0)
-    # action_smoothness_reward = RewTerm(func=mdp.action_smoothness_reward, weight=1.0)
-
-    # falcon_spin = RewTerm(
-    #     func=mdp.spinnage_reward_drones,
-    #     weight=1.0)
-        
 
     omnidrones_reward = RewTerm(
         func=mdp.OmniDrones_reward,
@@ -266,12 +194,6 @@ class TerminationsCfg:
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
     )
-    # end when payload crashes
-    # falcon_base_contact = DoneTerm(
-    # func=mdp.illegal_contact,
-    # params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="load_link"), "threshold": 1.0},
-    # )
-
     # end when angular velocity of payload is too high
     payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
@@ -281,7 +203,6 @@ class TerminationsCfg:
 
     # end when angular velocity of falcon is too high
     falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
-    # falcon_angle = DoneTerm(func=mdp.falcon_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9})
 
     nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
