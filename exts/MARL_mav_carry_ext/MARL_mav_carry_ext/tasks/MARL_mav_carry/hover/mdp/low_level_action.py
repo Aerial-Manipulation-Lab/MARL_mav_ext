@@ -8,7 +8,7 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import quat_mul, quat_inv
+from omni.isaac.lab.utils.math import quat_inv, quat_mul
 
 from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
 

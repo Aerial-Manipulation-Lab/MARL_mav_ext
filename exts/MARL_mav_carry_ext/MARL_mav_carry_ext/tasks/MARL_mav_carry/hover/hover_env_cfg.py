@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.mdp as mdp
 import math
+
+import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.mdp as mdp
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
@@ -54,7 +55,7 @@ class CommandsCfg:
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(30, 30), # out of range of max episode length for now
+        resampling_time_range=(30, 30),  # out of range of max episode length for now
         debug_vis=False,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
             pos_x=(-1.0, 1.0),
@@ -66,6 +67,7 @@ class CommandsCfg:
         ),
     )
 
+
 @configclass
 class ActionsCfg:
     """Actions for the hovering task.
@@ -76,6 +78,7 @@ class ActionsCfg:
     low_level_action: mdp.LowLevelActionCfg = mdp.LowLevelActionCfg(
         asset_name="robot", body_name="Falcon.*base_link.*", debug_vis=False
     )
+
 
 @configclass
 class ObservationsCfg:
@@ -97,7 +100,7 @@ class ObservationsCfg:
 
         # goal error terms
         payload_positional_error = ObsTerm(func=mdp.payload_positional_error)
-        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)  
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
@@ -174,8 +177,6 @@ class RewardsCfg:
     )
 
 
-
-
 @configclass
 class TerminationsCfg:
     """Terminal conditions for the hovering task.
@@ -206,8 +207,11 @@ class TerminationsCfg:
 
     nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
-    angle_drones_cable = DoneTerm(func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0})
+    angle_drones_cable = DoneTerm(
+        func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0}
+    )
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
+
 
 @configclass
 class CurriculumCfg:

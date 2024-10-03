@@ -2,8 +2,7 @@ import torch
 
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import euler_xyz_from_quat
-from omni.isaac.lab.utils.math import quat_mul, quat_inv
+from omni.isaac.lab.utils.math import euler_xyz_from_quat, quat_inv, quat_mul
 
 
 def falcon_fly_low(
@@ -78,9 +77,8 @@ def payload_angle_cos(
     assert is_angle_limit.shape == (env.num_envs,)
     return is_angle_limit
 
-def nan_states(
-    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
+
+def nan_states(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Terminate when any body states are NaN."""
     robot = env.scene[asset_cfg.name]
     body_idx = robot.find_bodies(".*")[0]
@@ -88,6 +86,7 @@ def nan_states(
     is_nan_states = torch.isnan(body_states).any(dim=-1).any(dim=-1)
     assert is_nan_states.shape == (env.num_envs,)
     return is_nan_states
+
 
 def large_states(
     env: ManagerBasedRLEnv, threshold: float = 1e3, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -100,8 +99,9 @@ def large_states(
     assert is_large_states.shape == (env.num_envs,)
     return is_large_states
 
+
 def cable_angle_drones_cos(
-    env: ManagerBasedRLEnv, threshold: float = 0.0 ,asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, threshold: float = 0.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Angle of cable between cable and drones."""
     robot = env.scene[asset_cfg.name]
@@ -110,12 +110,15 @@ def cable_angle_drones_cos(
     rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
     drone_orientation_world = robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
     drone_orientation_inv = quat_inv(drone_orientation_world)
-    rope_orientations_drones= quat_mul(drone_orientation_inv, rope_orientations_world) # cable angles relative to drones
+    rope_orientations_drones = quat_mul(
+        drone_orientation_inv, rope_orientations_world
+    )  # cable angles relative to drones
     roll, pitch, yaw = euler_xyz_from_quat(rope_orientations_drones)  # yaw can be whatever
     mapped_angle = torch.stack((torch.cos(roll), torch.cos(pitch)), dim=1)
     is_cable_limit = (mapped_angle < threshold).any(dim=1).view(-1, 3).any(dim=1)
     assert is_cable_limit.shape == (env.num_envs,)
     return is_cable_limit
+
 
 def bounding_box(
     env: ManagerBasedRLEnv, threshold: float = 3.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

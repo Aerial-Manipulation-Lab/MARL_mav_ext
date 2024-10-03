@@ -30,8 +30,9 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
 from gymnasium.spaces import Box
+
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
 
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 

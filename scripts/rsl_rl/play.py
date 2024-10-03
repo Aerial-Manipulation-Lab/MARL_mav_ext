@@ -37,6 +37,8 @@ simulation_app = app_launcher.app
 
 
 import gymnasium as gym
+import matplotlib.pyplot as plt
+import numpy as np
 import os
 import torch
 
@@ -44,8 +46,6 @@ from rsl_rl.runners import OnPolicyRunner
 
 # Import extensions to set up environment tasks
 import MARL_mav_carry_ext.tasks  # noqa: F401
-import matplotlib.pyplot as plt
-import numpy as np
 
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
@@ -99,7 +99,7 @@ def main():
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
-    
+
     # create lists for action plots
     drone_1_forces = []
     drone_2_forces = []
@@ -209,18 +209,18 @@ def main():
             if args_cli.plot_data:
 
                 # append actions
-                drone_1_forces.append(actions[:,0].cpu().numpy())
-                drone_2_forces.append(actions[:,4].cpu().numpy())
-                drone_3_forces.append(actions[:,8].cpu().numpy())
-                drone_1_x_torque.append(actions[:,1].cpu().numpy())
-                drone_1_y_torque.append(actions[:,2].cpu().numpy())
-                drone_1_z_torque.append(actions[:,3].cpu().numpy())
-                drone_2_x_torque.append(actions[:,5].cpu().numpy())
-                drone_2_y_torque.append(actions[:,6].cpu().numpy())
-                drone_2_z_torque.append(actions[:,7].cpu().numpy())
-                drone_3_x_torque.append(actions[:,9].cpu().numpy())
-                drone_3_y_torque.append(actions[:,10].cpu().numpy())
-                drone_3_z_torque.append(actions[:,11].cpu().numpy())
+                drone_1_forces.append(actions[:, 0].cpu().numpy())
+                drone_2_forces.append(actions[:, 4].cpu().numpy())
+                drone_3_forces.append(actions[:, 8].cpu().numpy())
+                drone_1_x_torque.append(actions[:, 1].cpu().numpy())
+                drone_1_y_torque.append(actions[:, 2].cpu().numpy())
+                drone_1_z_torque.append(actions[:, 3].cpu().numpy())
+                drone_2_x_torque.append(actions[:, 5].cpu().numpy())
+                drone_2_y_torque.append(actions[:, 6].cpu().numpy())
+                drone_2_z_torque.append(actions[:, 7].cpu().numpy())
+                drone_3_x_torque.append(actions[:, 9].cpu().numpy())
+                drone_3_y_torque.append(actions[:, 10].cpu().numpy())
+                drone_3_z_torque.append(actions[:, 11].cpu().numpy())
 
                 # append payload observations
                 payload_pos_x.append(obs[:, 0].cpu().numpy())
@@ -236,7 +236,7 @@ def main():
                 payload_ang_vel_x.append(obs[:, 10].cpu().numpy())
                 payload_ang_vel_y.append(obs[:, 11].cpu().numpy())
                 payload_ang_vel_z.append(obs[:, 12].cpu().numpy())
-                
+
                 # append drone observations
                 drone_1_pos_x.append(obs[:, 13].cpu().numpy())
                 drone_1_pos_y.append(obs[:, 14].cpu().numpy())
@@ -280,7 +280,7 @@ def main():
                 drone_3_ang_vel_x.append(obs[:, 49].cpu().numpy())
                 drone_3_ang_vel_y.append(obs[:, 50].cpu().numpy())
                 drone_3_ang_vel_z.append(obs[:, 51].cpu().numpy())
-                
+
                 # append cable angles
                 cable_angle_1_w.append(obs[:, 92].cpu().numpy())
                 cable_angle_1_x.append(obs[:, 93].cpu().numpy())
@@ -308,7 +308,7 @@ def main():
 
                 if dones | timestep == args_cli.video_length:
                     break
-                
+
         if args_cli.video:
             # timestep += 1
             # Exit the play loop after recording one video
@@ -540,7 +540,7 @@ def main():
     plt.subplot(2, 2, 2)
     plt.plot(payload_quat_error_w, label="w")
     plt.plot(payload_quat_error_x, label="x")
-    plt.plot(payload_quat_error_y, label="y")   
+    plt.plot(payload_quat_error_y, label="y")
     plt.plot(payload_quat_error_z, label="z")
     plt.title("Payload Orientation Error")
     plt.legend()
