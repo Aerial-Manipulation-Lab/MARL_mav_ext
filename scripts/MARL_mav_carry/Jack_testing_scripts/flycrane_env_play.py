@@ -55,7 +55,6 @@ def main():
     # print(env.scene["robot"].root_physx_view.get_masses())
     # simulate physics
     count = 0
-    print("action space", env.action_space)
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
