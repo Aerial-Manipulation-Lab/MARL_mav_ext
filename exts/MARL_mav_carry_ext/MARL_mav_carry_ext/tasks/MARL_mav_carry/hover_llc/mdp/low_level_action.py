@@ -67,8 +67,7 @@ class LowLevelAction(ActionTerm):
         print("body ids", self._body_ids)
 
         self._reference_trajectory = self._reference_trajectory.reshape(
-            self._env.scene.num_envs, len(self._body_ids), 4
-        )  # [force, torques]
+            self._env.scene.num_envs, len(self._body_ids))
         self._forces[..., 2] = self._reference_trajectory[..., 0]  # z force
         self._torques = self._reference_trajectory[..., 1:]  # torques
 
