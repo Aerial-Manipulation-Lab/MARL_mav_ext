@@ -11,7 +11,8 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.math import quat_inv, quat_mul
 
 from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
-
+from .observations import *
+# from MARL_mav_carry_ext.controllers import GeometricController
 
 class LowLevelAction(ActionTerm):
     """Low level action term for the hover task."""
@@ -23,42 +24,53 @@ class LowLevelAction(ActionTerm):
         self._env = env
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
-        self._high_level_action = torch.zeros(
+        self._reference_trajectory = torch.zeros(
             len(self._body_ids) * 3, device=self.device
         )  # now dim is 3 drones * xyz waypoint
         self._forces = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
-        self._torques = torch.zeros_like(self._forces)
-
-    """
-    properties
-    """
+        self._torques = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
+        # self._geometric_controller = GeometricController()
+        """
+        properties
+        """
 
     @property
     def action_dim(self) -> int:
-        return len(self._body_ids) * 4  # for now: z force + 3 torques * 3 drones
+        return len(self._body_ids) # 4 propllers for each drone
 
     @property
     def raw_actions(self) -> torch.Tensor:
-        return self._high_level_action
+        return self._reference_trajectory
 
     @property
     def processed_actions(self) -> torch.Tensor:
-        return [self._forces, self._torques]
+        return self._forces
 
     def process_actions(self, waypoint: torch.Tensor):
-        """Process the waypoints to be used by the low level controller.
+        """Process the waypoints to be used by the geometric low level controller.
         Args:
             waypoint: The waypoints to be processed (will be trajectory later).
         Returns:
-            The processed external forces to be applied to the rotors/falcon bodies."""
-        self._high_level_action = waypoint  # vector with 3 waypoints for 3 drones
+            The processed external forces to be applied to the rotors."""
+        self._reference_trajectory = waypoint  # vector with 3 waypoints for 3 drones
 
-        # low level controller, for now just something random, later agilicious
-        self._high_level_action = self._high_level_action.reshape(
+        # low level controller
+        drone_states: dict = {} # dict of tensors
+        drone_states["pos"] = drone_positions(self._env)
+        drone_states["quat"] = drone_orientations(self._env)
+        drone_states["lin_vel"] = drone_linear_velocities(self._env)
+        drone_states["ang_vel"] = drone_angular_velocities(self._env)
+        drone_states["lin_acc"] = drone_linear_acceleration(self._env)
+        drone_states["ang_acc"] = drone_angular_acceleration(self._env)
+
+        # low_level_command = self._geometric_controller.getCommand(drone_states, self._forces, self._reference_trajectory)
+        print("body ids", self._body_ids)
+
+        self._reference_trajectory = self._reference_trajectory.reshape(
             self._env.scene.num_envs, len(self._body_ids), 4
         )  # [force, torques]
-        self._forces[..., 2] = self._high_level_action[..., 0]  # z force
-        self._torques = self._high_level_action[..., 1:]  # torques
+        self._forces[..., 2] = self._reference_trajectory[..., 0]  # z force
+        self._torques = self._reference_trajectory[..., 1:]  # torques
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
@@ -153,7 +165,5 @@ class LowLevelActionCfg(ActionTermCfg):
     # """Decimation factor for the low level action term."""
     # low_level_actions: ActionTermCfg = MISSING
     # """Low level action configuration."""
-    # low_level_observations: ObservationGroupCfg = MISSING
-    # """Low level observation configuration."""
     debug_vis: bool = False
     """Whether to visualize debug information. Defaults to False."""

@@ -119,6 +119,17 @@ def drone_angular_velocities(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = S
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     return robot.data.body_state_w[:, drone_idx, 10:].view(env.num_envs, -1)
 
+def drone_linear_acceleration(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Drone linear acceleration in world frame."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
+    return robot.data.body_acc_w[:, drone_idx, 0:3].view(env.num_envs, -1)
+
+def drone_angular_acceleration(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Drone angular acceleration in world frame."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
+    return robot.data.body_acc_w[:, drone_idx, 3:].view(env.num_envs, -1)
 
 # relative drone positions
 

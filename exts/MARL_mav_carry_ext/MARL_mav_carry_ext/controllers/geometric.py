@@ -36,8 +36,8 @@ class GeometricController():
     # function to check if all parameters are valid
 
     def getCommand(
-        self, state: torch.tensor, 
-        state_accelerations: torch.tensor, 
+        self, 
+        state: torch.tensor, 
         actions: torch.tensor,
         reference_trajectory: torch.tensor):
         """
@@ -45,13 +45,18 @@ class GeometricController():
         inputs:
         state: current state of the drone given by Isaac sim: [pos, quat, lin_vel, ang_vel]
         state_accelerations: current accelerations of the drone given by Isaac sim: [lin_acc, ang_acc]
-        actions: actions given by the policy, 4 rotor thrusts for each propeller
+        actions: actions given by the policy, 4 rotor thrusts for each propeller * 3 drones
         reference_trajectory: reference trajectory for the drone: [pos, quat, lin_vel, ang_vel, lin_acc, ang_acc, jerk, snap]
         """
+
+        setpoints = reference_trajectory[0] # set point for each of the 3 drones
 
         # update low pass filters: not here for now
 
         body_acceleration = quat_inv(state[:, 3:7]) * (state_accelerations[:, 0:3] - self.gravity)
+        # thrust_f = thrust mapping * actions
 
+        # acceleration command
+        p_ref_cg = setpoint[0:3] - state[] * self.p_offset
     
 
