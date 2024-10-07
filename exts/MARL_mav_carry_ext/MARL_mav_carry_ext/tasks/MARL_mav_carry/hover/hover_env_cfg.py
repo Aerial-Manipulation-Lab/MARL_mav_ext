@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.mdp as mdp
 
 import omni.isaac.lab.sim as sim_utils
@@ -12,11 +14,10 @@ from omni.isaac.lab.managers import RewardTermCfg as RewTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
 from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import ContactSensorCfg, FrameTransformerCfg
+from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
-
 
 # Define the scene configuration
 
@@ -51,37 +52,18 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Commands for the hovering task"""
 
-    # null = mdp.NullCommandCfg()
-    # This is in base frame of the robot, not the world frame TODO: the debugging visualization is in base frame,
-    # but the command is fixed so the reward is calculated correctly with a fixed goal.
-
-    # pose_command = mdp.UniformPoseCommandGlobalCfg(
-    #     asset_name="robot",
-    #     body_name="load_link",
-    #     resampling_time_range=(8.0, 8.0),
-    #     debug_vis=True,
-    #     ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-    #         pos_x=(-1.0, 1.0),
-    #         pos_y=(-1.0, 1.0),
-    #         pos_z=(0.5, 1.5),
-    #         roll=(-0.0, 0.0),
-    #         pitch=(-0.0, 0.0),
-    #         yaw=(-math.pi, math.pi),
-    #     ),
-    # )
-
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(8.0, 8.0),
-        debug_vis=False,  # visualizes always in robot root frame
+        resampling_time_range=(30, 30),  # out of range of max episode length for now
+        debug_vis=False,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-            pos_x=(-0.0, 0.0),
-            pos_y=(-0.0, 0.0),
-            pos_z=(1.0, 1.0),
+            pos_x=(-1.0, 1.0),
+            pos_y=(-1.0, 1.0),
+            pos_z=(1.0, 2.0),
             roll=(-0.0, 0.0),
             pitch=(-0.0, 0.0),
-            yaw=(-0.0, 0.0),
+            yaw=(-math.pi, math.pi),
         ),
     )
 
@@ -96,6 +78,7 @@ class ActionsCfg:
     low_level_action: mdp.LowLevelActionCfg = mdp.LowLevelActionCfg(
         asset_name="robot", body_name="Falcon.*base_link.*", debug_vis=False
     )
+
 
 @configclass
 class ObservationsCfg:
@@ -117,14 +100,13 @@ class ObservationsCfg:
 
         # goal error terms
         payload_positional_error = ObsTerm(func=mdp.payload_positional_error)
-        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)  
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
         drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
         drone_pdist = ObsTerm(func=mdp.drone_pdist_obs)
-        # cable_angle = ObsTerm(func=mdp.cable_angle) #TODO
-        # pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+        cable_angle = ObsTerm(func=mdp.cable_angle)
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations
@@ -141,40 +123,17 @@ class EventCfg:
     Resetting states on resets, disturbances, etc.
     """
 
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (-0.5, 0.5),
-    #             "y": (-0.5, 0.5),
-    #             "z": (1.0, 1.5),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-3.14, 3.14),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (-0.0, 0.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #     },
-    # )
-
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.0, 0.0),
-                "y": (-0.0, 0.0),
-                "z": (1.0, 1.0),
+                "x": (-1.0, 1.0),
+                "y": (-1.0, 1.0),
+                "z": (1.0, 2.0),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
-                "yaw": (0.0, 0.0),
+                "yaw": (-math.pi, math.pi),
             },
             "velocity_range": {
                 "x": (-0.0, 0.0),
@@ -211,45 +170,11 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the hovering task."""
 
-    # termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400000.0)
-    # alive_reward = RewTerm(func=mdp.is_alive, weight=1000.0)
-
-    # reward for tracking the payload command position
-
-    # track_payload_pos = RewTerm(
-    #     func=mdp.track_payload_pos,
-    #     weight=1.0,
-    #     params={"debug_vis": False, "command_name": "pose_command"},
-    # )
-    # track_payload_orientation = RewTerm(
-    #     func=mdp.track_payload_orientation,
-    #     weight=1.0,
-    #     params={"debug_vis": False, "command_name": "pose_command"},
-    # )
-
-    # action_penalty = RewTerm(
-    #     func=mdp.action_penalty,
-    #     weight=1.0,
-    # )
-
-    # separation_reward = RewTerm(func=mdp.separation_reward, weight=1.0)
-    # upright_reward = RewTerm(func=mdp.upright_reward, weight=1.0)
-    # spinnage_reward = RewTerm(func=mdp.spinnage_reward, weight=1.0)
-    # swing_reward = RewTerm(func=mdp.swing_reward, weight=1.0)
-    # action_smoothness_reward = RewTerm(func=mdp.action_smoothness_reward, weight=1.0)
-
-    # falcon_spin = RewTerm(
-    #     func=mdp.spinnage_reward_drones,
-    #     weight=1.0)
-        
-
     omnidrones_reward = RewTerm(
         func=mdp.OmniDrones_reward,
         weight=1.0,
-        params={"debug_vis": False, "command_name": "pose_command"},
+        params={"debug_vis": True, "command_name": "pose_command"},
     )
-
-
 
 
 @configclass
@@ -270,22 +195,22 @@ class TerminationsCfg:
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
     )
-    # end when payload crashes
-    # falcon_base_contact = DoneTerm(
-    # func=mdp.illegal_contact,
-    # params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="load_link"), "threshold": 1.0},
-    # )
-
     # end when angular velocity of payload is too high
     payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
     payload_angle = DoneTerm(
-        func=mdp.payload_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 1.5}
+        func=mdp.payload_angle_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
     # end when angular velocity of falcon is too high
     falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
-    # falcon_angle = DoneTerm(func=mdp.falcon_angle_sine, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.9})
+
+    nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
+    large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
+    angle_drones_cable = DoneTerm(
+        func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0}
+    )
+    bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
 
 
 @configclass
@@ -299,7 +224,7 @@ class CurriculumCfg:
 class HoverEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the hovering task."""
 
-    scene: CarryingSceneCfg = CarryingSceneCfg(num_envs=1, env_spacing=2.5)
+    scene: CarryingSceneCfg = CarryingSceneCfg(num_envs=1, env_spacing=4.0)
     commands: CommandsCfg = CommandsCfg()
     actions: ActionsCfg = ActionsCfg()
     observations: ObservationsCfg = ObservationsCfg()

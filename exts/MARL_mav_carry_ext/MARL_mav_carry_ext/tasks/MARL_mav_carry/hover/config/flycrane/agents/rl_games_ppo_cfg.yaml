@@ -3,7 +3,7 @@ params:
 
   # environment wrapper clipping
   env:
-    clip_actions: 1.0
+    clip_actions: 25.0
 
   algo:
     name: a2c_continuous
@@ -26,7 +26,7 @@ params:
           val: 0
         fixed_sigma: True
     mlp:
-      units: [128, 128, 128]
+      units: [512, 256, 128]
       activation: elu
       d2rl: False
 
@@ -60,7 +60,7 @@ params:
     schedule_type: legacy
     kl_threshold: 0.01
     score_to_win: 20000
-    max_epochs: 300
+    max_epochs: 250000
     save_best_after: 100
     save_frequency: 50
     grad_norm: 1.0
@@ -68,7 +68,7 @@ params:
     truncate_grads: True
     e_clip: 0.2
     horizon_length: 24
-    minibatch_size: 512
+    minibatch_size: 4096
     mini_epochs: 5
     critic_coef: 2.0
     clip_value: True

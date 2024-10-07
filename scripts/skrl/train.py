@@ -82,6 +82,10 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.config.flycrane import agents
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+
+import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab.envs import (
     DirectMARLEnv,
     DirectMARLEnvCfg,
@@ -91,14 +95,8 @@ from omni.isaac.lab.envs import (
 )
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-
-import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
-
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
-
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.config.flycrane import agents
 
 # register the gym environment
 
@@ -117,6 +115,7 @@ gym.register(
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
 agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
+
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
