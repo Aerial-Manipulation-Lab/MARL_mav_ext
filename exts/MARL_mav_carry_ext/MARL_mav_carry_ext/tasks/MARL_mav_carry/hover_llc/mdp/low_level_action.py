@@ -12,7 +12,8 @@ from omni.isaac.lab.utils.math import quat_inv, quat_mul
 
 from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
 from .observations import *
-# from MARL_mav_carry_ext.controllers import GeometricController
+from MARL_mav_carry_ext.splines import minimum_snap_spline, evaluate_trajectory
+from MARL_mav_carry_ext.controllers import GeometricController
 
 class LowLevelAction(ActionTerm):
     """Low level action term for the hover task."""
@@ -24,11 +25,13 @@ class LowLevelAction(ActionTerm):
         self._env = env
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
-        self._reference_trajectory = torch.zeros(
-            len(self._body_ids) * 3, device=self.device
-        )  # now dim is 3 drones * xyz waypoint
         self._forces = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
         self._torques = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
+        self._num_drones = cfg.num_drones
+        self._waypoint_dim = cfg.waypoint_dim # pos, vel, acc, att
+        self._num_waypoints = cfg.num_waypoints
+        self._times = torch.arange(self._num_waypoints).float()
+        self._waypoints = torch.zeros(env.scene.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
         # self._geometric_controller = GeometricController()
         """
         properties
@@ -36,44 +39,57 @@ class LowLevelAction(ActionTerm):
 
     @property
     def action_dim(self) -> int:
-        return len(self._body_ids) # 4 propllers for each drone
-
+        return self._num_drones * self._waypoint_dim * self._num_waypoints
     @property
     def raw_actions(self) -> torch.Tensor:
-        return self._reference_trajectory
+        return self._waypoints
 
     @property
     def processed_actions(self) -> torch.Tensor:
         return self._forces
 
-    def process_actions(self, waypoint: torch.Tensor):
+    def process_actions(self, waypoints: torch.Tensor):
         """Process the waypoints to be used by the geometric low level controller.
         Args:
-            waypoint: The waypoints to be processed (will be trajectory later).
+            waypoint: The waypoints to be processed.
         Returns:
             The processed external forces to be applied to the rotors."""
-        self._reference_trajectory = waypoint  # vector with 3 waypoints for 3 drones
+        self._waypoints = waypoints
+        eval_time = 0.1 # evaluate the spline at this timestamp
+        thrusts = []
+        # create spline from waypoints for each drone
+        for i in range(self._num_drones):
+            drone_waypoints = waypoints[:, i * self._waypoint_dim * self._num_waypoints : (i + 1) * self._waypoint_dim * self._num_waypoints][0]
+            # generate spline
+            coeffs, orientations = minimum_snap_spline(drone_waypoints, torch.arange(self._num_waypoints).float())
+            position, velocity, acceleration, jerk, snap, orientation, angular_velocity = evaluate_trajectory(coeffs, orientations, self._times, eval_time)
+            drone_setpoint: dict = {}
+            drone_setpoint["pos"] = position
+            drone_setpoint["quat"] = orientation
+            drone_setpoint["lin_vel"] = velocity
+            drone_setpoint["ang_vel"] = angular_velocity
+            drone_setpoint["lin_acc"] = acceleration
+            drone_setpoint["jerk"] = jerk
+            drone_setpoint["snap"] = snap
+            
+            # current drone states # TODO: exchange this with observations later, not true states
+            drone_states: dict = {} # dict of tensors # TODO: remove [0] to generalize over all parallel envs
+            drone_states["pos"] = drone_positions(self._env)[0][i*3: i*3+3]
+            drone_states["quat"] = drone_orientations(self._env)[0][i*4: i*4+4]
+            drone_states["lin_vel"] = drone_linear_velocities(self._env)[0][i*3: i*3+3]
+            drone_states["ang_vel"] = drone_angular_velocities(self._env)[0][i*3: i*3+3]
+            drone_states["lin_acc"] = drone_linear_acceleration(self._env)[0][i*3: i*3+3]
+            drone_states["ang_acc"] = drone_angular_acceleration(self._env)[0][i*3: i*3+3]
 
-        # low level controller
-        drone_states: dict = {} # dict of tensors
-        drone_states["pos"] = drone_positions(self._env)
-        drone_states["quat"] = drone_orientations(self._env)
-        drone_states["lin_vel"] = drone_linear_velocities(self._env)
-        drone_states["ang_vel"] = drone_angular_velocities(self._env)
-        drone_states["lin_acc"] = drone_linear_acceleration(self._env)
-        drone_states["ang_acc"] = drone_angular_acceleration(self._env)
-
-        # low_level_command = self._geometric_controller.getCommand(drone_states, self._forces, self._reference_trajectory)
-        print("body ids", self._body_ids)
-
-        self._reference_trajectory = self._reference_trajectory.reshape(
-            self._env.scene.num_envs, len(self._body_ids))
-        self._forces[..., 2] = self._reference_trajectory[..., 0]  # z force
-        self._torques = self._reference_trajectory[..., 1:]  # torques
+            # drone_thrusts = self._geometric_controller.getCommand(drone_states, self._forces[i*4:i*4+4], drone_setpoint)
+            drone_thrusts = torch.tensor([1.0, 1.0, 1.0, 1.0]) # this is a dummy #TODO: remove
+            thrusts.append(drone_thrusts)
+        
+        self._forces[..., 2] = torch.cat(thrusts, dim=0)
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
-        self._forces = torch.clamp(self._forces, 0.0, 25.0)
+        self._forces = torch.clamp(self._forces, 0.0, 25.0) # TODO: change in SKRL to use sigmoid activation on last layer
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
 
     """
@@ -160,6 +176,12 @@ class LowLevelActionCfg(ActionTermCfg):
     """Name of the asset in the scene for which the commands are generated."""
     body_name: str = MISSING
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
+    num_drones: int = 3
+    """Number of drones."""
+    waypoint_dim: int = 13
+    """Dimension of the waypoints: [pos, vel, acc, att]."""
+    num_waypoints: int = 4
+    """Number of waypoints in the trajectory."""
     # low_level_decimation: int = 4
     # """Decimation factor for the low level action term."""
     # low_level_actions: ActionTermCfg = MISSING
