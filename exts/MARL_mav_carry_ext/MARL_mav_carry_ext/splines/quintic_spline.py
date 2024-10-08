@@ -1,7 +1,8 @@
 import torch
+from omni.isaac.lab.utils.math import quat_inv, quat_mul
 
 # Quintic polynomial trajectory for a single segment (3D)
-def quintic_trajectory_3d(start, end, t_start, t_end):
+def quintic_trajectory(start, end, t_start, t_end):
     T = t_end - t_start
     A = torch.tensor([
         [0, 0, 0, 0, 0, 1],             # p(t0)
@@ -12,37 +13,36 @@ def quintic_trajectory_3d(start, end, t_start, t_end):
         [20*T**3, 12*T**2, 6*T, 2, 0, 0]     # a(t1)
     ], dtype=torch.float32)
     
-    # Each axis x, y, z has its own polynomial
+    # Position polynomials
     b_x = torch.tensor([start['pos'][0], end['pos'][0], start['vel'][0], end['vel'][0], start['acc'][0], end['acc'][0]], dtype=torch.float32)
     b_y = torch.tensor([start['pos'][1], end['pos'][1], start['vel'][1], end['vel'][1], start['acc'][1], end['acc'][1]], dtype=torch.float32)
     b_z = torch.tensor([start['pos'][2], end['pos'][2], start['vel'][2], end['vel'][2], start['acc'][2], end['acc'][2]], dtype=torch.float32)
     
-    # Solve for polynomial coefficients for each axis
     coeffs_x = torch.linalg.solve(A, b_x)
     coeffs_y = torch.linalg.solve(A, b_y)
     coeffs_z = torch.linalg.solve(A, b_z)
-    
+
     return coeffs_x, coeffs_y, coeffs_z
 
-# Generate a minimum snap trajectory for multiple 3D waypoints
-def minimum_snap_spline_3d(waypoints, times):
-    n_points = len(waypoints)
-    coeffs_list = []
-    
-    # Loop through each pair of waypoints to create a segment
-    for i in range(n_points - 1):
-        start = {'pos': waypoints[i, 0], 'vel': waypoints[i, 1], 'acc': waypoints[i, 2]}  # Assuming zero velocity/acceleration
-        end = {'pos': waypoints[i+1, 0], 'vel': waypoints[i+1, 1], 'acc': waypoints[i+1, 2]}
-        t_start = times[i]
-        t_end = times[i+1]
-        
-        coeffs_x, coeffs_y, coeffs_z = quintic_trajectory_3d(start, end, t_start, t_end)
-        coeffs_list.append((coeffs_x, coeffs_y, coeffs_z))
-    
-    return coeffs_list
+# Spherical linear interpolation (SLERP) for quaternions
+def slerp(q0, q1, t):
+    dot = torch.dot(q0, q1)
+    theta = torch.acos(dot)
+    sin_theta = torch.sin(theta)
+    alpha = torch.sin((1 - t) * theta) / sin_theta
+    beta = torch.sin(t * theta) / sin_theta
+    return alpha * q0 + beta * q1
+
+# Calculate angular velocity from quaternions
+def quaternion_to_angular_velocity(q0, q1, delta_t):
+    q0_inv = quat_inv(q0)
+    q_diff = quat_mul(q0_inv, q1)
+    angle = 2 * torch.acos(q_diff[0])
+    axis = q_diff[1:] / torch.sin(angle / 2)
+    return angle / delta_t * axis
 
 # Compute derivatives of the polynomial (velocity, acceleration, jerk, snap)
-def compute_derivatives_3d(coeffs, power):
+def compute_derivatives(coeffs, power):
     if power == 1:
         return coeffs[:-1] * torch.tensor([5, 4, 3, 2, 1], dtype=torch.float32)
     elif power == 2:
@@ -54,8 +54,36 @@ def compute_derivatives_3d(coeffs, power):
     else:
         return coeffs
 
-# Evaluate the trajectory and its derivatives (position, velocity, acceleration, jerk, snap) at a specific time
-def evaluate_trajectory_3d(coeffs_list, times, t_eval):
+# Generate a minimum snap trajectory for multiple 3D waypoints with orientation
+def minimum_snap_spline(waypoints, times):
+
+    n_points = len(times)
+    waypoint_id_increment = len(waypoints) // n_points
+    coeffs_list = []
+    orientations = []
+
+    for i in range(n_points - 1):
+        curr_point_id = i * waypoint_id_increment
+        start = {'pos': waypoints[curr_point_id:curr_point_id+3], 'vel': waypoints[curr_point_id + 3: curr_point_id + 6],
+                  'acc': waypoints[curr_point_id + 6: curr_point_id + 9], 'orientation': waypoints[curr_point_id + 9: curr_point_id + 13]}
+        next_point_id = (i + 1) * waypoint_id_increment
+        end = {'pos': waypoints[next_point_id:next_point_id+3], 'vel': waypoints[next_point_id + 3: next_point_id + 6],
+                'acc': waypoints[next_point_id + 6: next_point_id + 9], 'orientation': waypoints[next_point_id + 9: next_point_id + 13]}
+        t_start = times[i]
+        t_end = times[i+1]
+        
+        # Calculate the position trajectory (quintic polynomial)
+        coeffs_x, coeffs_y, coeffs_z = quintic_trajectory(start, end, t_start, t_end)
+        coeffs_list.append((coeffs_x, coeffs_y, coeffs_z))
+
+        # SLERP for orientation over this segment
+        orientation_traj = (start['orientation'], end['orientation'])
+        orientations.append(orientation_traj)
+    
+    return coeffs_list, orientations
+
+# Compute trajectory, SLERP orientation, and angular velocity at time t_eval
+def evaluate_trajectory(coeffs_list, orientations, times, t_eval):
     for i in range(len(times) - 1):
         t_start = times[i]
         t_end = times[i+1]
@@ -64,36 +92,45 @@ def evaluate_trajectory_3d(coeffs_list, times, t_eval):
             T = t_eval - t_start
             coeffs_x, coeffs_y, coeffs_z = coeffs_list[i]
             
-            # Compute position
+            # Compute position (5th order polynomial)
             position_x = torch.sum(coeffs_x * torch.tensor([T**5, T**4, T**3, T**2, T, 1], dtype=torch.float32))
             position_y = torch.sum(coeffs_y * torch.tensor([T**5, T**4, T**3, T**2, T, 1], dtype=torch.float32))
             position_z = torch.sum(coeffs_z * torch.tensor([T**5, T**4, T**3, T**2, T, 1], dtype=torch.float32))
             position = torch.tensor([position_x, position_y, position_z], dtype=torch.float32)
             
             # Compute velocity
-            velocity_x = torch.sum(compute_derivatives_3d(coeffs_x, 1) * torch.tensor([T**4, T**3, T**2, T, 1], dtype=torch.float32))
-            velocity_y = torch.sum(compute_derivatives_3d(coeffs_y, 1) * torch.tensor([T**4, T**3, T**2, T, 1], dtype=torch.float32))
-            velocity_z = torch.sum(compute_derivatives_3d(coeffs_z, 1) * torch.tensor([T**4, T**3, T**2, T, 1], dtype=torch.float32))
+            velocity_x = torch.sum(compute_derivatives(coeffs_x, 1) * torch.tensor([T**4, T**3, T**2, T, 1], dtype=torch.float32))
+            velocity_y = torch.sum(compute_derivatives(coeffs_y, 1) * torch.tensor([T**4, T**3, T**2, T, 1], dtype=torch.float32))
+            velocity_z = torch.sum(compute_derivatives(coeffs_z, 1) * torch.tensor([T**4, T**3, T**2, T, 1], dtype=torch.float32))
             velocity = torch.tensor([velocity_x, velocity_y, velocity_z], dtype=torch.float32)
             
             # Compute acceleration
-            acceleration_x = torch.sum(compute_derivatives_3d(coeffs_x, 2) * torch.tensor([T**3, T**2, T, 1], dtype=torch.float32))
-            acceleration_y = torch.sum(compute_derivatives_3d(coeffs_y, 2) * torch.tensor([T**3, T**2, T, 1], dtype=torch.float32))
-            acceleration_z = torch.sum(compute_derivatives_3d(coeffs_z, 2) * torch.tensor([T**3, T**2, T, 1], dtype=torch.float32))
+            acceleration_x = torch.sum(compute_derivatives(coeffs_x, 2) * torch.tensor([T**3, T**2, T, 1], dtype=torch.float32))
+            acceleration_y = torch.sum(compute_derivatives(coeffs_y, 2) * torch.tensor([T**3, T**2, T, 1], dtype=torch.float32))
+            acceleration_z = torch.sum(compute_derivatives(coeffs_z, 2) * torch.tensor([T**3, T**2, T, 1], dtype=torch.float32))
             acceleration = torch.tensor([acceleration_x, acceleration_y, acceleration_z], dtype=torch.float32)
             
             # Compute jerk
-            jerk_x = torch.sum(compute_derivatives_3d(coeffs_x, 3) * torch.tensor([T**2, T, 1], dtype=torch.float32))
-            jerk_y = torch.sum(compute_derivatives_3d(coeffs_y, 3) * torch.tensor([T**2, T, 1], dtype=torch.float32))
-            jerk_z = torch.sum(compute_derivatives_3d(coeffs_z, 3) * torch.tensor([T**2, T, 1], dtype=torch.float32))
+            jerk_x = torch.sum(compute_derivatives(coeffs_x, 3) * torch.tensor([T**2, T, 1], dtype=torch.float32))
+            jerk_y = torch.sum(compute_derivatives(coeffs_y, 3) * torch.tensor([T**2, T, 1], dtype=torch.float32))
+            jerk_z = torch.sum(compute_derivatives(coeffs_z, 3) * torch.tensor([T**2, T, 1], dtype=torch.float32))
             jerk = torch.tensor([jerk_x, jerk_y, jerk_z], dtype=torch.float32)
             
             # Compute snap
-            snap_x = torch.sum(compute_derivatives_3d(coeffs_x, 4) * torch.tensor([T, 1], dtype=torch.float32))
-            snap_y = torch.sum(compute_derivatives_3d(coeffs_y, 4) * torch.tensor([T, 1], dtype=torch.float32))
-            snap_z = torch.sum(compute_derivatives_3d(coeffs_z, 4) * torch.tensor([T, 1], dtype=torch.float32))
+            snap_x = torch.sum(compute_derivatives(coeffs_x, 4) * torch.tensor([T, 1], dtype=torch.float32))
+            snap_y = torch.sum(compute_derivatives(coeffs_y, 4) * torch.tensor([T, 1], dtype=torch.float32))
+            snap_z = torch.sum(compute_derivatives(coeffs_z, 4) * torch.tensor([T, 1], dtype=torch.float32))
             snap = torch.tensor([snap_x, snap_y, snap_z], dtype=torch.float32)
             
-            return position, velocity, acceleration, jerk, snap
+            # SLERP for orientation
+            q0, q1 = orientations[i]
+            t_norm = (t_eval - t_start) / (t_end - t_start)
+            orientation = slerp(q0, q1, t_norm)
+
+            # Angular velocity (finite difference approximation)
+            delta_t = t_end - t_start
+            angular_velocity = quaternion_to_angular_velocity(q0, q1, delta_t)
+            
+            return position, velocity, acceleration, jerk, snap, orientation, angular_velocity
     
     return None

@@ -33,11 +33,11 @@ simulation_app = app_launcher.app
 from gymnasium.spaces import Box
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
-from MARL_mav_carry_ext.splines import minimum_snap_spline_3d, evaluate_trajectory_3d
+from MARL_mav_carry_ext.splines import minimum_snap_spline, evaluate_trajectory
 
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 import matplotlib.pyplot as plt
-
+import math
 
 def main():
     """Main function."""
@@ -57,26 +57,29 @@ def main():
     # print(env.scene["robot"].root_physx_view.get_masses())
     # simulate physics
     # Example usage: define 3D waypoints and corresponding timestamps
-    waypoints_3d = torch.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, # point 1
-                                 5, 5, 5, 1, 1, 1, 1, 1, 1, # point 2
-                                 10, 0, 10, 1, 1, 1, 1, 1, 1, # point 3
-                                 15, -5, 5, 0, 0, 0, 0, 0, 0], dtype=torch.float32) # point 4 # Positions (x, y, z) at each time point
+    waypoints_3d = torch.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,# point 1
+                                 5, 5, 5, 1, -1, 1, 1, -5, 1, 0.0007963, 0, 0, 1, # point 2
+                                 10, 0, 10, 1, -1, -1, 1, -1, -1, 0.4999998, -0.4996018, 0.4999998, 0.5003982, # point 3
+                                 15, -5, 5, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], dtype=torch.float32) # point 4 # Positions (x, y, z) at each time point
     times = torch.tensor([0, 2, 4, 6], dtype=torch.float32)  # Timestamps
 
     # Generate the minimum snap spline
-
-    coeffs_list_3d = minimum_snap_spline_3d(waypoints_3d.view(4, 3, 3), times)
+    coeffs_list_3d, orientations_traj = minimum_snap_spline(waypoints_3d, times)
 
     # Evaluate the trajectory at different time points
     positions = []
     velocities = []
     accelerations = []
+    orientations = []
+    angular_rates = []
     eval_times = torch.linspace(0, 6, 100)
     for t_eval in eval_times:
-        position_at_t, velocity_at_t, acceleration_at_t, jerk_at_t, snap_at_t = evaluate_trajectory_3d(coeffs_list_3d, times, t_eval)
-        positions.append(position_at_t)
-        velocities.append(velocity_at_t)
-        accelerations.append(acceleration_at_t)
+        position, velocity, acceleration, jerk, snap, orientation, angular_velocity = evaluate_trajectory(coeffs_list_3d, orientations_traj, times, t_eval)
+        positions.append(position)
+        velocities.append(velocity)
+        accelerations.append(acceleration)
+        orientations.append(orientation)
+        angular_rates.append(angular_velocity)
 
     positions = torch.stack(positions, dim=0)
     fig = plt.figure()
@@ -100,6 +103,24 @@ def main():
     plt.xlabel('Time')
     plt.ylabel('Accelerations')
     plt.title('Accelerations vs Time')
+    plt.legend(['X', 'Y', 'Z'])
+
+    # plot orientation against time
+    orientations = torch.stack(orientations, dim=0)
+    plt.figure()
+    plt.plot(eval_times, orientations)
+    plt.xlabel('Time')
+    plt.ylabel('Orientation')
+    plt.title('Orientation vs Time')
+    plt.legend(['W','X', 'Y', 'Z'])
+
+    # plot angular rates against time
+    angular_rates = torch.stack(angular_rates, dim=0)
+    plt.figure()
+    plt.plot(eval_times, angular_rates) 
+    plt.xlabel('Time')
+    plt.ylabel('Angular Rates')
+    plt.title('Angular Rates vs Time')
     plt.legend(['X', 'Y', 'Z'])
 
     plt.show()
