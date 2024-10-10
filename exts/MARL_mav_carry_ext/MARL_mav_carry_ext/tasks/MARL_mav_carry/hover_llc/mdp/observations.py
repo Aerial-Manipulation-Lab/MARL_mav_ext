@@ -47,6 +47,22 @@ def payload_angular_velocities(
     payload_idx = robot.find_bodies("load_link")[0]
     return robot.data.body_state_w[:, payload_idx, 10:].view(env.num_envs, -1)
 
+def payload_linear_acceleration(
+    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload linear acceleration in world frame."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_idx = robot.find_bodies("load_link")[0]
+    return robot.data.body_acc_w[:, payload_idx, 0:3].view(env.num_envs, -1)
+
+def payload_angular_acceleration(
+    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload angular acceleration in world frame."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_idx = robot.find_bodies("load_link")[0]
+    return robot.data.body_acc_w[:, payload_idx, 3:].view(env.num_envs, -1)
+
 
 def payload_positional_error(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload position error."""

@@ -90,13 +90,17 @@ class ObservationsCfg:
 
         # payload and drone states
         payload_pose = ObsTerm(func=mdp.payload_position)  # can add noise later
-        payload_orientation = ObsTerm(func=mdp.payload_orientation)  # can add noise later
-        payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)  # can add noise later
-        payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)  # can add noise later
-        drone_positions = ObsTerm(func=mdp.drone_positions)  # can add noise later
-        drone_orientations = ObsTerm(func=mdp.drone_orientations)  # can add noise later
-        drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)  # can add noise later
-        drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)  # can add noise later
+        payload_orientation = ObsTerm(func=mdp.payload_orientation) 
+        payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities) 
+        payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)  
+        payload_linear_accelerations = ObsTerm(func=mdp.payload_linear_acceleration)
+        payload_angular_accelerations = ObsTerm(func=mdp.payload_angular_acceleration)
+        drone_positions = ObsTerm(func=mdp.drone_positions)  
+        drone_orientations = ObsTerm(func=mdp.drone_orientations)  
+        drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)  
+        drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)
+        drone_linear_accelerations = ObsTerm(func=mdp.drone_linear_acceleration)
+        drone_angular_accelerations = ObsTerm(func=mdp.drone_angular_acceleration)
 
         # goal error terms
         payload_positional_error = ObsTerm(func=mdp.payload_positional_error)

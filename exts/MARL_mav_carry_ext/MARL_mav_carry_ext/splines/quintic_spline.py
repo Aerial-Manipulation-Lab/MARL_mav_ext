@@ -37,21 +37,20 @@ def compute_derivatives(coeffs, power):
     else:
         return coeffs
 
-# Generate a minimum snap trajectory for multiple 3D waypoints with orientation
+# Generate a minimum snap trajectory for multiple waypoints
 def minimum_snap_spline(waypoints, times):
 
     n_points = len(times)
     waypoint_id_increment = len(waypoints) // n_points
     coeffs_list = []
-    orientations = []
 
     for i in range(n_points - 1):
         curr_point_id = i * waypoint_id_increment
         start = {'pos': waypoints[curr_point_id:curr_point_id+3], 'vel': waypoints[curr_point_id + 3: curr_point_id + 6],
-                  'acc': waypoints[curr_point_id + 6: curr_point_id + 9], 'orientation': waypoints[curr_point_id + 9: curr_point_id + 13]}
+                  'acc': waypoints[curr_point_id + 6: curr_point_id + 9], 'yaw': waypoints[curr_point_id + 9]}
         next_point_id = (i + 1) * waypoint_id_increment
         end = {'pos': waypoints[next_point_id:next_point_id+3], 'vel': waypoints[next_point_id + 3: next_point_id + 6],
-                'acc': waypoints[next_point_id + 6: next_point_id + 9], 'orientation': waypoints[next_point_id + 9: next_point_id + 13]}
+                'acc': waypoints[next_point_id + 6: next_point_id + 9], 'yaw': waypoints[next_point_id + 9]}
         t_start = times[i]
         t_end = times[i+1]
         
@@ -59,14 +58,10 @@ def minimum_snap_spline(waypoints, times):
         coeffs_x, coeffs_y, coeffs_z = quintic_trajectory(start, end, t_start, t_end)
         coeffs_list.append((coeffs_x, coeffs_y, coeffs_z))
 
-        # SLERP for orientation over this segment
-        orientation_traj = (start['orientation'], end['orientation'])
-        orientations.append(orientation_traj)
-    
-    return coeffs_list, orientations
+    return coeffs_list
 
-# Compute trajectory, SLERP orientation, and angular velocity at time t_eval
-def evaluate_trajectory(coeffs_list, orientations, times, t_eval):
+# Compute trajectory at time t_eval
+def evaluate_trajectory(coeffs_list, times, t_eval):
     for i in range(len(times) - 1):
         t_start = times[i]
         t_end = times[i+1]
@@ -105,8 +100,7 @@ def evaluate_trajectory(coeffs_list, orientations, times, t_eval):
             snap_z = torch.sum(compute_derivatives(coeffs_z, 4) * torch.tensor([T, 1], dtype=torch.float32))
             snap = torch.tensor([snap_x, snap_y, snap_z], dtype=torch.float32, device=torch.device('cuda'))
             
-            # Angular velocity (finite difference approximation)
-            delta_t = t_end - t_start
-            
             return position, velocity, acceleration, jerk, snap
+        
+        raise ValueError("Time t_eval is out of range of the trajectory")
     return None

@@ -67,17 +67,15 @@ def main():
     times = torch.tensor([0, .25, .5, .75], dtype=torch.float32) * time_horizon # Timestamps
 
     # Generate the minimum snap spline
-    coeffs_list_3d, orientations_traj = minimum_snap_spline(waypoints_3d, times)
+    coeffs_list_3d = minimum_snap_spline(waypoints_3d, times)
 
     # Evaluate the trajectory at different time points
     positions = []
     velocities = []
     accelerations = []
-    orientations = []
-    angular_rates = []
     eval_times = torch.linspace(0, 0.75 * time_horizon, 100)
     for t_eval in eval_times:
-        position, velocity, acceleration, jerk, snap = evaluate_trajectory(coeffs_list_3d, orientations_traj, times, t_eval)
+        position, velocity, acceleration, jerk, snap = evaluate_trajectory(coeffs_list_3d, times * time_horizon, t_eval)
         positions.append(position.cpu())
         velocities.append(velocity.cpu())
         accelerations.append(acceleration.cpu())
@@ -106,7 +104,7 @@ def main():
     plt.title('Accelerations vs Time')
     plt.legend(['X', 'Y', 'Z'])
 
-    plt.show()
+    # plt.show()
 
     count = 0
     while simulation_app.is_running():
@@ -117,8 +115,6 @@ def main():
                 env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
-                # print("obs manager", env.observation_manager.compute())
-            # sample random actions
             waypoints_3d = torch.tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,# point 1
                                  5, 5, 5, 1, -1, 1, 1, -5, 1, 0.0007963, 0, 0, 1, # point 2
                                  10, 0, 10, 1, -1, -1, 1, -1, -1, 0.4999998, -0.4996018, 0.4999998, 0.5003982, # point 3
@@ -131,8 +127,9 @@ def main():
                                  5, 5, 5, 1, -1, 1, 1, -5, 1, 0.0007963, 0, 0, 1, # point 2
                                  10, 0, 10, 1, -1, -1, 1, -1, -1, 0.4999998, -0.4996018, 0.4999998, 0.5003982, # point 3
                                  15, -5, 5, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]], dtype=torch.float32) # point 4 # Positions (x, y, z) at each time point
+            hover_waypoint = torch.zeros_like(waypoints_3d)
             # step the environment
-            obs, rew, terminated, truncated, info = env.step(waypoints_3d)
+            obs, rew, terminated, truncated, info = env.step(hover_waypoint)
             # print current orientation of pole
             # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
             # update counter
