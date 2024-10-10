@@ -24,23 +24,6 @@ def quintic_trajectory(start, end, t_start, t_end):
 
     return coeffs_x, coeffs_y, coeffs_z
 
-# Spherical linear interpolation (SLERP) for quaternions
-def slerp(q0, q1, t):
-    dot = torch.dot(q0, q1)
-    theta = torch.acos(dot)
-    sin_theta = torch.sin(theta)
-    alpha = torch.sin((1 - t) * theta) / sin_theta
-    beta = torch.sin(t * theta) / sin_theta
-    return alpha * q0 + beta * q1
-
-# Calculate angular velocity from quaternions
-def quaternion_to_angular_velocity(q0, q1, delta_t):
-    q0_inv = quat_inv(q0)
-    q_diff = quat_mul(q0_inv, q1)
-    angle = 2 * torch.acos(q_diff[0])
-    axis = q_diff[1:] / torch.sin(angle / 2)
-    return angle / delta_t * axis
-
 # Compute derivatives of the polynomial (velocity, acceleration, jerk, snap)
 def compute_derivatives(coeffs, power):
     if power == 1:
@@ -122,15 +105,8 @@ def evaluate_trajectory(coeffs_list, orientations, times, t_eval):
             snap_z = torch.sum(compute_derivatives(coeffs_z, 4) * torch.tensor([T, 1], dtype=torch.float32))
             snap = torch.tensor([snap_x, snap_y, snap_z], dtype=torch.float32, device=torch.device('cuda'))
             
-            # SLERP for orientation
-            q0, q1 = orientations[i]
-            t_norm = (t_eval - t_start) / (t_end - t_start)
-            orientation = slerp(q0, q1, t_norm)
-
             # Angular velocity (finite difference approximation)
             delta_t = t_end - t_start
-            angular_velocity = quaternion_to_angular_velocity(q0, q1, delta_t)
             
-            return position, velocity, acceleration, jerk, snap, orientation, angular_velocity
-    
+            return position, velocity, acceleration, jerk, snap
     return None
