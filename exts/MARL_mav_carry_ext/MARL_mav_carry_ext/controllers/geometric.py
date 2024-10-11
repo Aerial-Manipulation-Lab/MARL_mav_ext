@@ -1,5 +1,5 @@
 import torch 
-from omni.isaac.lab.utils.math import quat_inv, quat_mul, quat_rotate, quat_from_matrix, matrix_from_quat
+from omni.isaac.lab.utils.math import quat_inv, quat_mul, quat_rotate, quat_rotate_inverse, quat_from_matrix, matrix_from_quat
 from torch.nn.functional import normalize
 from .utils import LowPassFilter
 
@@ -44,7 +44,7 @@ class GeometricController():
         self.kd_acc = torch.tensor([4.0, 4.0, 6.0]).to(self.device)
         self.ki_acc = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
 
-        self.kp_rate = torch.tensor([35.0, 35.0, 8.0]).to(self.device)
+        self.kp_rate = torch.tensor([25.0, 25.0, 8.0]).to(self.device)
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
         
@@ -102,11 +102,10 @@ class GeometricController():
  
         # angular velocity command
         # retrieve the current body axes of the drone
-        curent_rot_matrix = matrix_from_quat(state["quat"].unsqueeze(0))[0]
-        x_b = curent_rot_matrix[:, 0]
-        y_b = curent_rot_matrix[:, 1]
-        z_b = curent_rot_matrix[:, 2]
-
+        current_rot_matrix = matrix_from_quat(state["quat"].unsqueeze(0))[0]
+        x_b = current_rot_matrix[:, 0]
+        y_b = current_rot_matrix[:, 1]
+        z_b = current_rot_matrix[:, 2]
         z_i = torch.tensor([0.0, 0.0, 1.0], device=self.device)
 
         T_dot = self.falcon_mass * setpoint["jerk"].dot(z_b)
@@ -119,7 +118,7 @@ class GeometricController():
         T_ddot = self.falcon_mass * setpoint["snap"].dot(z_b) + self.falcon_mass * h_omega.dot(setpoint["jerk"])
         if current_collective_thrust_magnitude > 0.01: # avoid division by zero
             h_alpha = (self.falcon_mass/current_collective_thrust_magnitude) * setpoint["snap"] - (torch.linalg.cross(state["ang_vel"],h_omega) \
-                + (2*T_dot/current_collective_thrust_magnitude) * h_omega + T_ddot/current_collective_thrust_magnitude * z_b)
+                + (2*T_dot/current_collective_thrust_magnitude) * h_omega + (T_ddot/current_collective_thrust_magnitude) * z_b)
         else:
             h_alpha = (self.falcon_mass) * setpoint["snap"] - (torch.linalg.cross(state["ang_vel"],h_omega) \
                 + (2*T_dot) * h_omega + T_ddot * z_b)
@@ -136,11 +135,12 @@ class GeometricController():
         q_e_red = norm_factor * torch.tensor([q_e_w*q_e_x - q_e_y*q_e_z, q_e_w*q_e_y + q_e_x*q_e_z, 0.0], device=self.device)
         q_e_yaw = norm_factor * torch.tensor([0.0, 0.0, q_e_z], device=self.device)
 
-        alpha_b_des = self.kp_att_xy * q_e_red + self.kp_att_z * q_e_yaw + self.kp_rate * (omega_b_ref - state["ang_vel"]) + alpha_b_ref
+        ang_vel_body = quat_rotate_inverse(state["quat"].unsqueeze(0), state["ang_vel"].unsqueeze(0))[0]
+        alpha_b_des = self.kp_att_xy * q_e_red + self.kp_att_z * q_e_yaw + self.kp_rate * (omega_b_ref - ang_vel_body) + alpha_b_ref
 
         # calculate the thrust per propellor
-        # intertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
-        product = self.inertia_mat.mv(alpha_b_des) + torch.linalg.cross(state["ang_vel"],(self.inertia_mat.mv(state["ang_vel"])))
+        # inertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
+        product = self.inertia_mat.mv(alpha_b_des) + torch.linalg.cross(ang_vel_body,(self.inertia_mat.mv(ang_vel_body)))
         coll_thrust_tensor = torch.tensor([[collective_thrust_des_magntiude]], device=self.device)
         rh_side = torch.cat((coll_thrust_tensor[0], product), dim=0)
         thrusts = torch.inverse(self.G_1).mv(rh_side)
