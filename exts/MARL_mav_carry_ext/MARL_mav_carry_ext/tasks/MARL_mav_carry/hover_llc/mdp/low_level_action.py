@@ -31,7 +31,7 @@ class LowLevelAction(ActionTerm):
         self._waypoint_dim = cfg.waypoint_dim # pos, vel, acc, att
         self._num_waypoints = cfg.num_waypoints
         self._times = (torch.arange(self._num_waypoints + 1).float())/self._num_waypoints # normalized time vector
-        self._time_horizon = 8 # sec
+        self._time_horizon = cfg.time_horizon # sec
         self._waypoints = torch.zeros(env.scene.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
         self._geometric_controller = GeometricController()
         """
@@ -56,7 +56,7 @@ class LowLevelAction(ActionTerm):
         Returns:
             The processed external forces to be applied to the rotors."""
         self._waypoints = waypoints
-        eval_time = 0.01 * self._time_horizon # evaluate the spline at this timestamp
+        eval_time = 1.0 * self._time_horizon # evaluate the spline at this timestamp
         thrusts = []
         observations = self._env.observation_manager.compute_group("policy")
         # TODO: remove [0] to generalize over all parallel envs
@@ -77,25 +77,35 @@ class LowLevelAction(ActionTerm):
             drone_states["lin_acc"] = drone_linear_accelerations[i*3: i*3+3]
             drone_states["ang_acc"] = drone_angular_accelerations[i*3: i*3+3]
             _, _, current_yaw = euler_xyz_from_quat(yaw_quat(drone_states["quat"].unsqueeze(0))) # TODO: remove unsqueeze
-            first_waypoint = torch.cat((drone_states["pos"], drone_states["lin_vel"], drone_states["lin_acc"], current_yaw))
+            # first_waypoint = torch.cat((drone_states["pos"], drone_states["lin_vel"], drone_states["lin_acc"], current_yaw))
             # concat first state to start of generated waypoints
-            drone_waypoints = torch.cat((first_waypoint, drone_waypoints))
+            # drone_waypoints = torch.cat((first_waypoint, drone_waypoints))
             # generate spline
-            coeffs = minimum_snap_spline(drone_waypoints, torch.arange(self._num_waypoints).float())
+            # coeffs = minimum_snap_spline(drone_waypoints, self._times * self._time_horizon)
             # get individual rotor thrusts from geometric controller
-            position, velocity, acceleration, jerk, snap = evaluate_trajectory(coeffs, self._times * self._time_horizon, eval_time)
-            drone_setpoint: dict = {}
-            drone_setpoint["pos"] = position
-            drone_setpoint["lin_vel"] = velocity
-            drone_setpoint["lin_acc"] = acceleration
-            drone_setpoint["jerk"] = jerk
-            drone_setpoint["snap"] = snap
-            drone_setpoint["yaw"] = torch.tensor([0], device="cuda") # for now
+            # position, velocity, acceleration, jerk, snap = evaluate_trajectory(coeffs, self._times * self._time_horizon, eval_time)
+            # drone_setpoint: dict = {}
+            # drone_setpoint["pos"] = position
+            # drone_setpoint["lin_vel"] = velocity
+            # drone_setpoint["lin_acc"] = acceleration
+            # drone_setpoint["jerk"] = jerk
+            # drone_setpoint["snap"] = snap
+            # drone_setpoint["yaw"] = torch.tensor([0], device="cuda") # for now
+
+            # for now, just send 1 waypoint, bypass the spline
+            drone_setpoint = {}
+            drone_setpoint["pos"] = drone_waypoints[:3]
+            drone_setpoint["lin_vel"] = drone_waypoints[3:6]
+            drone_setpoint["lin_acc"] = drone_waypoints[6:9]
+            drone_setpoint["jerk"] = drone_waypoints[9:12]
+            drone_setpoint["snap"] = drone_waypoints[12:15]
+            drone_setpoint["yaw"] = drone_waypoints[15]
+
             drone_thrusts = self._geometric_controller.getCommand(drone_states, self._forces[0, i*4:i*4+4], drone_setpoint)
             thrusts.append(drone_thrusts)
-        
+
         self._forces[..., 2] = torch.cat(thrusts, dim=0)
-        print(self._forces)
+
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
         self._forces = torch.clamp(self._forces, 0.0, 25.0) # TODO: change in SKRL to use sigmoid activation on last layer
@@ -187,10 +197,14 @@ class LowLevelActionCfg(ActionTermCfg):
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
     num_drones: int = 3
     """Number of drones."""
-    waypoint_dim: int = 13
-    """Dimension of the waypoints: [pos, vel, acc, att]."""
-    num_waypoints: int = 4
+    # waypoint_dim: int = 10
+    # """Dimension of the waypoints: [pos, vel, acc, yaw]."""
+    waypoint_dim: int = 16
+    """Dimension of the waypoints: [pos, vel, acc, jerk, snap, yaw]."""
+    num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
+    time_horizon: int = 2
+    """Time horizon of the trajectory in seconds."""
     # low_level_decimation: int = 4
     # """Decimation factor for the low level action term."""
     # low_level_actions: ActionTermCfg = MISSING
