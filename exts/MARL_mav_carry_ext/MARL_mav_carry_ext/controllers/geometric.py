@@ -44,7 +44,7 @@ class GeometricController():
         self.kd_acc = torch.tensor([4.0, 4.0, 6.0]).to(self.device)
         self.ki_acc = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
 
-        self.kp_rate = torch.tensor([25.0, 25.0, 8.0]).to(self.device)
+        self.kp_rate = torch.tensor([50.0, 50.0, 8.0]).to(self.device)
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
         
@@ -81,10 +81,10 @@ class GeometricController():
         des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
         # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(0)
-        acc_load = state["lin_acc"] - self.gravity - quat_rotate(state["quat"].unsqueeze(0), current_collective_thrust.unsqueeze(0)/self.falcon_mass)
+        acc_load = state["lin_acc"] - self.gravity - quat_rotate(state["quat"].unsqueeze(0), current_collective_thrust.unsqueeze(0)/self.falcon_mass)[0]
         # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
-        des_thrust = self.falcon_mass * (des_acc - self.gravity + acc_load)
-        z_b_des = normalize(des_thrust)[0] # desired new thrust direction
+        des_thrust = self.falcon_mass * (des_acc - self.gravity )# + acc_load)
+        z_b_des = normalize(des_thrust, p=2, dim=0) # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(des_thrust)
         current_collective_thrust_magnitude = torch.norm(current_collective_thrust)
 
