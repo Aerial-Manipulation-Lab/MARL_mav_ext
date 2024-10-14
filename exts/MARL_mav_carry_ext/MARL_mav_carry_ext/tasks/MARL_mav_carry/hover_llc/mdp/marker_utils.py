@@ -15,15 +15,15 @@ FORCE_MARKER_Z_CFG = VisualizationMarkersCfg(
             scale=(0.1, 0.1, 1.0),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=yellow),
         ),
-        "arrow_2": sim_utils.UsdFileCfg(
+    }
+)
+
+ACC_MARKER_CFG = VisualizationMarkersCfg(
+    markers={
+        "arrow_1": sim_utils.UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
             scale=(0.1, 0.1, 1.0),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=yellow),
-        ),
-        "arrow_3": sim_utils.UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-            scale=(0.1, 0.1, 1.0),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=yellow),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=green),
         ),
     }
 )
@@ -43,4 +43,17 @@ TORQUE_MARKER_CFG = VisualizationMarkersCfg(
             scale=(0.5, 0.5, 0.5),
         ),
     }
+)
+
+GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
+markers={
+    "goal_pos_marker": sim_utils.SphereCfg(
+        radius=0.05,
+        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+    ),
+    "current_pos_marker": sim_utils.SphereCfg(
+        radius=0.05,
+        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+    ),
+}
 )

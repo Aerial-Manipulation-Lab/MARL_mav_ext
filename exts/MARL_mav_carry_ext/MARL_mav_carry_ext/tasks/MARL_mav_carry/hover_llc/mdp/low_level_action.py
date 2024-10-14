@@ -8,9 +8,9 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import yaw_quat, euler_xyz_from_quat, quat_inv, quat_mul
+from omni.isaac.lab.utils.math import yaw_quat, euler_xyz_from_quat, quat_inv, quat_mul, quat_from_angle_axis, normalize
 
-from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
+from .marker_utils import FORCE_MARKER_Z_CFG, GOAL_POS_MARKER_CFG, ACC_MARKER_CFG
 from .observations import *
 from MARL_mav_carry_ext.splines import minimum_snap_spline, evaluate_trajectory
 from MARL_mav_carry_ext.controllers import GeometricController
@@ -34,6 +34,14 @@ class LowLevelAction(ActionTerm):
         self._time_horizon = cfg.time_horizon # sec
         self._waypoints = torch.zeros(env.scene.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
         self._geometric_controller = GeometricController()
+        self.cfg = cfg
+
+        # debug
+        if cfg.debug_vis:
+            self.drone_positions_debug = torch.zeros(self._num_drones, 3, device=self.device)
+            self.drone_goals_debug = torch.zeros(self._num_drones, 3, device=self.device)
+            self.des_acc_debug = torch.zeros(self._num_drones, 3, device=self.device)
+
         """
         properties
         """
@@ -67,6 +75,7 @@ class LowLevelAction(ActionTerm):
         drone_linear_accelerations = observations[0][58:67]
         drone_angular_accelerations = observations[0][67:76]
         # create spline from waypoints for each drone
+
         for i in range(self._num_drones):
             drone_waypoints = waypoints[:, i * self._waypoint_dim * self._num_waypoints : (i + 1) * self._waypoint_dim * self._num_waypoints][0]
             drone_states: dict = {} # dict of tensors 
@@ -101,9 +110,13 @@ class LowLevelAction(ActionTerm):
             drone_setpoint["snap"] = drone_waypoints[12:15]
             drone_setpoint["yaw"] = drone_waypoints[15]
 
-            drone_thrusts = self._geometric_controller.getCommand(drone_states, self._forces[0, i*4:i*4+4], drone_setpoint)
+            drone_thrusts, acc_cmd = self._geometric_controller.getCommand(drone_states, self._forces[0, i*4:i*4+4], drone_setpoint)
             thrusts.append(drone_thrusts)
-
+            if self.cfg.debug_vis:
+                self.drone_positions_debug[i] = drone_states["pos"]
+                self.drone_goals_debug[i] = drone_setpoint["pos"]
+                self.des_acc_debug[i] = acc_cmd
+            print("for drone", i, "acc are", acc_cmd)
         self._forces[..., 2] = torch.cat(thrusts, dim=0)
 
     def apply_actions(self):
@@ -120,22 +133,29 @@ class LowLevelAction(ActionTerm):
         # note: parent only deals with callbacks. not their visibility
         if debug_vis:
             # create markers if necessary for the first tome
-            if not hasattr(self, "drone_z_force_visualizer"):
+            if not hasattr(self, "drone_force_z_visualizer"):
                 marker_cfg = FORCE_MARKER_Z_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_z_forces"
                 self.drone_force_z_visualizer = VisualizationMarkers(marker_cfg)
-            if not hasattr(self, "drone_torque_visualizer"):
-                marker_cfg = TORQUE_MARKER_CFG.copy()
-                marker_cfg.prim_path = "/Visuals/Actions/drone_torques"
-                self.drone_torque_visualizer = VisualizationMarkers(marker_cfg)
             # set their visibility to true
             self.drone_force_z_visualizer.set_visibility(True)
-            self.drone_torque_visualizer.set_visibility(True)
+            if not hasattr(self, "drone_pos_marker"):
+                marker_cfg = GOAL_POS_MARKER_CFG.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_pos_markers"
+                self.drone_pos_marker = VisualizationMarkers(marker_cfg)
+            self.drone_pos_marker.set_visibility(True)
+            if not hasattr(self, "acc_marker"):
+                marker_cfg = ACC_MARKER_CFG.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_acc"
+                self.acc_marker = VisualizationMarkers(marker_cfg)
+            self.acc_marker.set_visibility(True)
         else:
             if hasattr(self, "drone_force_z_visualizer"):
                 self.drone_force_z_visualizer.set_visibility(False)
-            if hasattr(self, "drone_torque_visualizer"):
-                self.drone_torque_visualizer.set_visibility(False)
+            if hasattr(self, "drone_pos_marker"):
+                self.drone_pos_marker.set_visibility(False)
+            if hasattr(self, "acc_marker"):
+                self.acc_marker.set_visibility(False)
 
     def _debug_vis_callback(self, event):
         # check if robot is initialized
@@ -143,46 +163,78 @@ class LowLevelAction(ActionTerm):
         if not self._robot.is_initialized:
             return
         # display markers
-        # marker indices for multiple envs
-        marker_indices = (
-            [0] * self._env.scene.num_envs + [1] * self._env.scene.num_envs + [2] * self._env.scene.num_envs
-        )
 
         # Get drone positions and orientations
-        drone_idx = self._robot.find_bodies("Falcon.*base_link")[0]
-        drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].view(-1, 3)
-        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
+        rotor_idx = self._robot.find_bodies("Falcon.*rotor_.*")[0]
+        rotor_pos_world_frame = self._robot.data.body_state_w[:, rotor_idx, :3].view(-1, 3)
+        rotor_orientation = self._robot.data.body_state_w[:, rotor_idx, 3:7].view(-1, 4)
 
+        # marker indices for multiple envs
+        marker_indices = ([0] * self._env.scene.num_envs * len(rotor_idx))
         # Rotate the arrow to point in the direction of the force
         zeros = torch.zeros(self._env.scene.num_envs, 1)
-        arrow_rotation_offset = math_utils.quat_from_euler_xyz(
+        arrow_rotation = math_utils.quat_from_euler_xyz(
             zeros, (-torch.pi / 2) * torch.ones(self._env.scene.num_envs, 1), zeros
         )  # rotate -90 degrees around y-axis in the world frame
 
         # Apply the offset in the drone's local frame by multiplying with drone's orientation
-        arrow_rotation_offset = arrow_rotation_offset.repeat(1, 3, 1).to(self.device).view(-1, 4)
-        arrow_orientation = math_utils.quat_mul(drone_orientation, arrow_rotation_offset)
+        arrow_rotation_offset = arrow_rotation.repeat(1, len(rotor_idx), 1).to(self.device).view(-1, 4)
+        arrow_orientation = math_utils.quat_mul(rotor_orientation, arrow_rotation_offset)
 
         # scale arrows with applied force
         forces_to_visualize = (self._forces.view(-1, 3)).clone()
-        forces_to_visualize[:, :2] += 1.0  # offset to make the forces visible
-        forces_to_visualize[:, 2] /= 15  # scale down the forces
+        forces_to_visualize[:, :2] += 0.5  # offset to make the forces visible
+        forces_to_visualize[:, 2] /= 10  # scale down the forces
         forces_to_visualize[:, [0, 2]] = forces_to_visualize[
             :, [2, 0]
         ]  # swap around because the arrow prim is oriented in x direction
         # drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
         self.drone_force_z_visualizer.visualize(
-            drone_pos_world_frame, arrow_orientation, forces_to_visualize, marker_indices
+            rotor_pos_world_frame, arrow_orientation, forces_to_visualize, marker_indices
         )
 
-        # visualize torques
-        torques_to_visualize = (self._torques.view(-1, 3)).clone()
-        torques_to_visualize += 0.01  # offset to make the torques visible
-        torques_to_visualize *= 10  # scale up the torques
-        # print(torques_to_visualize)
-        self.drone_torque_visualizer.visualize(
-            drone_pos_world_frame, drone_orientation, torques_to_visualize, marker_indices
+        # drone positions
+        positions = torch.cat(
+        (self.drone_positions_debug, self.drone_goals_debug), dim=0
+        )  # visualize the payload positions in world frame
+        marker_idx = [0] * 3 + [1] * 3
+        self.drone_pos_marker.visualize(translations=positions, marker_indices=marker_idx)
+
+        # Normalize the desired direction vector (which represents the direction)
+        acc_orientation_axis = normalize(self.des_acc_debug)
+
+        # Define the default x-axis (the direction the arrow marker points to by default)
+        x_axis = torch.tensor([1.0, 0.0, 0.0], device=self.device).repeat(self._env.scene.num_envs, self._num_drones, 1).squeeze(0)
+
+        # Compute the dot product between x-axis and desired direction to check alignment
+        cos_angle = torch.sum(x_axis * acc_orientation_axis, dim=-1)
+
+        # Flip the desired direction if the dot product is negative (indicating opposite direction)
+        acc_orientation_axis = torch.where(cos_angle.view(-1, 1) < 0,
+                                        -acc_orientation_axis,  # Flip the direction
+                                        acc_orientation_axis)
+
+        # Compute the axis of rotation (cross product between x-axis and desired direction)
+        rotation_axis = torch.linalg.cross(x_axis, acc_orientation_axis)
+
+        # Compute the angle between x-axis and desired direction using dot product
+        cos_angle = torch.sum(x_axis * acc_orientation_axis, dim=-1)
+        angle = torch.acos(cos_angle.clamp(-1.0, 1.0))  # Clamp to avoid numerical issues
+
+        # Handle cases where the vectors are parallel (no rotation needed)
+        rotation_axis = torch.where(
+            torch.norm(rotation_axis, dim=-1, keepdim=True) < 1e-6,  # Check if parallel
+            torch.tensor([0.0, 1.0, 0.0], device=self.device),  # Default to any orthogonal axis
+            normalize(rotation_axis)
         )
+
+        # Compute the quaternion from the angle-axis representation
+        acc_orientation = quat_from_angle_axis(angle.view(-1), rotation_axis.view(-1, 3)).view(-1, 4)
+
+        # Visualize the arrow marker with the new orientation
+        self.acc_marker.visualize(
+            self.drone_positions_debug, acc_orientation, self.des_acc_debug / 5, marker_indices=[0] * self._num_drones)
+
 
 
 @configclass
