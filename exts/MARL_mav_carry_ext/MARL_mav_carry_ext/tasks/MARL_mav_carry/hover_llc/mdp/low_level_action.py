@@ -116,7 +116,7 @@ class LowLevelAction(ActionTerm):
                 self.drone_positions_debug[i] = drone_states["pos"]
                 self.drone_goals_debug[i] = drone_setpoint["pos"]
                 self.des_acc_debug[i] = acc_cmd
-            print("for drone", i, "acc are", acc_cmd)
+            # print("for drone", i, "acc are", acc_cmd)
         self._forces[..., 2] = torch.cat(thrusts, dim=0)
 
     def apply_actions(self):
@@ -210,9 +210,8 @@ class LowLevelAction(ActionTerm):
         cos_angle = torch.sum(x_axis * acc_orientation_axis, dim=-1)
 
         # Flip the desired direction if the dot product is negative (indicating opposite direction)
-        acc_orientation_axis = torch.where(cos_angle.view(-1, 1) < 0,
-                                        -acc_orientation_axis,  # Flip the direction
-                                        acc_orientation_axis)
+        mask = cos_angle.view(-1, 1) < 0
+        acc_orientation_axis = torch.where(mask, -acc_orientation_axis, acc_orientation_axis)
 
         # Compute the axis of rotation (cross product between x-axis and desired direction)
         rotation_axis = torch.linalg.cross(x_axis, acc_orientation_axis)
@@ -232,6 +231,11 @@ class LowLevelAction(ActionTerm):
         acc_orientation = quat_from_angle_axis(angle.view(-1), rotation_axis.view(-1, 3)).view(-1, 4)
 
         # Visualize the arrow marker with the new orientation
+        norm_acc = torch.norm(self.des_acc_debug, dim=-1)
+        acc_tens = torch.tensor([[norm_acc[0], 0, 0],
+                                 [norm_acc[1], 0, 0],
+                                 [norm_acc[2], 0, 0]], device=self.device)
+        acc_tens = torch.where(mask, acc_tens, -acc_tens)
         self.acc_marker.visualize(
             self.drone_positions_debug, acc_orientation, self.des_acc_debug / 5, marker_indices=[0] * self._num_drones)
 
