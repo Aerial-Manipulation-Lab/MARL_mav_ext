@@ -1,6 +1,5 @@
 import torch 
-from omni.isaac.lab.utils.math import quat_inv, quat_mul, quat_rotate, quat_rotate_inverse, quat_from_matrix, matrix_from_quat
-from torch.nn.functional import normalize
+from omni.isaac.lab.utils.math import quat_inv, quat_mul, quat_rotate, quat_rotate_inverse, quat_from_matrix, matrix_from_quat, normalize
 from .utils import LowPassFilter
 
 class GeometricController():
@@ -44,8 +43,8 @@ class GeometricController():
         self.kd_acc = torch.tensor([4.0, 4.0, 6.0]).to(self.device)
         self.ki_acc = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
 
-        self.kp_rate = torch.tensor([50.0, 50.0, 8.0]).to(self.device)
-        self.kp_att_xy = 150.0
+        self.kp_rate = torch.tensor([25.0, 25.0, 8.0]).to(self.device)
+        self.kp_att_xy = 25.0
         self.kp_att_z = 5.0
         
         self.filter_sampling_frequency = torch.tensor([50, 50, 50], device=self.device)
@@ -85,7 +84,7 @@ class GeometricController():
         # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
         acc_cmd = des_acc - self.gravity - acc_load
         des_thrust = self.falcon_mass * acc_cmd
-        z_b_des = normalize(des_thrust, p=2, dim=0) # desired new thrust direction
+        z_b_des = normalize(des_thrust) # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(des_thrust)
         current_collective_thrust_magnitude = torch.norm(current_collective_thrust)
 
@@ -94,12 +93,13 @@ class GeometricController():
         setpoint_yaw = setpoint["yaw"]
         # calculate intermediate axis and new desired body frame
         x_intermediate_des = torch.tensor([torch.cos(setpoint_yaw), torch.sin(setpoint_yaw), 0.0], device=self.device)
-        y_b_des = torch.linalg.cross(z_b_des, x_intermediate_des)/torch.norm(torch.linalg.cross(z_b_des, x_intermediate_des))
+        y_b_des = torch.linalg.cross(z_b_des, x_intermediate_des) /torch.norm(torch.linalg.cross(z_b_des, x_intermediate_des))
         x_b_des = torch.linalg.cross(y_b_des, z_b_des)
 
         # calculate the desired quaternion
-        des_rot_matrix = torch.stack([x_b_des, y_b_des, z_b_des])
+        des_rot_matrix = torch.stack([x_b_des, y_b_des, z_b_des], dim =1)
         q_cmd = quat_from_matrix(des_rot_matrix.unsqueeze(0))
+        # q_cmd = torch.zeros_like(q_cmd) # TODO: remove this line
  
         # angular velocity command
         # retrieve the current body axes of the drone
@@ -132,7 +132,8 @@ class GeometricController():
         q_e_x = quat_diff[1]
         q_e_y = quat_diff[2]
         q_e_z = quat_diff[3]
-        norm_factor = 1/(torch.sqrt(q_e_w.square() + q_e_z.square()))
+        epsilon = torch.tensor(1e-6, device=self.device)    
+        norm_factor = 1/(torch.sqrt(q_e_w.square() + q_e_z.square()) + epsilon)
         q_e_red = norm_factor * torch.tensor([q_e_w*q_e_x - q_e_y*q_e_z, q_e_w*q_e_y + q_e_x*q_e_z, 0.0], device=self.device)
         q_e_yaw = norm_factor * torch.tensor([0.0, 0.0, q_e_z], device=self.device)
 
@@ -148,6 +149,6 @@ class GeometricController():
 
         thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
 
-        return thrusts, acc_cmd
+        return thrusts, acc_cmd, q_cmd, z_b_des
 
 

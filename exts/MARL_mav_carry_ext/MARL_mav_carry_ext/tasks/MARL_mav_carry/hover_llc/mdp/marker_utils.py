@@ -57,3 +57,22 @@ markers={
     ),
 }
 )
+
+ORIENTATION_MARKER_CFG = VisualizationMarkersCfg(
+    markers={
+        "frame_1": sim_utils.UsdFileCfg(
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+            scale=(0.1, 0.1, 0.1),
+        ),
+    }
+)
+
+BLUE_ARROW_MARKER_CFG = VisualizationMarkersCfg(
+    markers={
+        "arrow_1": sim_utils.UsdFileCfg(
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+            scale=(0.1, 0.1, 0.5),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=blue),
+        ),
+    }
+)
