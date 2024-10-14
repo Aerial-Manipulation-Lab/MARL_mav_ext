@@ -232,9 +232,8 @@ class LowLevelAction(ActionTerm):
 
         # Visualize the arrow marker with the new orientation
         norm_acc = torch.norm(self.des_acc_debug, dim=-1)
-        acc_tens = torch.tensor([[norm_acc[0], 0, 0],
-                                 [norm_acc[1], 0, 0],
-                                 [norm_acc[2], 0, 0]], device=self.device)
+        acc_tens = torch.zeros(self._num_drones, 3, device=self.device)
+        acc_tens[:, 0] = norm_acc
         acc_tens = torch.where(mask, acc_tens, -acc_tens)
         self.acc_marker.visualize(
             self.drone_positions_debug, acc_orientation, self.des_acc_debug / 5, marker_indices=[0] * self._num_drones)

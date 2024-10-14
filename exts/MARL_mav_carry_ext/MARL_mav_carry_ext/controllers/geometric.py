@@ -83,7 +83,7 @@ class GeometricController():
         current_collective_thrust = actions.sum(0)
         acc_load = state["lin_acc"] - self.gravity - quat_rotate(state["quat"].unsqueeze(0), current_collective_thrust.unsqueeze(0)/self.falcon_mass)[0]
         # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
-        acc_cmd = des_acc - self.gravity # + acc_load)
+        acc_cmd = des_acc - self.gravity - acc_load
         des_thrust = self.falcon_mass * acc_cmd
         z_b_des = normalize(des_thrust, p=2, dim=0) # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(des_thrust)
