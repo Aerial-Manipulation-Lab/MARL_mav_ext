@@ -119,12 +119,15 @@ def main():
                 env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
-                waypoints_3d = torch.tensor([[0.2, 0.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0,
-                                             0.2, -0.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0,
-                                             -0.2, 0.0, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0,]]) # 3 single waypoints for drone 1, 2 and 3
-                hover_waypoint = torch.zeros_like(waypoints_3d)
+                waypoint = torch.zeros_like(env.action_manager.action)
+                waypoint[0] = torch.tensor([[0.2, 0.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0,
+                                             0.2, -0.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0,
+                                             -0.2, 0.0, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0,]]) # 3 single waypoints for drone 1, 2 and 3
+                waypoint[1:] = torch.tensor([[0.4, 0.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0,
+                                             0.4, -0.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0,
+                                             -0.4, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0,]])
             # step the environment
-            obs, rew, terminated, truncated, info = env.step(waypoints_3d)
+            obs, rew, terminated, truncated, info = env.step(waypoint)
             # print current orientation of pole
             # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
             # update counter

@@ -33,17 +33,18 @@ class LowLevelAction(ActionTerm):
         self._times = (torch.arange(self._num_waypoints + 1).float())/self._num_waypoints # normalized time vector
         self._time_horizon = cfg.time_horizon # sec
         self._waypoints = torch.zeros(env.scene.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
-        self._geometric_controller = GeometricController()
+        self._geometric_controller = GeometricController(self.num_envs)
         self.cfg = cfg
         self._counter = 0
+        self._constant_yaw = torch.zeros([self._env.scene.num_envs, 1], device=self.device)
 
         # debug
         if cfg.debug_vis:
-            self.drone_positions_debug = torch.zeros(self._num_drones, 3, device=self.device)
-            self.drone_goals_debug = torch.zeros(self._num_drones, 3, device=self.device)
-            self.des_acc_debug = torch.zeros(self._num_drones, 3, device=self.device)
-            self.des_ori_debug = torch.zeros(self._num_drones, 4, device=self.device)
-            self.z_b_debug = torch.zeros(self._num_drones, 3, device=self.device)
+            self.drone_positions_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+            self.drone_goals_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+            self.des_acc_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+            self.des_ori_debug = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
+            self.z_b_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
         """
         properties
@@ -71,25 +72,26 @@ class LowLevelAction(ActionTerm):
             # eval_time = 1.0 * self._time_horizon # evaluate the spline at this timestamp
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
-            # TODO: remove [0] to generalize over all parallel envs
-            drone_positions = observations[0][19:28]
-            drone_orientations = observations[0][28:40]
-            drone_linear_velocities = observations[0][40:49]
-            drone_angular_velocities = observations[0][49:58]
-            drone_linear_accelerations = observations[0][58:67]
-            drone_angular_accelerations = observations[0][67:76]
+            drone_positions = observations[:, 19:28]
+            drone_orientations = observations[:, 28:40]
+            drone_linear_velocities = observations[:, 40:49]
+            drone_angular_velocities = observations[:, 49:58]
+            drone_linear_accelerations = observations[:, 58:67]
+            drone_angular_accelerations = observations[:, 67:76]
             # create spline from waypoints for each drone
-
             for i in range(self._num_drones):
-                drone_waypoints = waypoints[:, i * self._waypoint_dim * self._num_waypoints : (i + 1) * self._waypoint_dim * self._num_waypoints][0]
+                # print("waypoint shape: ", waypoints.shape)
+                start_drone_idx = i * self._waypoint_dim * self._num_waypoints
+                end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
+                drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx]
                 drone_states: dict = {} # dict of tensors 
-                drone_states["pos"] = drone_positions[i*3: i*3+3]
-                drone_states["quat"] = drone_orientations[i*4: i*4+4]
-                drone_states["lin_vel"] = drone_linear_velocities[i*3: i*3+3]
-                drone_states["ang_vel"] = drone_angular_velocities[i*3: i*3+3]
-                drone_states["lin_acc"] = drone_linear_accelerations[i*3: i*3+3]
-                drone_states["ang_acc"] = drone_angular_accelerations[i*3: i*3+3]
-                _, _, current_yaw = euler_xyz_from_quat(yaw_quat(drone_states["quat"].unsqueeze(0))) # TODO: remove unsqueeze
+                drone_states["pos"] = drone_positions[:, i*3: i*3+3]
+                drone_states["quat"] = drone_orientations[:, i*4: i*4+4]
+                drone_states["lin_vel"] = drone_linear_velocities[:, i*3: i*3+3]
+                drone_states["ang_vel"] = drone_angular_velocities[:, i*3: i*3+3]
+                drone_states["lin_acc"] = drone_linear_accelerations[:, i*3: i*3+3]
+                drone_states["ang_acc"] = drone_angular_accelerations[:, i*3: i*3+3]
+                _, _, current_yaw = euler_xyz_from_quat(yaw_quat(drone_states["quat"]))
                 # first_waypoint = torch.cat((drone_states["pos"], drone_states["lin_vel"], drone_states["lin_acc"], current_yaw))
                 # concat first state to start of generated waypoints
                 # drone_waypoints = torch.cat((first_waypoint, drone_waypoints))
@@ -107,22 +109,22 @@ class LowLevelAction(ActionTerm):
 
                 # for now, just send 1 waypoint, bypass the spline
                 drone_setpoint = {}
-                drone_setpoint["pos"] = drone_waypoints[:3]
-                drone_setpoint["lin_vel"] = drone_waypoints[3:6]
-                drone_setpoint["lin_acc"] = drone_waypoints[6:9]
-                drone_setpoint["jerk"] = drone_waypoints[9:12]
-                drone_setpoint["snap"] = drone_waypoints[12:15]
-                drone_setpoint["yaw"] = drone_waypoints[15]
-
-                drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(drone_states, self._forces[0, i*4:i*4+4], drone_setpoint)
+                drone_setpoint["pos"] = drone_waypoints[:, :3]
+                drone_setpoint["lin_vel"] = drone_waypoints[:, 3:6]
+                drone_setpoint["lin_acc"] = drone_waypoints[:, 6:9]
+                drone_setpoint["jerk"] = drone_waypoints[:, 9:12]
+                drone_setpoint["snap"] = drone_waypoints[:, 12:15]
+                drone_setpoint["yaw"] = self._constant_yaw
+                drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(drone_states, self._forces[:, i*4:i*4+4], drone_setpoint)
                 thrusts.append(drone_thrusts)
                 if self.cfg.debug_vis:
-                    self.drone_positions_debug[i] = drone_states["pos"]
-                    self.drone_goals_debug[i] = drone_setpoint["pos"]
-                    self.des_acc_debug[i] = acc_cmd
-                    self.des_ori_debug[i] = q_cmd
-                    self.z_b_debug[i] = z_b_des
-            self._forces[..., 2] = torch.cat(thrusts, dim=0)
+                    self.drone_positions_debug[:, i] = drone_states["pos"]
+                    self.drone_goals_debug[:, i] = drone_setpoint["pos"]
+                    self.des_acc_debug[:, i] = acc_cmd
+                    self.des_ori_debug[:, i] = q_cmd
+                    self.z_b_debug[:, i] = z_b_des
+                
+            self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._counter = 0
         self._counter += 1
 
@@ -130,7 +132,7 @@ class LowLevelAction(ActionTerm):
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._counter % self.cfg.low_level_decimation == 0:
-            self._forces = torch.clamp(self._forces, 0.0, 25.0) # TODO: change in SKRL to use sigmoid activation on last layer
+            self._forces = torch.clamp(self._forces, 0.0, 25.0/4) # TODO: change in SKRL to use sigmoid activation on last layer
             self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
 
     """
@@ -187,7 +189,7 @@ class LowLevelAction(ActionTerm):
         rotor_orientation = self._robot.data.body_state_w[:, rotor_idx, 3:7].view(-1, 4)
 
         # marker indices for multiple envs
-        marker_indices = ([0] * self._env.scene.num_envs * len(rotor_idx))
+        marker_indices = ([0] * self.num_envs * len(rotor_idx))
         # Rotate the arrow to point in the direction of the force
         zeros = torch.zeros(self._env.scene.num_envs, 1)
         arrow_rotation = math_utils.quat_from_euler_xyz(
@@ -214,8 +216,8 @@ class LowLevelAction(ActionTerm):
         positions = torch.cat(
         (self.drone_positions_debug, self.drone_goals_debug), dim=0
         )  # visualize the payload positions in world frame
-        marker_idx = [0] * 3 + [1] * 3
-        self.drone_pos_marker.visualize(translations=positions, marker_indices=marker_idx)
+        marker_idx = [0] * self.num_envs * 3 + [1] * self.num_envs * 3
+        self.drone_pos_marker.visualize(translations=positions.view(-1,3), marker_indices=marker_idx)
 
         # drone desired accelerations
 
@@ -244,11 +246,11 @@ class LowLevelAction(ActionTerm):
 
         # Visualize the arrow marker with the new orientation
         self.acc_marker.visualize(
-            self.drone_positions_debug, acc_orientation, self.des_acc_debug / 5, marker_indices=[0] * self._num_drones)
+            self.drone_positions_debug, acc_orientation, self.des_acc_debug / 5, marker_indices=[0] * self.num_envs * self._num_drones)
         
         # Visualize the orientation of the drone
         self.drone_ori_marker.visualize(
-            self.drone_positions_debug, self.des_ori_debug, marker_indices=[0] * self._num_drones)
+            self.drone_positions_debug.view(-1,3), self.des_ori_debug.view(-1,4), marker_indices=[0] * self.num_envs * self._num_drones)
 
 
 @configclass
@@ -265,7 +267,7 @@ class LowLevelActionCfg(ActionTermCfg):
     """Number of drones."""
     # waypoint_dim: int = 10
     # """Dimension of the waypoints: [pos, vel, acc, yaw]."""
-    waypoint_dim: int = 16
+    waypoint_dim: int = 15
     """Dimension of the waypoints: [pos, vel, acc, jerk, snap, yaw]."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
