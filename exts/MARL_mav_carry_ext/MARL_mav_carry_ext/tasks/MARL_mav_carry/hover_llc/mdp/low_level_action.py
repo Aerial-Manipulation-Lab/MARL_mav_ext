@@ -25,18 +25,18 @@ class LowLevelAction(ActionTerm):
         self._env = env
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
-        self._forces = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
-        self._torques = torch.zeros(env.scene.num_envs, len(self._body_ids), 3, device=self.device)
+        self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._torques = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._num_drones = cfg.num_drones
         self._waypoint_dim = cfg.waypoint_dim # pos, vel, acc, att
         self._num_waypoints = cfg.num_waypoints
         self._times = (torch.arange(self._num_waypoints + 1).float())/self._num_waypoints # normalized time vector
         self._time_horizon = cfg.time_horizon # sec
-        self._waypoints = torch.zeros(env.scene.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
+        self._waypoints = torch.zeros(env.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
         self._geometric_controller = GeometricController(self.num_envs)
         self.cfg = cfg
         self._counter = 0
-        self._constant_yaw = torch.zeros([self._env.scene.num_envs, 1], device=self.device)
+        self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
 
         # debug
         if cfg.debug_vis:
@@ -118,12 +118,11 @@ class LowLevelAction(ActionTerm):
                 drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(drone_states, self._forces[:, i*4:i*4+4], drone_setpoint)
                 thrusts.append(drone_thrusts)
                 if self.cfg.debug_vis:
-                    self.drone_positions_debug[:, i] = drone_states["pos"]
-                    self.drone_goals_debug[:, i] = drone_setpoint["pos"]
+                    self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
+                    self.drone_goals_debug[:, i] = drone_setpoint["pos"] + self._env.scene.env_origins
                     self.des_acc_debug[:, i] = acc_cmd
                     self.des_ori_debug[:, i] = q_cmd
                     self.z_b_debug[:, i] = z_b_des
-                
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._counter = 0
         self._counter += 1
@@ -191,9 +190,9 @@ class LowLevelAction(ActionTerm):
         # marker indices for multiple envs
         marker_indices = ([0] * self.num_envs * len(rotor_idx))
         # Rotate the arrow to point in the direction of the force
-        zeros = torch.zeros(self._env.scene.num_envs, 1)
+        zeros = torch.zeros(self.num_envs, 1)
         arrow_rotation = math_utils.quat_from_euler_xyz(
-            zeros, (-torch.pi / 2) * torch.ones(self._env.scene.num_envs, 1), zeros
+            zeros, (-torch.pi / 2) * torch.ones(self.num_envs, 1), zeros
         )  # rotate -90 degrees around y-axis in the world frame
 
         # Apply the offset in the drone's local frame by multiplying with drone's orientation
@@ -224,12 +223,13 @@ class LowLevelAction(ActionTerm):
         # Normalize the desired direction vector (which represents the direction)
         acc_orientation_axis = normalize(self.des_acc_debug)
         # Define the default x-axis (the direction the arrow marker points to by default)
-        x_axis = torch.tensor([1.0, 0.0, 0.0], device=self.device).repeat(self._env.scene.num_envs, self._num_drones, 1).squeeze(0)
+        x_axis = torch.tensor([1.0, 0.0, 0.0], device=self.device).repeat(self.num_envs, self._num_drones, 1)
         # Compute the dot product between x-axis and desired direction to check alignment
         cos_angle = torch.sum(x_axis * acc_orientation_axis, dim=-1)
         # Flip the desired direction if the dot product is negative (indicating opposite direction)
-        mask = cos_angle.view(-1, 1) < 0
-        acc_orientation_axis = torch.where(mask, -acc_orientation_axis, acc_orientation_axis)
+        mask = (cos_angle.view(-1, 1) < 0).squeeze()
+        # acc_orientation_axis = torch.where(mask.squeeze(), -acc_orientation_axis.view(-1,3), acc_orientation_axis.view(-1,3))
+        acc_orientation_axis.view(-1,3)[mask] = -acc_orientation_axis.view(-1,3)[mask]
         # Compute the axis of rotation (cross product between x-axis and desired direction)
         rotation_axis = torch.linalg.cross(x_axis, acc_orientation_axis)
         # Compute the angle between x-axis and desired direction using dot product
@@ -246,9 +246,9 @@ class LowLevelAction(ActionTerm):
 
         # Visualize the arrow marker with the new orientation
         self.acc_marker.visualize(
-            self.drone_positions_debug, acc_orientation, self.des_acc_debug / 5, marker_indices=[0] * self.num_envs * self._num_drones)
+            self.drone_positions_debug.view(-1,3), acc_orientation.view(-1,4), self.des_acc_debug.view(-1,3) / 5, marker_indices=[0] * self.num_envs * self._num_drones)
         
-        # Visualize the orientation of the drone
+        # Visualize the desired orientation of the drone
         self.drone_ori_marker.visualize(
             self.drone_positions_debug.view(-1,3), self.des_ori_debug.view(-1,4), marker_indices=[0] * self.num_envs * self._num_drones)
 
