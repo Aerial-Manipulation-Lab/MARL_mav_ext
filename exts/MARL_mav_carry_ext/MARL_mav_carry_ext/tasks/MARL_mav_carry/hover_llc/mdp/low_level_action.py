@@ -80,7 +80,6 @@ class LowLevelAction(ActionTerm):
             drone_angular_accelerations = observations[:, 67:76]
             # create spline from waypoints for each drone
             for i in range(self._num_drones):
-                # print("waypoint shape: ", waypoints.shape)
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
                 end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
                 drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx]
@@ -130,9 +129,8 @@ class LowLevelAction(ActionTerm):
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
-        if self._counter % self.cfg.low_level_decimation == 0:
-            self._forces = torch.clamp(self._forces, 0.0, 25.0/4) # TODO: change in SKRL to use sigmoid activation on last layer
-            self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
+        # self._forces = torch.clamp(self._forces, 0.0, 25.0/4) # TODO: change in SKRL to use sigmoid activation on last layer
+        self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
 
     """
     visualizations
