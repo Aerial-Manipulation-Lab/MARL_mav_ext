@@ -32,10 +32,12 @@ class LowLevelAction_spline(ActionTerm):
         self._num_waypoints = cfg.num_waypoints
         self._times = (torch.arange(self._num_waypoints + 1).float())/self._num_waypoints # normalized time vector
         self._time_horizon = cfg.time_horizon # sec
-        self._waypoints = torch.zeros(env.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
+        self._waypoints = torch.zeros(self.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
         self._geometric_controller = GeometricController(self.num_envs)
         self.cfg = cfg
-        self._counter = 0
+        self._ll_counter = 0
+        self._hl_counter = 0
+        self._eval_time = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
 
         # debug
@@ -68,9 +70,12 @@ class LowLevelAction_spline(ActionTerm):
             waypoint: The waypoints to be processed.
         Returns:
             The processed external forces to be applied to the rotors."""
-        self._waypoints = waypoints
-        if self._counter % self.cfg.low_level_decimation == 0:
-            eval_time = 1.0 * self._time_horizon # evaluate the spline at this timestamp
+        if self._hl_counter % self.cfg.planner_decimation == 0:
+            self._waypoints = waypoints
+            self._eval_time = 0.25
+            self._hl_counter = 0
+
+        if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = observations[:, 19:28]
@@ -95,22 +100,21 @@ class LowLevelAction_spline(ActionTerm):
                 # concat first state to start of generated waypoints
                 drone_total_waypoints = torch.cat((first_waypoint, drone_waypoints), dim=-1)
                 # generate spline
-                coeffs = minimum_snap_spline(drone_total_waypoints, self._times * self._time_horizon, self.num_envs)
+                spline_coeffs = minimum_snap_spline(drone_total_waypoints, self._times * self._time_horizon, self.num_envs)
                 # get individual rotor thrusts from geometric controller
-                position, velocity, acceleration, jerk, snap = evaluate_trajectory(coeffs, self._times * self._time_horizon, eval_time)
+                position, velocity, acceleration, jerk, snap = evaluate_trajectory(spline_coeffs, self._times * self._time_horizon, self._eval_time * self._time_horizon)
                 drone_setpoint: dict = {}
                 drone_setpoint["pos"] = position
                 drone_setpoint["lin_vel"] = velocity
                 drone_setpoint["lin_acc"] = acceleration
-                drone_setpoint["jerk"] = jerk * 0
-                drone_setpoint["snap"] = snap * 0
+                drone_setpoint["jerk"] = jerk
+                drone_setpoint["snap"] = snap
                 drone_setpoint["yaw"] = self._constant_yaw
 
                 drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(drone_states, self._forces[:, i*4:i*4+4], drone_setpoint)
                 thrusts.append(drone_thrusts)
                 if self.cfg.debug_vis:
                     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
-
                     for j in range(self._num_waypoints):
                         self.spline_control_points_debug[:, j] = drone_waypoints[:, j * self._waypoint_dim : j * self._waypoint_dim + 3]
                     self.drone_goals_debug[:, i] = self.spline_control_points_debug + self._env.scene.env_origins.unsqueeze(1)
@@ -118,8 +122,11 @@ class LowLevelAction_spline(ActionTerm):
                     self.des_ori_debug[:, i] = q_cmd
                     self.z_b_debug[:, i] = z_b_des
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
-            self._counter = 0
-        self._counter += 1
+            self._ll_counter = 0
+            self._eval_time += 0.5
+
+        self._ll_counter += 1
+        self._hl_counter += 1
 
 
     def apply_actions(self):
@@ -266,6 +273,8 @@ class LowLevelActionCfg_spline(ActionTermCfg):
     """Time horizon of the trajectory in seconds."""
     low_level_decimation: int = 2
     """Decimation factor for the low level action term."""
+    planner_decimation: int = 4
+    """Decimation factor for the RL planner term."""
     # low_level_actions: ActionTermCfg = MISSING
     # """Low level action configuration."""
     debug_vis: bool = False
