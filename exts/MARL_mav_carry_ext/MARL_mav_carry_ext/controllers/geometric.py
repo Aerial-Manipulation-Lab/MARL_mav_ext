@@ -160,7 +160,7 @@ class GeometricController():
         product = alpha_b_des.matmul(self.inertia_mat.transpose(0,1)) + torch.linalg.cross(ang_vel_body, ang_vel_body.matmul(self.inertia_mat.transpose(0,1)))
         rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
         thrusts = rh_side.matmul(torch.linalg.pinv(self.G_1).transpose(0,1))
-        # thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
+        thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
 
         return thrusts, acc_cmd, q_cmd, z_b_des
 
