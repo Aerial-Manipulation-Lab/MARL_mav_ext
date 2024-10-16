@@ -1,7 +1,6 @@
 import torch
-from omni.isaac.lab.utils.math import quat_inv, quat_mul
 
-# Quintic polynomial trajectory for a single segment (3D)
+# Quintic polynomial trajectory for a single segment
 def quintic_trajectory(start, end, t_start, t_end):
     T = t_end - t_start
     A = torch.tensor([
@@ -47,10 +46,10 @@ def minimum_snap_spline(waypoints, times):
     for i in range(n_points - 1):
         curr_point_id = i * waypoint_id_increment
         start = {'pos': waypoints[curr_point_id:curr_point_id+3], 'vel': waypoints[curr_point_id + 3: curr_point_id + 6],
-                  'acc': waypoints[curr_point_id + 6: curr_point_id + 9], 'yaw': waypoints[curr_point_id + 9]}
+                  'acc': waypoints[curr_point_id + 6: curr_point_id + 9]}
         next_point_id = (i + 1) * waypoint_id_increment
         end = {'pos': waypoints[next_point_id:next_point_id+3], 'vel': waypoints[next_point_id + 3: next_point_id + 6],
-                'acc': waypoints[next_point_id + 6: next_point_id + 9], 'yaw': waypoints[next_point_id + 9]}
+                'acc': waypoints[next_point_id + 6: next_point_id + 9]}
         t_start = times[i]
         t_end = times[i+1]
         
