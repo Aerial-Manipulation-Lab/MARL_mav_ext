@@ -61,8 +61,8 @@ import torch
 import skrl
 from packaging import version
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.config.flycrane import agents
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.config.flycrane import agents
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
 
 # register the gym environment
 
@@ -71,7 +71,7 @@ gym.register(
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": HoverEnvCfg,
+        "env_cfg_entry_point": HoverEnvCfg_llc,
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",

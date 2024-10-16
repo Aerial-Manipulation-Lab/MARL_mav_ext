@@ -16,7 +16,11 @@ models:
       - name: net
         input: STATES
         layers: [512, 256, 128]
-        activations: elu
+        activations:
+        - elu
+        - elu
+        - tanh
+        
     output: ACTIONS
   value:  # see deterministic_model parameters
     class: DeterministicMixin

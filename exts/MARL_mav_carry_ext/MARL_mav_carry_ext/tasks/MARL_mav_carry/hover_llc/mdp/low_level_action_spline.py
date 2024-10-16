@@ -23,22 +23,36 @@ class LowLevelAction_spline(ActionTerm):
     def __init__(self, cfg: LowLevelActionCfg_spline, env: ManagerBasedRLEnv):
         super().__init__(cfg, env)
         self._env = env
+        self.cfg = cfg
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
         self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._prev_forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._torques = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._num_drones = cfg.num_drones
+
+        # spline parameters
         self._waypoint_dim = cfg.waypoint_dim # pos, vel, acc, att
         self._num_waypoints = cfg.num_waypoints
         self._times = (torch.arange(self._num_waypoints + 1).float())/self._num_waypoints # normalized time vector
         self._time_horizon = cfg.time_horizon # sec
         self._waypoints = torch.zeros(self.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
+
+        # to minimize jerk and snap in reward function
+        self._desired_jerk = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self._desired_snap = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+
+        # geometric controller
         self._geometric_controller = GeometricController(self.num_envs)
-        self.cfg = cfg
         self._ll_counter = 0
         self._hl_counter = 0
         self._eval_time = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
+
+        # output bounds
+        self._max_pos = 5.0 # max 5 meters from origin
+        self._max_vel = 60/3.6 # max 60 km/h from Agilicious paper
+        self._max_acc = 4*9.8066 # max 4g from Agilicious paper
 
         # debug
         if cfg.debug_vis:
@@ -77,6 +91,7 @@ class LowLevelAction_spline(ActionTerm):
 
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
+            self._prev_forces = self._forces.clone()
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = observations[:, 19:28]
             drone_orientations = observations[:, 28:40]
@@ -88,7 +103,11 @@ class LowLevelAction_spline(ActionTerm):
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
                 end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
-                drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx]
+                drone_waypoints_norm = waypoints[:, start_drone_idx : end_drone_idx] # normalized waypoints
+                drone_waypoints = drone_waypoints_norm.clone()
+                drone_waypoints[:, 0:3] = drone_waypoints_norm[:, 0:3] * self._max_pos # pos
+                drone_waypoints[:, 3:6] = drone_waypoints_norm[:, 3:6] * self._max_vel # vel
+                drone_waypoints[:, 6:9] = drone_waypoints_norm[:, 6:9] * self._max_acc # acc
                 drone_states: dict = {} # dict of tensors 
                 drone_states["pos"] = drone_positions[:, i*3: i*3+3]
                 drone_states["quat"] = drone_orientations[:, i*4: i*4+4]
@@ -108,7 +127,9 @@ class LowLevelAction_spline(ActionTerm):
                 drone_setpoint["lin_vel"] = velocity
                 drone_setpoint["lin_acc"] = acceleration
                 drone_setpoint["jerk"] = jerk
+                self._desired_jerk[:, i] = jerk # for minimization
                 drone_setpoint["snap"] = snap
+                self._desired_snap[:, i] = snap # for minimization
                 drone_setpoint["yaw"] = self._constant_yaw
 
                 drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(drone_states, self._forces[:, i*4:i*4+4], drone_setpoint)
