@@ -101,7 +101,7 @@ from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 # register the gym environment
 
 gym.register(
-    id="Isaac-flycrane-payload-hovering-v0",
+    id="Isaac-flycrane-payload-hovering-llc-v0",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={

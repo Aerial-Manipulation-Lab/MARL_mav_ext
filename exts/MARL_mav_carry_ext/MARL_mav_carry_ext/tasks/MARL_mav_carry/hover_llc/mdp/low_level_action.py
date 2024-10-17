@@ -26,6 +26,7 @@ class LowLevelAction(ActionTerm):
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
         self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._prev_forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._torques = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._num_drones = cfg.num_drones
         self._waypoint_dim = cfg.waypoint_dim # pos, vel, acc, att
@@ -37,6 +38,13 @@ class LowLevelAction(ActionTerm):
         self.cfg = cfg
         self._counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
+
+        # output bounds
+        self._max_pos = 5.0 # max 5 meters from origin
+        self._max_vel = 10 # max 10 m/s from learning agile flight in the wild paper
+        self._max_acc = 3*9.8066 # max 3g
+        self._max_jerk = 55 # arbitrary estimation
+        self._max_snap = 175 # arbitrary estimation
 
         # debug
         if cfg.debug_vis:

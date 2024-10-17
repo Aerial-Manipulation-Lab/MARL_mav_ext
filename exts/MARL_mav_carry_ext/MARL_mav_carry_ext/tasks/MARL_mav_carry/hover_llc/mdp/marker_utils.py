@@ -58,6 +58,27 @@ markers={
 }
 )
 
+DRONE_POS_MARKER_CFG = VisualizationMarkersCfg(
+markers={
+    "current_pos_marker": sim_utils.SphereCfg(
+        radius=0.03,
+        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=green),
+    ),
+    "goal_pos_marker_1": sim_utils.SphereCfg(
+        radius=0.03,
+        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=red),
+    ),
+    "goal_pos_marker_2": sim_utils.SphereCfg(
+    radius=0.03,
+    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=yellow),
+    ),
+    "goal_pos_marker_3": sim_utils.SphereCfg(
+    radius=0.03,
+    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=blue),
+    ),
+}
+)
+
 ORIENTATION_MARKER_CFG = VisualizationMarkersCfg(
     markers={
         "frame_1": sim_utils.UsdFileCfg(
