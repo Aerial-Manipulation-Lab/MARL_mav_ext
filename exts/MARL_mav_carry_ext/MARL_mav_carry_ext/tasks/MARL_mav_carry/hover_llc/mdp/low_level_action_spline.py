@@ -86,7 +86,7 @@ class LowLevelAction_spline(ActionTerm):
             The processed external forces to be applied to the rotors."""
         if self._hl_counter % self.cfg.planner_decimation == 0:
             self._waypoints = waypoints
-            self._eval_time = 1.0
+            self._eval_time = 0.25
             self._hl_counter = 0
 
         if self._ll_counter % self.cfg.low_level_decimation == 0:
@@ -103,11 +103,7 @@ class LowLevelAction_spline(ActionTerm):
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
                 end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
-                drone_waypoints_norm = waypoints[:, start_drone_idx : end_drone_idx] # normalized waypoints
-                drone_waypoints = drone_waypoints_norm.clone()
-                drone_waypoints[:, 0:3] = drone_waypoints_norm[:, 0:3] * self._max_pos # pos
-                drone_waypoints[:, 3:6] = drone_waypoints_norm[:, 3:6] * self._max_vel # vel
-                drone_waypoints[:, 6:9] = drone_waypoints_norm[:, 6:9] * self._max_acc # acc
+                drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx] # normalized waypoints
                 drone_states: dict = {} # dict of tensors 
                 drone_states["pos"] = drone_positions[:, i*3: i*3+3]
                 drone_states["quat"] = drone_orientations[:, i*4: i*4+4]
@@ -144,7 +140,7 @@ class LowLevelAction_spline(ActionTerm):
                     self.z_b_debug[:, i] = z_b_des
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._ll_counter = 0
-            # self._eval_time += 0.5
+            self._eval_time += 0.5
 
         self._ll_counter += 1
         self._hl_counter += 1

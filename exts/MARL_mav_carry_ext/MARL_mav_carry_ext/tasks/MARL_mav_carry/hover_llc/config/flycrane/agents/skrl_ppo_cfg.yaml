@@ -19,7 +19,7 @@ models:
         activations:
         - elu
         - elu
-        - tanh
+        - elu
 
     output: ACTIONS
   value:  # see deterministic_model parameters
@@ -71,7 +71,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "flycrane_hover_ppo"
-    experiment_name: "hovering_llc_all_penalties"
+    experiment_name: "hovering_llc_higher_action_penalty"
     write_interval: 100
     checkpoint_interval: 10000
 

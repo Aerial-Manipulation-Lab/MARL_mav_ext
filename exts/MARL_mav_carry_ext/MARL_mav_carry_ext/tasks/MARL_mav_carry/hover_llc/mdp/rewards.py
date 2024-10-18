@@ -270,9 +270,7 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high force values."""
     reward_effort_weight = 0.2
     action_forces = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
-    max_force = 25.0/4  # N
-    normalized_actions = action_forces / max_force
-    effort_norm = torch.sum(normalized_actions, dim=-1)
+    effort_norm = torch.sum(action_forces, dim=-1)
     reward_effort = reward_effort_weight * torch.exp(-effort_norm)
     assert reward_effort.shape == (env.scene.num_envs,)
     return reward_effort
@@ -314,10 +312,8 @@ def OmniDrones_reward_spline(
 
     reward_desired_jerk = jerk_penalty_spline(env)
     reward_desired_snap = snap_penalty_spline(env)
-    # reward_action_pos_smoothness = action_smoothness_pos_reward(env)
-    # reward_action_vel_smoothness = action_smoothness_vel_reward(env)
-    # reward_action_acc_smoothness = action_smoothness_acc_reward(env)
 
+    reward_action_smoothness = action_smoothness_reward(env)    
     reward_force = action_penalty_force(env)
     reward_action_force_smoothness = action_smoothness_force_reward(env)
 
@@ -329,9 +325,7 @@ def OmniDrones_reward_spline(
         + reward_spin_drones
         + reward_desired_jerk
         + reward_desired_snap
-        # + reward_action_pos_smoothness
-        # + reward_action_vel_smoothness
-        # + reward_action_acc_smoothness
+        + reward_action_smoothness
         + reward_force
         + reward_action_force_smoothness
     )
