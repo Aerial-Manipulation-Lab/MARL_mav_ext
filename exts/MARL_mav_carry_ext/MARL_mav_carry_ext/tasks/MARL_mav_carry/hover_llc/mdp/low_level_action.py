@@ -10,7 +10,7 @@ from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.math import yaw_quat, euler_xyz_from_quat, quat_inv, quat_mul, quat_from_angle_axis, normalize
 
-from .marker_utils import FORCE_MARKER_Z_CFG, GOAL_POS_MARKER_CFG, ACC_MARKER_CFG, ORIENTATION_MARKER_CFG, BLUE_ARROW_MARKER_CFG
+from .marker_utils import FORCE_MARKER_Z_CFG, DRONE_POS_MARKER_CFG, ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
 from .observations import *
 from MARL_mav_carry_ext.splines import minimum_snap_spline, evaluate_trajectory
 from MARL_mav_carry_ext.controllers import GeometricController
@@ -140,7 +140,7 @@ class LowLevelAction(ActionTerm):
             # set their visibility to true
             self.drone_force_z_visualizer.set_visibility(True)
             if not hasattr(self, "drone_pos_marker"):
-                marker_cfg = GOAL_POS_MARKER_CFG.copy()
+                marker_cfg = DRONE_POS_MARKER_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_pos_markers"
                 self.drone_pos_marker = VisualizationMarkers(marker_cfg)
             self.drone_pos_marker.set_visibility(True)
@@ -205,7 +205,7 @@ class LowLevelAction(ActionTerm):
         positions = torch.cat(
         (self.drone_positions_debug, self.drone_goals_debug), dim=0
         )  # visualize the payload positions in world frame
-        marker_idx = [0] * self.num_envs * 3 + [1] * self.num_envs * 3
+        marker_idx = [0] * self.num_envs * self._num_drones + [1] * self.num_envs + [2] * self.num_envs + [3] * self.num_envs
         self.drone_pos_marker.visualize(translations=positions.view(-1,3), marker_indices=marker_idx)
 
         # drone desired accelerations

@@ -197,11 +197,64 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the hovering task."""
 
-    omnidrones_reward = RewTerm(
-        func=mdp.OmniDrones_reward,
+    pose_reward = RewTerm(
+        func=mdp.track_payload_pose,
         weight=1.0,
-        params={"debug_vis": True, "command_name": "pose_command"},
+        params={"asset_cfg": SceneEntityCfg("robot")},
     )
+
+    up_reward = RewTerm(
+        func=mdp.upright_reward,
+        weight=1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    spin_payload = RewTerm(
+        func=mdp.spinnage_reward_payload,
+        weight=1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    swing_payload = RewTerm(
+        func=mdp.swing_reward,
+        weight=1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    spin_falcon = RewTerm(
+        func=mdp.spinnage_reward_drones,
+        weight=1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    jerk_penalty = RewTerm(
+        func=mdp.jerk_penalty,
+        weight=1.0,
+    )
+
+    snap_penalty = RewTerm(
+        func=mdp.snap_penalty,
+        weight=1.0,
+    )
+
+    policy_action_smoothness = RewTerm(
+        func=mdp.action_smoothness_reward,
+        weight=1.0,
+    )
+
+    force_penalty = RewTerm(
+        func=mdp.action_penalty_force,
+        weight=1.0,
+    )
+
+    force_smoothness = RewTerm(
+        func=mdp.action_smoothness_force_reward,
+        weight=1.0,
+    )
+
+
+
+    
 
 
 @configclass

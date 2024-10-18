@@ -50,22 +50,6 @@ if debug_vis_reward:
     orientation_marker_cfg.prim_path = "/Visuals/payload_orientation"
     payload_orientation_marker = VisualizationMarkers(orientation_marker_cfg)
 
-def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
-    """Test reward function."""
-    safe_distance = 0.44  # smallest distance where drones are just upright
-    robot = env.scene[asset_cfg.name]
-    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
-    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
-    rpos = get_drone_rpos(drone_pos_world_frame)
-    pdist = torch.norm(rpos, dim=-1, keepdim=True)
-    separation = (
-        get_drone_pdist(pdist).min(dim=-1).values.min(dim=-1).values
-    )  # get the smallest distance between drones in the swarm
-    reward_separation = torch.square(separation / safe_distance).clamp(0, 1)
-
-    assert reward_separation.shape == (env.scene.num_envs,)
-    return separation
-
 
 def track_payload_pos(
     env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -84,7 +68,10 @@ def track_payload_pos(
     reward_distance_scale = 1.2
     reward_position = torch.exp(-positional_error * reward_distance_scale)
 
-    marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
+    if env.scene.num_envs > 1:
+        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
+    else:
+        marker_indices = [0, 1]
 
     if debug_vis:
         # set their visibility to true
@@ -114,10 +101,7 @@ def track_payload_orientation(
     reward_distance_scale = 1.2
     reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
 
-    if env.scene.num_envs > 1:
-        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
-    else:
-        marker_indices = [0, 1]
+    marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
 
     if debug_vis:
         payload_orientation_marker.set_visibility(True)
@@ -133,15 +117,23 @@ def track_payload_orientation(
 
     return reward_orientation
 
-def track_payload_pose(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
-    """Reward for the desired pose"""
-    position_reward = track_payload_pos(env, debug_vis_reward, "pose_command", asset_cfg)
-    orientation_reward = track_payload_orientation(env, debug_vis_reward, "pose_command", asset_cfg)
-    reward_pose = position_reward + orientation_reward
-    sep_reward = separation_reward(env, asset_cfg)
-    reward_pose = reward_pose * sep_reward # from omnidrones paper
-    assert reward_pose.shape == (env.scene.num_envs,)
-    return reward_pose
+
+def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Test reward function."""
+    safe_distance = 0.44  # smallest distance where drones are just upright
+    robot = env.scene[asset_cfg.name]
+    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
+    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
+    rpos = get_drone_rpos(drone_pos_world_frame)
+    pdist = torch.norm(rpos, dim=-1, keepdim=True)
+    separation = (
+        get_drone_pdist(pdist).min(dim=-1).values.min(dim=-1).values
+    )  # get the smallest distance between drones in the swarm
+    reward_separation = torch.square(separation / safe_distance).clamp(0, 1)
+
+    assert reward_separation.shape == (env.scene.num_envs,)
+    return separation
+
 
 def upright_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for keeping the payload up."""
@@ -151,10 +143,6 @@ def upright_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
     payload_up = quat_axis(payload_orientation, axis=2)
     up = payload_up[:, 2]
     reward_up = torch.square((up + 1) / 2)
-    sep_reward = separation_reward(env, asset_cfg)
-    pose_reward = track_payload_pose(env, asset_cfg)
-    reward_up = reward_up * sep_reward * pose_reward # from omnidrones paper
-
     assert reward_up.shape == (env.scene.num_envs,)
     return reward_up
 
@@ -168,10 +156,6 @@ def spinnage_reward_payload(
     payload_idx = robot.find_bodies("load_link")[0]
     payload_angular_velocity = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(payload_angular_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    pose_reward = track_payload_pose(env, asset_cfg)
-    reward_spin = reward_spin * sep_reward * pose_reward # from omnidrones paper
-
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
 
@@ -183,9 +167,6 @@ def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = S
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_angular_velocity = robot.data.body_state_w[:, drone_idx, 10:].square().sum(-1).sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(drone_angular_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    reward_spin = reward_spin * sep_reward # from omnidrones paper
-
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
 
@@ -197,10 +178,6 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     payload_idx = robot.find_bodies("load_link")[0]
     payload_linear_velocity = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1).abs().sum(-1)
     reward_swing = swing_weight * torch.exp(-torch.square(payload_linear_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    pose_reward = track_payload_pose(env, asset_cfg)
-    reward_swing = reward_swing * sep_reward * pose_reward # from omnidrones paper
-
     assert reward_swing.shape == (env.scene.num_envs,)
     return reward_swing
 
@@ -212,9 +189,6 @@ def jerk_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
     jerk_norm_drone = torch.norm(desired_jerk, dim=-1)
     total_jerk = jerk_norm_drone.sum(dim=-1)
     reward_jerk = reward_jerk_weight * torch.exp(-total_jerk)
-    sep_reward = separation_reward(env)
-    reward_jerk = reward_jerk * sep_reward # from omnidrones paper
-
     assert reward_jerk.shape == (env.scene.num_envs,)
     return reward_jerk
 
@@ -226,9 +200,6 @@ def snap_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
     snap_norm_drone = torch.norm(desired_snap, dim=-1)
     total_snap = snap_norm_drone.sum(dim=-1)
     reward_snap = reward_snap_weight * torch.exp(-total_snap)
-    sep_reward = separation_reward(env)
-    reward_snap = reward_snap * sep_reward # from omnidrones paper
-
     assert reward_snap.shape == (env.scene.num_envs,)
     return reward_snap
 
@@ -239,9 +210,6 @@ def jerk_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
     desired_jerk = env.action_manager.action[:, [9, 10, 11, 24, 25, 26, 39, 40, 41]]
     jerk_norm_drone = torch.norm(desired_jerk, dim=-1)
     reward_jerk = reward_jerk_weight * torch.exp(-jerk_norm_drone)
-    sep_reward = separation_reward(env)
-    reward_jerk = reward_jerk * sep_reward # from omnidrones paper
-
     assert reward_jerk.shape == (env.scene.num_envs,)
     return reward_jerk
 
@@ -251,9 +219,6 @@ def snap_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
     desired_snap = env.action_manager.action[:, [12, 13, 14, 27, 28, 29, 42, 43, 44]]
     snap_norm_drone = torch.norm(desired_snap, dim=-1)
     reward_snap = reward_snap_weight * torch.exp(-snap_norm_drone)
-    sep_reward = separation_reward(env)
-    reward_snap = reward_snap * sep_reward # from omnidrones paper
-
     assert reward_snap.shape == (env.scene.num_envs,)
     return reward_snap
 
@@ -264,9 +229,6 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action_prev = env.action_manager.prev_action
     action_smoothness = torch.norm(action - action_prev, dim=-1)
     reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness)
-    sep_reward = separation_reward(env)
-    reward_action_smoothness = reward_action_smoothness * sep_reward # from omnidrones paper
-
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
 
@@ -307,9 +269,6 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     action_forces = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
     effort_norm = torch.sum(action_forces, dim=-1)
     reward_effort = reward_effort_weight * torch.exp(-effort_norm)
-    sep_reward = separation_reward(env)
-    reward_effort = reward_effort * sep_reward # from omnidrones paper
-
     assert reward_effort.shape == (env.scene.num_envs,)
     return reward_effort
 
@@ -321,12 +280,91 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2]
     action_smoothness_force = torch.norm(action_force - action_prev_force, dim=-1)
     reward_action_smoothness_force = reward_action_smoothness_force_weight * torch.exp(-action_smoothness_force)
-    sep_reward = separation_reward(env)
-    reward_action_smoothness_force = reward_action_smoothness_force * sep_reward # from omnidrones paper
-
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force   
 
 """ TODO: rewards for:
 - Joint limits (angles between cables) of cable joints
 """
+
+
+def OmniDrones_reward_spline(
+    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Rewards in the same way as the OmniDrones paper.
+    This function calls the other functions to calculate the rewards,
+    it is done in a separate function because the separation reward is a multiplicative factor.
+    """
+
+    # Calculate the rewards
+    reward_position = track_payload_pos(env, debug_vis, command_name, asset_cfg)
+    reward_orientation = track_payload_orientation(env, debug_vis, command_name, asset_cfg)
+    reward_pose = reward_position + reward_orientation
+
+    reward_separation = separation_reward(env)
+    reward_up = upright_reward(env)
+    reward_spin_payload = spinnage_reward_payload(env)
+    reward_swing = swing_reward(env)
+    reward_spin_drones = spinnage_reward_drones(env)
+
+    reward_desired_jerk = jerk_penalty_spline(env)
+    reward_desired_snap = snap_penalty_spline(env)
+
+    reward_action_smoothness = action_smoothness_reward(env)    
+    reward_force = action_penalty_force(env)
+    reward_action_force_smoothness = action_smoothness_force_reward(env)
+
+    # Calculate the total reward
+    reward = reward_separation * (
+        reward_pose
+        + reward_pose * (reward_up + reward_spin_payload + reward_swing)
+        # + reward_joint_limit
+        + reward_spin_drones
+        + reward_desired_jerk
+        + reward_desired_snap
+        + reward_action_smoothness
+        + reward_force
+        + reward_action_force_smoothness
+    )
+    return reward
+
+
+def OmniDrones_reward(
+    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Rewards in the same way as the OmniDrones paper.
+    This function calls the other functions to calculate the rewards,
+    it is done in a separate function because the separation reward is a multiplicative factor.
+    """
+
+    # Calculate the rewards
+    reward_position = track_payload_pos(env, debug_vis, command_name, asset_cfg)
+    reward_orientation = track_payload_orientation(env, debug_vis, command_name, asset_cfg)
+    reward_pose = reward_position + reward_orientation
+
+    reward_separation = separation_reward(env)
+    reward_up = upright_reward(env)
+    reward_spin_payload = spinnage_reward_payload(env)
+    reward_swing = swing_reward(env)
+    reward_spin_drones = spinnage_reward_drones(env)
+
+    reward_desired_jerk = jerk_penalty(env)
+    reward_desired_snap = snap_penalty(env)
+    reward_action_smoothness = action_smoothness_reward(env)
+
+    reward_force = action_penalty_force(env)
+    reward_action_force_smoothness = action_smoothness_force_reward(env)
+
+    # Calculate the total reward
+    reward = reward_separation * (
+        reward_pose
+        + reward_pose * (reward_up + reward_spin_payload + reward_swing)
+        # + reward_joint_limit
+        + reward_spin_drones
+        + reward_desired_jerk
+        + reward_desired_snap
+        + reward_action_smoothness
+        + reward_force
+        + reward_action_force_smoothness
+    )
+    return reward
