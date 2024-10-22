@@ -75,8 +75,8 @@ class LowLevelAction(ActionTerm):
             waypoint: The waypoints to be processed.
         Returns:
             The processed external forces to be applied to the rotors."""
-        self._waypoints = waypoints
         if self._counter % self.cfg.low_level_decimation == 0:
+            self._waypoints = waypoints
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = observations[:, 19:28]
@@ -122,7 +122,6 @@ class LowLevelAction(ActionTerm):
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
-        # self._forces = torch.clamp(self._forces, 0.0, 25.0/4) # TODO: change in SKRL to use sigmoid activation on last layer
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
 
     """
@@ -256,8 +255,6 @@ class LowLevelActionCfg(ActionTermCfg):
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
     num_drones: int = 3
     """Number of drones."""
-    # waypoint_dim: int = 10
-    # """Dimension of the waypoints: [pos, vel, acc, yaw]."""
     waypoint_dim: int = 3
     """Dimension of the waypoints: [pos, vel, acc, jerk, snap, yaw]."""
     num_waypoints: int = 1
@@ -266,7 +263,7 @@ class LowLevelActionCfg(ActionTermCfg):
     """Time horizon of the trajectory in seconds."""
     low_level_decimation: int = 2
     """Decimation factor for the low level action term."""
-    # low_level_actions: ActionTermCfg = MISSING
-    # """Low level action configuration."""
+    planner_decimation: int = 10
+    """Decimation factor for the RL planner term."""
     debug_vis: bool = False
     """Whether to visualize debug information. Defaults to False."""
