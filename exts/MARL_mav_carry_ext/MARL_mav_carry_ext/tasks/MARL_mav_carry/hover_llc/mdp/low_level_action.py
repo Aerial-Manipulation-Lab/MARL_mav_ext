@@ -78,7 +78,6 @@ class LowLevelAction(ActionTerm):
             The processed external forces to be applied to the rotors."""
         if self._hl_counter % self.cfg.planner_decimation == 0:
             self._waypoints = waypoints
-            self._eval_time = 1/(self.cfg.planner_decimation/self.cfg.low_level_decimation + 1)
             self._hl_counter = 0
 
         if self._ll_counter % self.cfg.low_level_decimation == 0:

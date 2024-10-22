@@ -76,7 +76,7 @@ class GeometricController():
         pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
         vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
 
-        des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"] # TODO: check if this is correct
+        des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
         # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(1) # sum over all propellors
         acc_load = state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust/self.falcon_mass)

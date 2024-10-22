@@ -69,6 +69,10 @@ def main():
                                             -0.5, 0.0, 2.5, # end goal drone 2
                                             0.5, 0.5, 2.5, # end goal drone 3]
                                             ]], dtype=torch.float32)
+                waypoint[1] = torch.tensor([[0.5, 0.5, 2.5, # end goal drone 1
+                                            0.5, 0.0, 2.5, # end goal drone 2
+                                            -0.5, 0.5, 3.0, # end goal drone 3]
+                                            ]], dtype=torch.float32)
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # update counter
