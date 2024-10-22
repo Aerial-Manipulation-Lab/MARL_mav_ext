@@ -32,13 +32,14 @@ class LowLevelAction_spline(ActionTerm):
         self._num_drones = cfg.num_drones
 
         # spline parameters
-        self._waypoint_dim = cfg.waypoint_dim # pos, vel, acc, att
+        self._waypoint_dim = cfg.waypoint_dim # pos
         self._num_waypoints = cfg.num_waypoints
         self._times = (torch.arange(self._num_waypoints + 1).float())/self._num_waypoints # normalized time vector
         self._time_horizon = cfg.time_horizon # sec
         self._waypoints = torch.zeros(self.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
 
-        # to minimize jerk and snap in reward function
+        # to be used in the reward function
+        self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self._desired_jerk = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self._desired_snap = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
@@ -125,6 +126,7 @@ class LowLevelAction_spline(ActionTerm):
                 position, velocity, acceleration, jerk, snap = septic_spline.evaluate_trajectory(spline_coeffs, self._times * self._time_horizon, self._eval_time * self._time_horizon)
                 drone_setpoint: dict = {}
                 drone_setpoint["pos"] = position
+                self._desired_position[:, i] = position # for reward
                 drone_setpoint["lin_vel"] = velocity
                 drone_setpoint["lin_acc"] = acceleration
                 drone_setpoint["jerk"] = jerk

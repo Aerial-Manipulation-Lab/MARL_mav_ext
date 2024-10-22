@@ -107,7 +107,7 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_pos_world = robot.data.body_state_w[:, drone_idx, :3]
     drone_pos_env = drone_pos_world - env.scene.env_origins.unsqueeze(1)
-    desired_pos = env.action_manager.action.view(-1,3,3)
+    desired_pos = env.action_manager._terms["low_level_action"]._desired_position
     # compute the error
     positional_error = torch.norm((desired_pos - drone_pos_env) / num_drones, dim=-1)
     total_positional_error = positional_error.sum(dim=-1)
