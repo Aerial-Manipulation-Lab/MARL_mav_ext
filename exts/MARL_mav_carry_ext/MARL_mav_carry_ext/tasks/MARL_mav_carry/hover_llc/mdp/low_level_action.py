@@ -35,7 +35,8 @@ class LowLevelAction(ActionTerm):
         self._waypoints = torch.zeros(env.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device)
         self._geometric_controller = GeometricController(self.num_envs)
         self.cfg = cfg
-        self._counter = 0
+        self._ll_counter = 0
+        self._hl_counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
@@ -75,7 +76,12 @@ class LowLevelAction(ActionTerm):
             waypoint: The waypoints to be processed.
         Returns:
             The processed external forces to be applied to the rotors."""
-        if self._counter % self.cfg.low_level_decimation == 0:
+        if self._hl_counter % self.cfg.planner_decimation == 0:
+            self._waypoints = waypoints
+            self._eval_time = 1/(self.cfg.planner_decimation/self.cfg.low_level_decimation + 1)
+            self._hl_counter = 0
+
+        if self._ll_counter % self.cfg.low_level_decimation == 0:
             self._waypoints = waypoints
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
@@ -116,8 +122,10 @@ class LowLevelAction(ActionTerm):
                     self.des_ori_debug[:, i] = q_cmd
                     self.z_b_debug[:, i] = z_b_des
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
-            self._counter = 0
-        self._counter += 1
+            self._ll_counter = 0
+
+        self._ll_counter += 1
+        self._hl_counter += 1
 
 
     def apply_actions(self):

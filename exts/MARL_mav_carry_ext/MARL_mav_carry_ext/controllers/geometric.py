@@ -82,7 +82,7 @@ class GeometricController():
         acc_load = state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust/self.falcon_mass)
         # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
         acc_cmd = des_acc - self.gravity - acc_load
-        des_thrust = self.falcon_mass * acc_cmd
+        des_thrust = self.falcon_mass * acc_cmd # avoid division by zero
         z_b_des = normalize(des_thrust) # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(des_thrust, dim = 1, keepdim=True)
         current_collective_thrust_magnitude = torch.norm(current_collective_thrust, dim = 1, keepdim=True)
@@ -92,7 +92,7 @@ class GeometricController():
         setpoint_yaw = setpoint["yaw"]
         # calculate intermediate axis and new desired body frame
         x_intermediate_des = torch.cat((torch.cos(setpoint_yaw), torch.sin(setpoint_yaw), torch.zeros_like(setpoint_yaw)), dim=1)
-        y_b_des = torch.linalg.cross(z_b_des, x_intermediate_des) /torch.norm(torch.linalg.cross(z_b_des, x_intermediate_des), dim=-1, keepdim=True)
+        y_b_des = torch.linalg.cross(z_b_des, x_intermediate_des) /(torch.norm(torch.linalg.cross(z_b_des, x_intermediate_des), dim=-1, keepdim=True) + 0.0001) # avoid division by zero
         x_b_des = torch.linalg.cross(y_b_des, z_b_des)
 
         # calculate the desired quaternion
