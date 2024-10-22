@@ -8,11 +8,11 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import yaw_quat, euler_xyz_from_quat, quat_inv, quat_mul, quat_from_angle_axis, normalize
+from omni.isaac.lab.utils.math import quat_from_angle_axis, normalize
 
-from .marker_utils import FORCE_MARKER_Z_CFG, GOAL_POS_MARKER_CFG, ACC_MARKER_CFG, ORIENTATION_MARKER_CFG, DRONE_POS_MARKER_CFG
+from .marker_utils import FORCE_MARKER_Z_CFG, ACC_MARKER_CFG, ORIENTATION_MARKER_CFG, DRONE_POS_MARKER_CFG
 from .observations import *
-from MARL_mav_carry_ext.splines import minimum_snap_spline, evaluate_trajectory
+from MARL_mav_carry_ext.splines import septic_spline
 from MARL_mav_carry_ext.controllers import GeometricController
 
 class LowLevelAction_spline(ActionTerm):
@@ -86,7 +86,7 @@ class LowLevelAction_spline(ActionTerm):
             The processed external forces to be applied to the rotors."""
         if self._hl_counter % self.cfg.planner_decimation == 0:
             self._waypoints = waypoints
-            self._eval_time = 0.25
+            self._eval_time = 1/(self.cfg.planner_decimation/self.cfg.low_level_decimation + 1)
             self._hl_counter = 0
 
         if self._ll_counter % self.cfg.low_level_decimation == 0:
@@ -103,7 +103,12 @@ class LowLevelAction_spline(ActionTerm):
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
                 end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
-                drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx] # normalized waypoints
+                drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx]
+                desired_vel_end = torch.zeros(self.num_envs, 3, device=self.device)
+                desired_acc_end = torch.zeros(self.num_envs, 3, device=self.device)
+                desired_jerk_end = torch.zeros(self.num_envs, 3, device=self.device)
+                desired_snap_end = torch.zeros(self.num_envs, 3, device=self.device)
+                drone_end_state = torch.cat([drone_waypoints, desired_vel_end, desired_acc_end, desired_jerk_end, desired_snap_end], dim=1)
                 drone_states: dict = {} # dict of tensors 
                 drone_states["pos"] = drone_positions[:, i*3: i*3+3]
                 drone_states["quat"] = drone_orientations[:, i*4: i*4+4]
@@ -113,11 +118,11 @@ class LowLevelAction_spline(ActionTerm):
                 drone_states["ang_acc"] = drone_angular_accelerations[:, i*3: i*3+3]
                 first_waypoint = torch.cat((drone_states["pos"], drone_states["lin_vel"], drone_states["lin_acc"]), dim=-1)
                 # concat first state to start of generated waypoints
-                drone_total_waypoints = torch.cat((first_waypoint, drone_waypoints), dim=-1)
+                # drone_total_waypoints = torch.cat((first_waypoint, drone_end_state), dim=-1)
                 # generate spline
-                spline_coeffs = minimum_snap_spline(drone_total_waypoints, self._times * self._time_horizon, self.num_envs)
+                spline_coeffs = septic_spline.get_coeffs(first_waypoint, drone_end_state, self._times * self._time_horizon, self.num_envs)
                 # get individual rotor thrusts from geometric controller
-                position, velocity, acceleration, jerk, snap = evaluate_trajectory(spline_coeffs, self._times * self._time_horizon, self._eval_time * self._time_horizon)
+                position, velocity, acceleration, jerk, snap = septic_spline.evaluate_trajectory(spline_coeffs, self._times * self._time_horizon, self._eval_time * self._time_horizon)
                 drone_setpoint: dict = {}
                 drone_setpoint["pos"] = position
                 drone_setpoint["lin_vel"] = velocity
@@ -133,14 +138,15 @@ class LowLevelAction_spline(ActionTerm):
                 if self.cfg.debug_vis:
                     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
                     for j in range(self._num_waypoints):
-                        self.spline_control_points_debug[:, j] = drone_waypoints[:, j * self._waypoint_dim : j * self._waypoint_dim + 3]
+                        self.spline_control_points_debug[:, j] = position + self._env.scene.env_origins
                     self.drone_goals_debug[:, i] = self.spline_control_points_debug + self._env.scene.env_origins.unsqueeze(1)
                     self.des_acc_debug[:, i] = acc_cmd
                     self.des_ori_debug[:, i] = q_cmd
                     self.z_b_debug[:, i] = z_b_des
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._ll_counter = 0
-            self._eval_time += 0.5
+            if self._eval_time < 1.0:
+                self._eval_time += 1/(self.cfg.planner_decimation/self.cfg.low_level_decimation + 1)
 
         self._ll_counter += 1
         self._hl_counter += 1
@@ -148,7 +154,6 @@ class LowLevelAction_spline(ActionTerm):
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
-        # self._forces = torch.clamp(self._forces, 0.0, 25.0/4) # TODO: change in SKRL to use sigmoid activation on last layer
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
 
     """
@@ -282,15 +287,15 @@ class LowLevelActionCfg_spline(ActionTermCfg):
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
     num_drones: int = 3
     """Number of drones."""
-    waypoint_dim: int = 9
-    """Dimension of the waypoints: [pos, vel, acc]."""
-    num_waypoints: int = 4
+    waypoint_dim: int = 3
+    """Dimension of the waypoints: [pos]."""
+    num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
-    time_horizon: int = 3
+    time_horizon: int = 2
     """Time horizon of the trajectory in seconds."""
     low_level_decimation: int = 2
     """Decimation factor for the low level action term."""
-    planner_decimation: int = 4
+    planner_decimation: int = 10
     """Decimation factor for the RL planner term."""
     # low_level_actions: ActionTermCfg = MISSING
     # """Low level action configuration."""

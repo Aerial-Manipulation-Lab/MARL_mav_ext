@@ -12,7 +12,6 @@ from omni.isaac.lab.utils.math import yaw_quat, euler_xyz_from_quat, quat_inv, q
 
 from .marker_utils import FORCE_MARKER_Z_CFG, DRONE_POS_MARKER_CFG, ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
 from .observations import *
-from MARL_mav_carry_ext.splines import minimum_snap_spline, evaluate_trajectory
 from MARL_mav_carry_ext.controllers import GeometricController
 
 class LowLevelAction(ActionTerm):
@@ -256,7 +255,7 @@ class LowLevelActionCfg(ActionTermCfg):
     num_drones: int = 3
     """Number of drones."""
     waypoint_dim: int = 3
-    """Dimension of the waypoints: [pos, vel, acc, jerk, snap, yaw]."""
+    """Dimension of the waypoints: [pos]."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
     time_horizon: int = 2
