@@ -226,7 +226,7 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
 def jerk_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for desired jerk values."""
     reward_jerk_weight = 0.2
-    desired_jerk = env.action_manager._terms["low_level_action"]._desired_jerk
+    desired_jerk = env.action_manager._terms["low_level_action"]._desired_jerk / num_drones
     jerk_norm_drone = torch.norm(desired_jerk, dim=-1)
     total_jerk = jerk_norm_drone.sum(dim=-1)
     reward_jerk = reward_jerk_weight * torch.exp(-total_jerk)
@@ -240,7 +240,7 @@ def jerk_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
 def snap_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for desired snap values."""
     reward_snap_weight = 0.5
-    desired_snap = env.action_manager._terms["low_level_action"]._desired_snap
+    desired_snap = env.action_manager._terms["low_level_action"]._desired_snap / num_drones
     snap_norm_drone = torch.norm(desired_snap, dim=-1)
     total_snap = snap_norm_drone.sum(dim=-1)
     reward_snap = reward_snap_weight * torch.exp(-total_snap)
@@ -250,30 +250,6 @@ def snap_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
     assert reward_snap.shape == (env.scene.num_envs,)
     return reward_snap
 
-# if not using spline
-def jerk_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Penalty for desired jerk values."""
-    reward_jerk_weight = 0.2
-    desired_jerk = env.action_manager.action[:, [9, 10, 11, 24, 25, 26, 39, 40, 41]] / num_drones
-    jerk_norm_drone = torch.norm(desired_jerk, dim=-1) 
-    reward_jerk = reward_jerk_weight * torch.exp(-jerk_norm_drone)
-    sep_reward = separation_reward(env)
-    reward_jerk = reward_jerk * sep_reward # from omnidrones paper
-
-    assert reward_jerk.shape == (env.scene.num_envs,)
-    return reward_jerk
-
-def snap_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Penalty for desired snap values."""
-    reward_snap_weight = 0.5
-    desired_snap = env.action_manager.action[:, [12, 13, 14, 27, 28, 29, 42, 43, 44]] / num_drones
-    snap_norm_drone = torch.norm(desired_snap, dim=-1)
-    reward_snap = reward_snap_weight * torch.exp(-snap_norm_drone)
-    sep_reward = separation_reward(env)
-    reward_snap = reward_snap * sep_reward # from omnidrones paper
-
-    assert reward_snap.shape == (env.scene.num_envs,)
-    return reward_snap
 
 def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in action values."""
@@ -287,36 +263,6 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
-
-# def action_smoothness_pos_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
-#     """Penalty for high variation in waypoint values."""
-#     reward_action_smoothness_pos_weight = 0.5
-#     action_pos = env.action_manager.action[:, 0:3]
-#     action_prev_pos = env.action_manager.prev_action[:, 0:3]
-#     action_smoothness_pos = torch.norm(action_pos - action_prev_pos, dim=-1)
-#     reward_action_smoothness_pos = reward_action_smoothness_pos_weight * torch.exp(-action_smoothness_pos)
-#     assert reward_action_smoothness_pos.shape == (env.scene.num_envs,)
-#     return reward_action_smoothness_pos
-
-# def action_smoothness_vel_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
-#     """Penalty for high variation in velocity values."""
-#     reward_action_smoothness_vel_weight = 0.5
-#     action_vel = env.action_manager.action[:, 3:6]
-#     action_prev_vel = env.action_manager.prev_action[:, 3:6]
-#     action_smoothness_vel = torch.norm(action_vel - action_prev_vel, dim=-1)
-#     reward_action_smoothness_vel = reward_action_smoothness_vel_weight * torch.exp(-action_smoothness_vel)
-#     assert reward_action_smoothness_vel.shape == (env.scene.num_envs,)
-#     return reward_action_smoothness_vel
-
-# def action_smoothness_acc_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
-#     """Penalty for high variation in acceleration values."""
-#     reward_action_smoothness_acc_weight = 0.5
-#     action_acc = env.action_manager.action[:, 6:9]
-#     action_prev_acc = env.action_manager.prev_action[:, 6:9]
-#     action_smoothness_acc = torch.norm(action_acc - action_prev_acc, dim=-1)
-#     reward_action_smoothness_acc = reward_action_smoothness_acc_weight * torch.exp(-action_smoothness_acc)
-#     assert reward_action_smoothness_acc.shape == (env.scene.num_envs,)
-#     return reward_action_smoothness_acc
 
 
 def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
