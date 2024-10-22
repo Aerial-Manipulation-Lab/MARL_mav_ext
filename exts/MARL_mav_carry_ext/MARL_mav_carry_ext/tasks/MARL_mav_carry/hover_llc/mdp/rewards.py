@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from omni.isaac.lab.envs import ManagerBasedRLEnv
 
 # TODO: put this somewhere else
+num_drones = 3
+
 debug_vis_reward = True
 if debug_vis_reward:
     GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
@@ -99,6 +101,22 @@ def track_payload_pos(
 
     return reward_position
 
+def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Reward for tracking the drone reference."""
+    robot = env.scene[asset_cfg.name]
+    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
+    drone_pos_world = robot.data.body_state_w[:, drone_idx, :3]
+    drone_pos_env = drone_pos_world - env.scene.env_origins.unsqueeze(1)
+    desired_pos = env.action_manager.action.view(-1,3,3)
+    # compute the error
+    positional_error = torch.norm((desired_pos - drone_pos_env) / num_drones, dim=-1)
+    total_positional_error = positional_error.sum(dim=-1)
+    reward_distance_scale = 1.5
+    reward_position = torch.exp(-total_positional_error * reward_distance_scale)
+    assert reward_position.shape == (env.scene.num_envs,)
+    return reward_position
+
+
 
 def track_payload_orientation(
     env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -181,7 +199,7 @@ def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = S
     spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
-    drone_angular_velocity = robot.data.body_state_w[:, drone_idx, 10:].square().sum(-1).sum(-1)
+    drone_angular_velocity = (robot.data.body_state_w[:, drone_idx, 10:] / num_drones).square().sum(-1).sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(drone_angular_velocity))
     sep_reward = separation_reward(env, asset_cfg)
     reward_spin = reward_spin * sep_reward # from omnidrones paper
@@ -236,8 +254,8 @@ def snap_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
 def jerk_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for desired jerk values."""
     reward_jerk_weight = 0.2
-    desired_jerk = env.action_manager.action[:, [9, 10, 11, 24, 25, 26, 39, 40, 41]]
-    jerk_norm_drone = torch.norm(desired_jerk, dim=-1)
+    desired_jerk = env.action_manager.action[:, [9, 10, 11, 24, 25, 26, 39, 40, 41]] / num_drones
+    jerk_norm_drone = torch.norm(desired_jerk, dim=-1) 
     reward_jerk = reward_jerk_weight * torch.exp(-jerk_norm_drone)
     sep_reward = separation_reward(env)
     reward_jerk = reward_jerk * sep_reward # from omnidrones paper
@@ -248,7 +266,7 @@ def jerk_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
 def snap_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for desired snap values."""
     reward_snap_weight = 0.5
-    desired_snap = env.action_manager.action[:, [12, 13, 14, 27, 28, 29, 42, 43, 44]]
+    desired_snap = env.action_manager.action[:, [12, 13, 14, 27, 28, 29, 42, 43, 44]] / num_drones
     snap_norm_drone = torch.norm(desired_snap, dim=-1)
     reward_snap = reward_snap_weight * torch.exp(-snap_norm_drone)
     sep_reward = separation_reward(env)
@@ -262,7 +280,7 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     reward_action_smoothness_weight = 0.5
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
-    action_smoothness = torch.norm(action - action_prev, dim=-1)
+    action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
     reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness)
     sep_reward = separation_reward(env)
     reward_action_smoothness = reward_action_smoothness * sep_reward # from omnidrones paper
@@ -305,7 +323,8 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high force values."""
     reward_effort_weight = 0.2
     action_forces = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
-    effort_norm = torch.sum(action_forces, dim=-1)
+    normalized_forces = action_forces / 6.25
+    effort_norm = torch.sum(normalized_forces, dim=-1) / num_drones
     reward_effort = reward_effort_weight * torch.exp(-effort_norm)
     sep_reward = separation_reward(env)
     reward_effort = reward_effort * sep_reward # from omnidrones paper
@@ -317,9 +336,9 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
 def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
     reward_action_smoothness_force_weight = 0.5
-    action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
-    action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2]
-    action_smoothness_force = torch.norm(action_force - action_prev_force, dim=-1)
+    action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
+    action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
+    action_smoothness_force = torch.norm((action_force - action_prev_force) / num_drones, dim=-1)
     reward_action_smoothness_force = reward_action_smoothness_force_weight * torch.exp(-action_smoothness_force)
     sep_reward = separation_reward(env)
     reward_action_smoothness_force = reward_action_smoothness_force * sep_reward # from omnidrones paper

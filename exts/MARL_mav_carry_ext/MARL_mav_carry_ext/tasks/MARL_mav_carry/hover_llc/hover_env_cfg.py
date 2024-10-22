@@ -203,6 +203,12 @@ class RewardsCfg:
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
+    drone_ref_reward = RewTerm(
+        func=mdp.track_drone_reference,
+        weight=1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
     up_reward = RewTerm(
         func=mdp.upright_reward,
         weight=1.0,
@@ -227,15 +233,15 @@ class RewardsCfg:
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
-    jerk_penalty = RewTerm(
-        func=mdp.jerk_penalty,
-        weight=1.0,
-    )
+    # jerk_penalty = RewTerm(
+    #     func=mdp.jerk_penalty,
+    #     weight=1.0,
+    # )
 
-    snap_penalty = RewTerm(
-        func=mdp.snap_penalty,
-        weight=1.0,
-    )
+    # snap_penalty = RewTerm(
+    #     func=mdp.snap_penalty,
+    #     weight=1.0,
+    # )
 
     policy_action_smoothness = RewTerm(
         func=mdp.action_smoothness_reward,
