@@ -39,12 +39,12 @@ class GeometricController():
         self.max_thrust = torch.tensor(25.0/4, device=self.device)
 
         # controller parameters
-        self.kp_acc = torch.tensor([4.0, 4.0, 9.0]).to(self.device) /2 # not real tunings
-        self.kd_acc = torch.tensor([4.0, 4.0, 6.0]).to(self.device) # not real tunings
+        self.kp_acc = torch.tensor([4.0, 4.0, 9.0]).to(self.device)
+        self.kd_acc = torch.tensor([4.0, 4.0, 6.0]).to(self.device)
         self.ki_acc = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
 
         self.kp_rate = torch.tensor([25.0, 25.0, 8.0]).to(self.device)
-        self.kp_att_xy = 25.0
+        self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
         
         self.filter_sampling_frequency = torch.tensor([50, 50, 50], device=self.device)
