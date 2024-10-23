@@ -86,7 +86,7 @@ class LowLevelAction_spline(ActionTerm):
         Returns:
             The processed external forces to be applied to the rotors."""
         if self._hl_counter % self.cfg.planner_decimation == 0:
-            self._waypoints = waypoints
+            self._waypoints = torch.clamp(waypoints, -5, 5)
             self._eval_time = 1/(self.cfg.planner_decimation/self.cfg.low_level_decimation + 1)
             self._hl_counter = 0
 
@@ -104,7 +104,7 @@ class LowLevelAction_spline(ActionTerm):
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
                 end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
-                drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx]
+                drone_waypoints = self._waypoints[:, start_drone_idx : end_drone_idx]
                 desired_vel_end = torch.zeros(self.num_envs, 3, device=self.device)
                 desired_acc_end = torch.zeros(self.num_envs, 3, device=self.device)
                 desired_jerk_end = torch.zeros(self.num_envs, 3, device=self.device)

@@ -77,11 +77,10 @@ class LowLevelAction(ActionTerm):
         Returns:
             The processed external forces to be applied to the rotors."""
         if self._hl_counter % self.cfg.planner_decimation == 0:
-            self._waypoints = waypoints
+            self._waypoints = torch.clamp(waypoints, -5, 5)
             self._hl_counter = 0
 
         if self._ll_counter % self.cfg.low_level_decimation == 0:
-            self._waypoints = waypoints
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = observations[:, 19:28]
@@ -94,7 +93,7 @@ class LowLevelAction(ActionTerm):
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
                 end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
-                drone_waypoints = waypoints[:, start_drone_idx : end_drone_idx]
+                drone_waypoints = self._waypoints[:, start_drone_idx : end_drone_idx]
                 drone_states: dict = {} # dict of tensors 
                 drone_states["pos"] = drone_positions[:, i*3: i*3+3]
                 drone_states["quat"] = drone_orientations[:, i*4: i*4+4]
