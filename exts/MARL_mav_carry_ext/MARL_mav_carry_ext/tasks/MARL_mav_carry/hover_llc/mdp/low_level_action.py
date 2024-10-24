@@ -77,7 +77,7 @@ class LowLevelAction(ActionTerm):
         Returns:
             The processed external forces to be applied to the rotors."""
         if self._hl_counter % self.cfg.planner_decimation == 0:
-            self._waypoints = torch.clamp(waypoints, -5, 5)
+            self._waypoints = waypoints
             self._hl_counter = 0
 
         if self._ll_counter % self.cfg.low_level_decimation == 0:
