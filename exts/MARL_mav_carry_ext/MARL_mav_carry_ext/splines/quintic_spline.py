@@ -37,7 +37,7 @@ def compute_derivatives(coeffs, power):
         return coeffs
 
 # Generate a minimum snap trajectory for multiple waypoints
-def minimum_snap_spline(waypoints, times, num_envs):
+def get_coeffs(waypoints, times, num_envs):
 
     n_points = len(times)
     waypoint_id_increment = waypoints.shape[-1] // n_points

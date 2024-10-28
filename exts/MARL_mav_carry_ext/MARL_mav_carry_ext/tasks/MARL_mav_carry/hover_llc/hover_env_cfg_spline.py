@@ -180,11 +180,11 @@ class RewardsCfg:
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
-    drone_ref_reward = RewTerm(
-        func=mdp.track_drone_reference,
-        weight=1.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
+    # drone_ref_reward = RewTerm(
+    #     func=mdp.track_drone_reference,
+    #     weight=1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
 
     up_reward = RewTerm(
         func=mdp.upright_reward,
