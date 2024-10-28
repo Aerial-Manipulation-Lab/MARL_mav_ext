@@ -299,7 +299,7 @@
 
 
   <joint name="Falcon2/rotor_3_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 0.075 0.02"/>    
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon2/base_link"/>

@@ -119,15 +119,16 @@ def cable_angle_drones_cos(
     assert is_cable_limit.shape == (env.num_envs,)
     return is_cable_limit
 
+
 def cable_angle_payload_cos(
-        env: ManagerBasedRLEnv, threshold: float = 0.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, threshold: float = 0.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Angle of cable between cable and payload."""
     robot: Articulation = env.scene[asset_cfg.name]
     base_rope_idx = robot.find_bodies("rope_.*_link_0")[0]
     payload_idx = robot.find_bodies("load_link")[0]
     rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
-    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1,3,1).view(-1,4)
+    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
     payload_orientation_inv = quat_inv(payload_orientation_world)
     rope_orientations_payload = quat_mul(
         payload_orientation_inv, rope_orientations_world

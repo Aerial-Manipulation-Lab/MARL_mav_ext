@@ -46,37 +46,37 @@ TORQUE_MARKER_CFG = VisualizationMarkersCfg(
 )
 
 GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
-markers={
-    "goal_pos_marker": sim_utils.SphereCfg(
-        radius=0.03,
-        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
-    ),
-    "current_pos_marker": sim_utils.SphereCfg(
-        radius=0.03,
-        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
-    ),
-}
+    markers={
+        "goal_pos_marker": sim_utils.SphereCfg(
+            radius=0.03,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+        ),
+        "current_pos_marker": sim_utils.SphereCfg(
+            radius=0.03,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+        ),
+    }
 )
 
 DRONE_POS_MARKER_CFG = VisualizationMarkersCfg(
-markers={
-    "current_pos_marker": sim_utils.SphereCfg(
-        radius=0.03,
-        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=green),
-    ),
-    "goal_pos_marker_1": sim_utils.SphereCfg(
-        radius=0.03,
-        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=red),
-    ),
-    "goal_pos_marker_2": sim_utils.SphereCfg(
-    radius=0.03,
-    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=yellow),
-    ),
-    "goal_pos_marker_3": sim_utils.SphereCfg(
-    radius=0.03,
-    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=blue),
-    ),
-}
+    markers={
+        "current_pos_marker": sim_utils.SphereCfg(
+            radius=0.03,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=green),
+        ),
+        "goal_pos_marker_1": sim_utils.SphereCfg(
+            radius=0.03,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=red),
+        ),
+        "goal_pos_marker_2": sim_utils.SphereCfg(
+            radius=0.03,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=yellow),
+        ),
+        "goal_pos_marker_3": sim_utils.SphereCfg(
+            radius=0.03,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=blue),
+        ),
+    }
 )
 
 ORIENTATION_MARKER_CFG = VisualizationMarkersCfg(

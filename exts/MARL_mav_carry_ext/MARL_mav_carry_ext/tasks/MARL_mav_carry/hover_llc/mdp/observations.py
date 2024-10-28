@@ -47,6 +47,7 @@ def payload_angular_velocities(
     payload_idx = robot.find_bodies("load_link")[0]
     return robot.data.body_state_w[:, payload_idx, 10:].view(env.num_envs, -1)
 
+
 def payload_linear_acceleration(
     env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -54,6 +55,7 @@ def payload_linear_acceleration(
     robot: Articulation = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
     return robot.data.body_acc_w[:, payload_idx, 0:3].view(env.num_envs, -1)
+
 
 def payload_angular_acceleration(
     env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -93,7 +95,7 @@ def cable_angle(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg
     base_rope_idx = robot.find_bodies("rope_.*_link_0")[0]
     payload_idx = robot.find_bodies("load_link")[0]
     rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
-    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1,3,1).view(-1,4)
+    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
     payload_orientation_inv = quat_inv(payload_orientation_world)
     rope_orientations_payload = quat_mul(
         payload_orientation_inv, rope_orientations_world
@@ -135,17 +137,24 @@ def drone_angular_velocities(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = S
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     return robot.data.body_state_w[:, drone_idx, 10:].view(env.num_envs, -1)
 
-def drone_linear_acceleration(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+def drone_linear_acceleration(
+    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
     """Drone linear acceleration in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     return robot.data.body_acc_w[:, drone_idx, 0:3].view(env.num_envs, -1)
 
-def drone_angular_acceleration(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+def drone_angular_acceleration(
+    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
     """Drone angular acceleration in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     return robot.data.body_acc_w[:, drone_idx, 3:].view(env.num_envs, -1)
+
 
 # relative drone positions
 

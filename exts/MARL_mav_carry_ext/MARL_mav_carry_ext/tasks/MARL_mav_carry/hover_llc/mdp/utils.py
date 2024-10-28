@@ -58,4 +58,5 @@ def quat_axis(q: torch.Tensor, axis: int = 0):
     basis_vec[:, axis] = 1
     return quat_rotate(q, basis_vec)
 
+
 import torch

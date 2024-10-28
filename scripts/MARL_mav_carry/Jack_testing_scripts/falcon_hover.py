@@ -79,7 +79,7 @@ def main():
     count = 0
     robot_root_state = robot.data.default_root_state[:, :7]
     robot_root_state[0, :3] += torch.tensor([1.5, 0.5, 0.42])
-    robot_root_state[0, 3:7] = torch.tensor([ 0.4645017, 0.1911519, 0.4645017, 0.7293403 ])
+    robot_root_state[0, 3:7] = torch.tensor([0.4645017, 0.1911519, 0.4645017, 0.7293403])
     robot_root_state[1, :3] += torch.tensor([-1.5, 0.5, 0.42])
     # Simulate physics
     while simulation_app.is_running():

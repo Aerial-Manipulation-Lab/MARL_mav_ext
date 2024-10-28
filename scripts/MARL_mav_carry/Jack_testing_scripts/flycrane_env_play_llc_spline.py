@@ -30,14 +30,15 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
+import math
+import matplotlib.pyplot as plt
 from gymnasium.spaces import Box
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg_spline import HoverEnvCfg_llc_spline
 from MARL_mav_carry_ext.splines import septic_spline
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg_spline import HoverEnvCfg_llc_spline
 
 from omni.isaac.lab.envs import ManagerBasedRLEnv
-import matplotlib.pyplot as plt
-import math
+
 
 def main():
     """Main function."""
@@ -65,14 +66,26 @@ def main():
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:] = torch.tensor([[0.5, -0.5, 2.5, # end goal drone 1
-                                            -0.5, 0.0, 2.5, # end goal drone 2
-                                            0.5, 0.5, 2.5, # end goal drone 3]
-                                            ]], dtype=torch.float32)
-                waypoint[1] = torch.tensor([[0.5, 0.5, 2.5, # end goal drone 1
-                                            0.5, 0.0, 2.5, # end goal drone 2
-                                            -0.5, 0.5, 3.0, # end goal drone 3]
-                                            ]], dtype=torch.float32)
+                waypoint[:] = torch.tensor(
+                    [
+                        [
+                            0.5,
+                            -0.5,
+                            2.5,  # end goal drone 1
+                            -0.5,
+                            0.0,
+                            2.5,  # end goal drone 2
+                            0.5,
+                            0.5,
+                            2.5,  # end goal drone 3]
+                        ]
+                    ],
+                    dtype=torch.float32,
+                )
+                # waypoint[1] = torch.tensor([[0.5, 0.5, 2.5, # end goal drone 1
+                #                             0.5, 0.0, 2.5, # end goal drone 2
+                #                             -0.5, 0.5, 3.0, # end goal drone 3]
+                #                             ]], dtype=torch.float32)
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # update counter

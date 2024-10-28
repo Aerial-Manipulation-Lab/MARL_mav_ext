@@ -314,7 +314,7 @@ def main():
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
-    
+
     if args_cli.plot_data:
         # Plot action data
         plt.figure(figsize=(10, 8))
