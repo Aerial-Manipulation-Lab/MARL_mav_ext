@@ -53,10 +53,10 @@ agent:
   learning_rate_scheduler: KLAdaptiveLR
   learning_rate_scheduler_kwargs:
     kl_threshold: 0.01
-  state_preprocessor: null
-  state_preprocessor_kwargs: null
-  value_preprocessor: null
-  value_preprocessor_kwargs: null
+  state_preprocessor: RunningStandardScaler
+  state_preprocessor_kwargs: {"size": env.observation_space, "device": device}
+  value_preprocessor: RunningStandardScaler
+  value_preprocessor_kwargs: {"size": 1, "device": device}
   random_timesteps: 0
   learning_starts: 0
   grad_norm_clip: 1.0
@@ -71,7 +71,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "flycrane_hover_ppo"
-    experiment_name: "single_point"
+    experiment_name: "drone_ref_1_scaled"
     write_interval: 100
     checkpoint_interval: 10000
 

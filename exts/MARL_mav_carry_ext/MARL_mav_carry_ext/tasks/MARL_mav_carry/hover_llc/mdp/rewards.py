@@ -8,6 +8,7 @@ from omni.isaac.lab.assets import RigidObject
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
+from omni.isaac.lab.utils.math import quat_error_magnitude
 
 from .utils import *
 
@@ -111,7 +112,7 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     # compute the error
     positional_error = torch.norm((desired_pos - drone_pos_env) / num_drones, dim=-1)
     total_positional_error = positional_error.sum(dim=-1)
-    reward_distance_scale = 1.2
+    reward_distance_scale = 1.0
     reward_position = torch.exp(-total_positional_error * reward_distance_scale)
     assert reward_position.shape == (env.scene.num_envs,)
     return reward_position
@@ -128,7 +129,7 @@ def track_payload_orientation(
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:]
     # compute the error
-    orientation_error = torch.norm(desired_quat - payload_quat, dim=-1)
+    orientation_error = quat_error_magnitude(desired_quat, payload_quat)
     reward_distance_scale = 1.2
     reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
 
