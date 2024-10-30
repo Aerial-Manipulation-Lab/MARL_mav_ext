@@ -43,8 +43,9 @@ class GeometricController:
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0]).to(self.device)
         self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0]).to(self.device)
         self.t_last = 0.0
-        self.falcon_mass = 1.2336  # kg
+        self.falcon_mass = 0.6168  # kg
         self.l = 0.075
+        self._epsilon = torch.tensor(1e-6, device=self.device) # avoid division by zero
         self.kappa = self.torque_map[0] / self.thrust_map[0]
         self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
         self.G_1 = torch.tensor(
@@ -116,8 +117,9 @@ class GeometricController:
             state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust / self.falcon_mass)
         )
         # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
+        # print("acc_load", acc_load)
         acc_cmd = des_acc - self.gravity - acc_load
-        des_thrust = self.falcon_mass * acc_cmd  # avoid division by zero
+        des_thrust = self.falcon_mass * acc_cmd
         z_b_des = normalize(des_thrust)  # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(des_thrust, dim=1, keepdim=True)
         current_collective_thrust_magnitude = torch.norm(current_collective_thrust, dim=1, keepdim=True)
@@ -130,7 +132,7 @@ class GeometricController:
             (torch.cos(setpoint_yaw), torch.sin(setpoint_yaw), torch.zeros_like(setpoint_yaw)), dim=1
         )
         y_b_des = torch.linalg.cross(z_b_des, x_intermediate_des) / (
-            torch.norm(torch.linalg.cross(z_b_des, x_intermediate_des), dim=-1, keepdim=True) + 0.0001
+            torch.norm(torch.linalg.cross(z_b_des, x_intermediate_des), dim=-1, keepdim=True) + self._epsilon
         )  # avoid division by zero
         x_b_des = torch.linalg.cross(y_b_des, z_b_des)
 
@@ -190,8 +192,7 @@ class GeometricController:
         q_e_x = quat_diff[..., 1].view(self.num_envs, 1)
         q_e_y = quat_diff[..., 2].view(self.num_envs, 1)
         q_e_z = quat_diff[..., 3].view(self.num_envs, 1)
-        epsilon = torch.tensor(1e-6, device=self.device)
-        norm_factor = (1 / (torch.sqrt(q_e_w.square() + q_e_z.square()) + epsilon)).view(self.num_envs, 1)
+        norm_factor = (1 / (torch.sqrt(q_e_w.square() + q_e_z.square()) + self._epsilon)).view(self.num_envs, 1)
         zeros = torch.zeros((self.num_envs, 1), device=self.device)
         q_e_red = norm_factor * torch.cat((q_e_w * q_e_x - q_e_y * q_e_z, q_e_w * q_e_y + q_e_x * q_e_z, zeros), dim=-1)
         q_e_yaw = norm_factor * torch.cat([zeros, zeros, q_e_z], dim=-1)
