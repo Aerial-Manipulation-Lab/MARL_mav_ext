@@ -20,7 +20,8 @@ from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis
 class FalconEnvCfg(DirectRLEnvCfg):
     """Configuration for the Falcon environment."""
     episode_length_s = 10.0
-    decimation = 2
+    decimation = 2 # for LLC
+    planner_decimation = 10
     action_space = 3 # waypoint end goal
     observation_space = 19
     state_space = 0 # arbitrary for now
@@ -76,6 +77,10 @@ class FalconEnv(DirectRLEnv):
         self._forces = torch.zeros(self.num_envs, len(self._rotor_idx), 3, device=self.device)
         self._moments = torch.zeros_like(self._forces)
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
+        self._low_level_decimation = self.cfg.decimation
+        self._high_level_decimation = self.cfg.planner_decimation
+        self._ll_counter = 0
+        self._hl_counter = 0
 
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -114,33 +119,42 @@ class FalconEnv(DirectRLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor):
         # apply the low level controller here
-        self._actions = actions
-        self._desired_pos_w = actions
-        drone_states: dict = {}  # dict of tensors
-        observations = self._get_observations()["policy"]
-        drone_states["pos"] = observations[:, :3]
-        drone_states["quat"] = observations[:, 3:7]
-        drone_states["lin_vel"] = observations[:, 7:10]
-        drone_states["ang_vel"] = observations[:, 10:13]
-        drone_states["lin_acc"] = observations[:, 13:16]
-        drone_states["ang_acc"] = observations[:, 16:]
+        if self._hl_counter % self._high_level_decimation == 0:
+            self._actions = actions
+            self._desired_pos_w = actions
+            self._hl_counter = 0
 
-        drone_setpoint = {}
-        drone_setpoint["pos"] = actions
-        drone_setpoint["lin_vel"] = torch.zeros(self.num_envs, 3, device=self.device)
-        drone_setpoint["lin_acc"] = torch.zeros(self.num_envs, 3, device=self.device)
-        drone_setpoint["jerk"] = torch.zeros(self.num_envs, 3, device=self.device)
-        drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
-        drone_setpoint["yaw"] = torch.zeros(self.num_envs, 1, device=self.device)
-        drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(
-                    drone_states, self._forces, drone_setpoint
-                )
-        if self.cfg.debug_vis:
-            self.des_acc_debug = acc_cmd
-            self.drone_positions_debug = drone_states["pos"]
-            self.des_ori_debug = q_cmd
+        if self._ll_counter % self._low_level_decimation == 0:
 
-        self._forces[..., 2] = drone_thrusts
+            drone_states: dict = {}  # dict of tensors
+            observations = self._get_observations()["policy"]
+            drone_states["pos"] = observations[:, :3]
+            drone_states["quat"] = observations[:, 3:7]
+            drone_states["lin_vel"] = observations[:, 7:10]
+            drone_states["ang_vel"] = observations[:, 10:13]
+            drone_states["lin_acc"] = observations[:, 13:16]
+            drone_states["ang_acc"] = observations[:, 16:]
+
+            drone_setpoint = {}
+            drone_setpoint["pos"] = actions
+            drone_setpoint["lin_vel"] = torch.zeros(self.num_envs, 3, device=self.device)
+            drone_setpoint["lin_acc"] = torch.zeros(self.num_envs, 3, device=self.device)
+            drone_setpoint["jerk"] = torch.zeros(self.num_envs, 3, device=self.device)
+            drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
+            drone_setpoint["yaw"] = torch.zeros(self.num_envs, 1, device=self.device)
+            drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(
+                        drone_states, self._forces, drone_setpoint
+                    )
+            if self.cfg.debug_vis:
+                self.des_acc_debug = acc_cmd
+                self.drone_positions_debug = drone_states["pos"]
+                self.des_ori_debug = q_cmd
+
+            self._forces[..., 2] = drone_thrusts
+            self._ll_counter = 0
+
+        self._ll_counter += 1
+        self._hl_counter += 1
 
     def _apply_action(self):
         self._robot.set_external_force_and_torque(self._forces, self._moments, body_ids=self._rotor_idx)
