@@ -52,7 +52,7 @@ def main():
     env = FalconEnv(cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
     if args_cli.video:
         video_kwargs = {
-            "video_folder": "./falcon_videos",
+            "video_folder": "./videos",
             "step_trigger": lambda step: step == 0,
             "video_length": args_cli.video_length,
             "disable_logger": True,
@@ -61,8 +61,6 @@ def main():
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    robot_mass = env._robot.root_physx_view.get_masses().sum()
-    gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     count = 0
 
     # test trajectory
@@ -74,26 +72,19 @@ def main():
             if i > 0:
                 references.append([float(x) for x in row])
             i += 1
-        references = torch.tensor(references, device=env.sim.device)
-        print(references.shape)
-        print(references)
+        references = torch.tensor(references, device=env.sim.device).repeat(env.num_envs, 1, 1)
             
     while simulation_app.is_running():
         with torch.inference_mode():
-            # reset
-            if count % 500 == 0:
-                # env.reset()
-                print("-" * 80)
-                print("[INFO]: Resetting environment...")
-                waypoint = torch.zeros((env.num_envs, env._action_space))
-                waypoint[:] = torch.tensor([0.5,0,1.5])
+            count = count % references.shape[1]
+            waypoint = references[:, count]
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # update counter
-            count += 1
+            count += 2
             
             if args_cli.video:
-                if count == args_cli.video_length:
+                if count/2 == args_cli.video_length:
                     break
 
     # close the simulator

@@ -14,7 +14,7 @@ from MARL_mav_carry_ext.controllers import GeometricController
 from MARL_mav_carry_ext.assets import FALCON_CFG
 from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
-from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis
+from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat
 
 @configclass
 class FalconEnvCfg(DirectRLEnvCfg):
@@ -22,7 +22,7 @@ class FalconEnvCfg(DirectRLEnvCfg):
     episode_length_s = 10.0
     decimation = 10 # how fast the policy runs
     low_level_decimation = 2
-    action_space = 3 # waypoint end goal
+    action_space = 30 # waypoint end goal
     observation_space = 19
     state_space = 0 # arbitrary for now
     debug_vis = True
@@ -74,6 +74,7 @@ class FalconEnv(DirectRLEnv):
         self._action_space = gym.spaces.flatdim(self.single_action_space)
         self._geometric_controller = GeometricController(self.num_envs)
         self._actions = torch.zeros(self.num_envs, self._action_space, device=self.sim.device)
+        self._previous_actions = torch.zeros_like(self._actions)
         self._forces = torch.zeros(self.num_envs, len(self._rotor_idx), 3, device=self.device)
         self._moments = torch.zeros_like(self._forces)
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
@@ -81,6 +82,8 @@ class FalconEnv(DirectRLEnv):
         self._high_level_decimation = self.cfg.decimation
         self._ll_counter = 0
         self._hl_counter = 0
+        self._planner_dt = 1/self._high_level_decimation
+        self._eval_time = 0.0
 
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -121,9 +124,8 @@ class FalconEnv(DirectRLEnv):
         # apply the low level controller here
         if self._hl_counter % self._high_level_decimation == 0:
             self._actions = actions
-            self._desired_pos_w = actions
             self._hl_counter = 0
-
+            self._eval_time = (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
         if self._ll_counter % self._low_level_decimation == 0:
 
             drone_states: dict = {}  # dict of tensors
@@ -135,13 +137,22 @@ class FalconEnv(DirectRLEnv):
             drone_states["lin_acc"] = observations[:, 13:16]
             drone_states["ang_acc"] = observations[:, 16:]
 
+            # linearly interpolate the setpoint
+            difference_pos = (self._actions[:, 1:4] - self._previous_actions[:, 1:4])/self._planner_dt
+            difference_vel = (self._actions[:, 8:11] - self._previous_actions[:, 8:11])/self._planner_dt
+            difference_acc = (self._actions[:, 14:17] - self._previous_actions[:, 14:17])/self._planner_dt
+            difference_jerk = (self._actions[:, 24:27] - self._previous_actions[:, 24:27])/self._planner_dt
+            difference_snap = (self._actions[:, 27:] - self._previous_actions[:, 27:])/self._planner_dt
+
+            self._desired_pos_w = difference_pos * self._eval_time + self._previous_actions[:, 1:4]
             drone_setpoint = {}
-            drone_setpoint["pos"] = actions
-            drone_setpoint["lin_vel"] = torch.zeros(self.num_envs, 3, device=self.device)
-            drone_setpoint["lin_acc"] = torch.zeros(self.num_envs, 3, device=self.device)
-            drone_setpoint["jerk"] = torch.zeros(self.num_envs, 3, device=self.device)
-            drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
-            drone_setpoint["yaw"] = torch.zeros(self.num_envs, 1, device=self.device)
+            drone_setpoint["pos"] = self._desired_pos_w
+            drone_setpoint["lin_vel"] = difference_vel * self._eval_time + self._previous_actions[:, 8:11]
+            drone_setpoint["lin_acc"] = difference_acc * self._eval_time + self._previous_actions[:, 14:17]
+            drone_setpoint["jerk"] = difference_jerk * self._eval_time + self._previous_actions[:, 24:27]
+            drone_setpoint["snap"] = difference_snap * self._eval_time + self._previous_actions[:, 27:]
+            _, _, yaw = euler_xyz_from_quat(actions[:, 4:8])
+            drone_setpoint["yaw"] = yaw.view(self.num_envs, 1)
             drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(
                         drone_states, self._forces, drone_setpoint
                     )
@@ -150,8 +161,12 @@ class FalconEnv(DirectRLEnv):
                 self.drone_positions_debug = drone_states["pos"]
                 self.des_ori_debug = q_cmd
 
+            self._eval_time += (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
             self._forces[..., 2] = drone_thrusts
             self._ll_counter = 0
+
+            if self._hl_counter % (self._high_level_decimation - 1) == 0:
+                self._previous_actions = self._actions
 
         self._ll_counter += 1
         self._hl_counter += 1
