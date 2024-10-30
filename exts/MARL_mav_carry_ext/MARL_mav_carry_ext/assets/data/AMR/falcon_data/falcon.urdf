@@ -2,7 +2,7 @@
 <robot name="Falcon">
   <link name="Falcon/base_link"/>
   <joint name="Falcon/base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <origin rpy="0 0 1.5708" xyz="0 0 0.0"/>
     <parent link="Falcon/base_link"/>
     <child link="Falcon/base_link_inertia"/>
   </joint>
@@ -30,7 +30,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_0_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
@@ -46,7 +46,7 @@
     <visual>
     <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <box size="0.254 0.01 0.005"/>
       </geometry>
@@ -60,7 +60,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_1_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
@@ -90,7 +90,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_2_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
@@ -120,7 +120,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_3_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
@@ -136,7 +136,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <box size="0.254 0.01 0.005"/>
       </geometry>
