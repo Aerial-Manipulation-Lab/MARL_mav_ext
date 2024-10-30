@@ -20,8 +20,8 @@ from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis
 class FalconEnvCfg(DirectRLEnvCfg):
     """Configuration for the Falcon environment."""
     episode_length_s = 10.0
-    decimation = 2 # for LLC
-    planner_decimation = 10
+    decimation = 10 # how fast the policy runs
+    low_level_decimation = 2
     action_space = 3 # waypoint end goal
     observation_space = 19
     state_space = 0 # arbitrary for now
@@ -29,7 +29,7 @@ class FalconEnvCfg(DirectRLEnvCfg):
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
-        dt=0.005,
+        dt=0.002,
         render_interval=decimation,
         disable_contact_processing=True,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -77,8 +77,8 @@ class FalconEnv(DirectRLEnv):
         self._forces = torch.zeros(self.num_envs, len(self._rotor_idx), 3, device=self.device)
         self._moments = torch.zeros_like(self._forces)
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
-        self._low_level_decimation = self.cfg.decimation
-        self._high_level_decimation = self.cfg.planner_decimation
+        self._low_level_decimation = self.cfg.low_level_decimation
+        self._high_level_decimation = self.cfg.decimation
         self._ll_counter = 0
         self._hl_counter = 0
 

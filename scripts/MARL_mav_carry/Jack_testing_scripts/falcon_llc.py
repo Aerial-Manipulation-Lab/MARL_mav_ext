@@ -34,7 +34,7 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import math
+import csv
 import matplotlib.pyplot as plt
 import gymnasium as gym
 
@@ -64,6 +64,20 @@ def main():
     robot_mass = env._robot.root_physx_view.get_masses().sum()
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     count = 0
+
+    # test trajectory
+    with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv", "r") as f:
+        reader = csv.reader(f, delimiter=",")
+        i = 0
+        references = []
+        for row in reader:
+            if i > 0:
+                references.append([float(x) for x in row])
+            i += 1
+        references = torch.tensor(references, device=env.sim.device)
+        print(references.shape)
+        print(references)
+            
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
