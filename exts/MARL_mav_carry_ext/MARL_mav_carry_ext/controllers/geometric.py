@@ -34,7 +34,7 @@ class GeometricController:
             torch.finfo(torch.float32).max,
         ).to(self.device)
 
-        self.p_offset = torch.zeros(self.num_envs, 3).to(self.device)
+        self.p_offset = torch.tensor([[0.0, 0.0, 0.0]] * self.num_envs).to(self.device)
         self.integration_max = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
 
         # sim and drone parameters
@@ -43,10 +43,10 @@ class GeometricController:
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0]).to(self.device)
         self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0]).to(self.device)
         self.t_last = 0.0
-        self.falcon_mass = 0.6168  # kg
+        self.falcon_mass = 0.617  # kg
         self.l = 0.075
         self._epsilon = torch.tensor(1e-6, device=self.device) # avoid division by zero
-        self.kappa = self.torque_map[0] / self.thrust_map[0]
+        self.kappa = 0.022
         self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
         self.G_1 = torch.tensor(
             [
@@ -69,7 +69,7 @@ class GeometricController:
         )
         self.inertia_mat = torch.diag(torch.tensor([0.00164, 0.00184, 0.0030], device=self.device))
         self.min_thrust = torch.tensor(0.0, device=self.device)
-        self.max_thrust = torch.tensor(25.0 / 4, device=self.device)
+        self.max_thrust = torch.tensor(8.5, device=self.device)
 
         # controller parameters
         self.kp_acc = torch.tensor([4.0, 4.0, 9.0]).to(self.device)
@@ -118,7 +118,7 @@ class GeometricController:
         )
         # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
         # print("acc_load", acc_load)
-        acc_cmd = des_acc - self.gravity - acc_load
+        acc_cmd = des_acc - self.gravity # - acc_load
         des_thrust = self.falcon_mass * acc_cmd
         z_b_des = normalize(des_thrust)  # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(des_thrust, dim=1, keepdim=True)
@@ -152,7 +152,7 @@ class GeometricController:
         h_omega[mask] /= current_collective_thrust_magnitude[mask]
         omega_b_x = (-h_omega * y_b).sum(-1, keepdim=True)
         omega_b_y = (h_omega * x_b).sum(-1, keepdim=True)
-        omega_b_z = setpoint["yaw"] * (self.z_i * z_b).sum(
+        omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(
             -1, keepdim=True
         )  # needs to be yaw_dot, for now yaw = 0 = yaw_dot
         omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
@@ -180,7 +180,7 @@ class GeometricController:
 
         h_alpha_x = (-h_alpha * y_b).sum(-1, keepdim=True)
         h_alpha_y = (h_alpha * x_b).sum(-1, keepdim=True)
-        h_alpha_z = setpoint["yaw"] * (self.z_i * z_b).sum(
+        h_alpha_z = setpoint["yaw_acc"] * (self.z_i * z_b).sum(
             -1, keepdim=True
         )  # needs to be yaw_ddot, for now yaw = 0 = yaw_ddot
 
@@ -200,7 +200,7 @@ class GeometricController:
         ang_vel_body = quat_rotate_inverse(state["quat"], state["ang_vel"])
         alpha_b_des = (
             self.kp_att_xy * q_e_red
-            + self.kp_att_z * q_e_yaw
+            + self.kp_att_z * torch.sign(q_e_w) * q_e_yaw
             + self.kp_rate * (omega_b_ref - ang_vel_body)
             + alpha_b_ref
         )
@@ -215,3 +215,11 @@ class GeometricController:
         thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
 
         return thrusts, acc_cmd, q_cmd, z_b_des
+
+# notes on controller discrepancies
+# 1. The controller in the script uses a low pass filter for acceleration, which is not implemented in the geometric controller
+# 2. Drag compensation
+# 3. Agilicious uses different way to get the yaw
+# 4. No QP based controll allocation, might be an issue when the motors saturate at high thrusts
+# 5. Some implementations to avoid division by zero
+# 6. The CoM is moved down by 3 cm
