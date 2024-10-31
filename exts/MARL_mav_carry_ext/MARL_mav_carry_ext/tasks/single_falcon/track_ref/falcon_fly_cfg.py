@@ -31,7 +31,7 @@ class FalconEnvCfg(DirectRLEnvCfg):
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
-        dt=0.005,
+        dt=0.002,
         gravity=(0.0, 0.0, -9.8066),
         render_interval=decimation,
         disable_contact_processing=True,
