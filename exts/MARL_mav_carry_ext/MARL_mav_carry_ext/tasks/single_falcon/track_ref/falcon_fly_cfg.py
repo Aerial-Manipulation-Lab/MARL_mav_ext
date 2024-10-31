@@ -16,11 +16,13 @@ from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # is
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
 from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat
 
+import csv
+
 @configclass
 class FalconEnvCfg(DirectRLEnvCfg):
     """Configuration for the Falcon environment."""
-    episode_length_s = 10.0
-    decimation = 10 # how fast the policy runs
+    episode_length_s = 100.0
+    decimation = 10
     low_level_decimation = 2
     action_space = 30 # waypoint end goal
     observation_space = 19
@@ -29,7 +31,8 @@ class FalconEnvCfg(DirectRLEnvCfg):
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
-        dt=0.002,
+        dt=0.005,
+        gravity=(0.0, 0.0, -9.8066),
         render_interval=decimation,
         disable_contact_processing=True,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -82,6 +85,7 @@ class FalconEnv(DirectRLEnv):
         self._high_level_decimation = self.cfg.decimation
         self._ll_counter = 0
         self._hl_counter = 0
+        self._setpoint_id = 0
         self._planner_dt = 1/self._high_level_decimation
         self._eval_time = 0.0
 
@@ -104,6 +108,27 @@ class FalconEnv(DirectRLEnv):
             self.drone_positions_debug = torch.zeros(self.num_envs, 3, device=self.device)
             self.des_ori_debug = torch.zeros(self.num_envs, 4, device=self.device)
 
+        # load test trajectory
+        with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv", "r") as f:
+            reader = csv.reader(f, delimiter=",")
+            i = 0
+            references = []
+            for row in reader:
+                if i > 0:
+                    references.append([float(x) for x in row])
+                i += 1
+            self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
+
+        # with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv", "r") as f:
+        #     reader = csv.reader(f, delimiter=",")
+        #     i = 0
+        #     references = []
+        #     for row in reader:
+        #         if i > 1:
+        #             references.append([float(x) for x in row])
+        #         i += 1
+        #     self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
+
     def _setup_scene(self):
 
         self._robot = Articulation(self.cfg.robot)
@@ -122,12 +147,20 @@ class FalconEnv(DirectRLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor):
         # apply the low level controller here
-        if self._hl_counter % self._high_level_decimation == 0:
-            self._actions = actions
-            self._hl_counter = 0
-            self._eval_time = (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
-        if self._ll_counter % self._low_level_decimation == 0:
+        # while (self._robot.data._sim_timestamp) > self._actions[0, 0]:
+        #     # print(self._robot.data._sim_timestamp)
+        #     # print(self._actions[0, 0])
+        #     self._setpoint_id += 1
+        #     self._actions = self._references[:, self._setpoint_id]
+        #     print("sampled behind")
+        # self._eval_time = (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
+        pass
 
+    def _apply_action(self):
+        if self._ll_counter % self._low_level_decimation == 0:
+            future_setpoints = self._references[:, :, 0] > self._robot.data._sim_timestamp
+            self._setpoint_id = torch.argmax(future_setpoints.float(), dim=1)
+            self._actions = self._references[:, self._setpoint_id.data[0]]
             drone_states: dict = {}  # dict of tensors
             observations = self._get_observations()["policy"]
             drone_states["pos"] = observations[:, :3]
@@ -138,21 +171,48 @@ class FalconEnv(DirectRLEnv):
             drone_states["ang_acc"] = observations[:, 16:]
 
             # linearly interpolate the setpoint
-            difference_pos = (self._actions[:, 1:4] - self._previous_actions[:, 1:4])/self._planner_dt
-            difference_vel = (self._actions[:, 8:11] - self._previous_actions[:, 8:11])/self._planner_dt
-            difference_acc = (self._actions[:, 14:17] - self._previous_actions[:, 14:17])/self._planner_dt
-            difference_jerk = (self._actions[:, 24:27] - self._previous_actions[:, 24:27])/self._planner_dt
-            difference_snap = (self._actions[:, 27:] - self._previous_actions[:, 27:])/self._planner_dt
+            # difference_pos = (self._actions[:, 1:4] - self._previous_actions[:, 1:4])/self._planner_dt
+            # difference_vel = (self._actions[:, 8:11] - self._previous_actions[:, 8:11])/self._planner_dt
+            # difference_acc = (self._actions[:, 14:17] - self._previous_actions[:, 14:17])/self._planner_dt
+            # difference_jerk = (self._actions[:, 24:27] - self._previous_actions[:, 24:27])/self._planner_dt
+            # difference_snap = (self._actions[:, 27:] - self._previous_actions[:, 27:])/self._planner_dt
+            # difference_yaw_rate = (self._actions[:, 13] - self._previous_actions[:, 13])/self._planner_dt
+            # difference_yaw_acc = (self._actions[:, 19] - self._previous_actions[:, 19])/self._planner_dt
 
-            self._desired_pos_w = difference_pos * self._eval_time + self._previous_actions[:, 1:4]
+            # self._desired_pos_w = difference_pos * self._eval_time + self._previous_actions[:, 1:4]
+            self._desired_pos_w = self._actions[:, 1:4]
+            # print("desired pos shape: ", self._desired_pos_w.shape)
             drone_setpoint = {}
+            # drone_setpoint["pos"] = self._desired_pos_w
+            # drone_setpoint["lin_vel"] = difference_vel * self._eval_time + self._previous_actions[:, 8:11]
+            # drone_setpoint["lin_acc"] = difference_acc * self._eval_time + self._previous_actions[:, 14:17]
+            # drone_setpoint["jerk"] = difference_jerk * self._eval_time + self._previous_actions[:, 24:27]
+            # drone_setpoint["snap"] = difference_snap * self._eval_time + self._previous_actions[:, 27:]
+            # _, _, yaw = euler_xyz_from_quat(actions[:, 4:8])
+            # drone_setpoint["yaw"] = yaw.view(self.num_envs, 1)
+            # drone_setpoint["yaw_rate"] = difference_yaw_rate * self._eval_time + self._previous_actions[:, 13]
+            # drone_setpoint["yaw_acc"] = difference_yaw_acc * self._eval_time + self._previous_actions[:, 19]
+
             drone_setpoint["pos"] = self._desired_pos_w
-            drone_setpoint["lin_vel"] = difference_vel * self._eval_time + self._previous_actions[:, 8:11]
-            drone_setpoint["lin_acc"] = difference_acc * self._eval_time + self._previous_actions[:, 14:17]
-            drone_setpoint["jerk"] = difference_jerk * self._eval_time + self._previous_actions[:, 24:27]
-            drone_setpoint["snap"] = difference_snap * self._eval_time + self._previous_actions[:, 27:]
-            _, _, yaw = euler_xyz_from_quat(actions[:, 4:8])
+            drone_setpoint["lin_vel"] = self._actions[:, 8:11]
+            drone_setpoint["lin_acc"] = self._actions[:, 14:17]
+            drone_setpoint["jerk"] = self._actions[:, 24:27]
+            drone_setpoint["snap"] = self._actions[:, 27:]
+            _, _, yaw = euler_xyz_from_quat(self._actions[:, 4:8])
             drone_setpoint["yaw"] = yaw.view(self.num_envs, 1)
+            drone_setpoint["yaw_rate"] = self._actions[:, 13]
+            drone_setpoint["yaw_acc"] = self._actions[:, 19]
+            # self._desired_pos_w = torch.tensor([[0.5, -0.5, 1.0]], device=self.device)
+            # drone_setpoint["pos"] = self._desired_pos_w 
+            # drone_setpoint["lin_vel"] = torch.zeros(self.num_envs, 3, device=self.device)
+            # drone_setpoint["lin_acc"] = torch.zeros(self.num_envs, 3, device=self.device)
+            # drone_setpoint["jerk"] = torch.zeros(self.num_envs, 3, device=self.device)
+            # drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
+            # _, _, yaw = euler_xyz_from_quat(self._actions[:, 4:8])
+            # drone_setpoint["yaw"] = torch.tensor([[0.0]], device=self.device)
+            # drone_setpoint["yaw_rate"] = torch.tensor([[0.0]], device=self.device)
+            # drone_setpoint["yaw_acc"] = torch.tensor([[0.0]], device=self.device)
+
             drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(
                         drone_states, self._forces, drone_setpoint
                     )
@@ -161,17 +221,12 @@ class FalconEnv(DirectRLEnv):
                 self.drone_positions_debug = drone_states["pos"]
                 self.des_ori_debug = q_cmd
 
-            self._eval_time += (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
+            # self._eval_time += (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
             self._forces[..., 2] = drone_thrusts
             self._ll_counter = 0
 
-            if self._hl_counter % (self._high_level_decimation - 1) == 0:
-                self._previous_actions = self._actions
-
         self._ll_counter += 1
-        self._hl_counter += 1
-
-    def _apply_action(self):
+        # self._hl_counter += 1
         self._robot.set_external_force_and_torque(self._forces, self._moments, body_ids=self._rotor_idx)
 
     def _get_observations(self) -> dict:
@@ -256,12 +311,12 @@ class FalconEnv(DirectRLEnv):
                 marker_cfg = ACC_MARKER_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_acc"
                 self.acc_marker = VisualizationMarkers(marker_cfg)
-            self.acc_marker.set_visibility(True)
+            self.acc_marker.set_visibility(False)
             if not hasattr(self, "drone_ori_marker"):
                 marker_cfg = ORIENTATION_MARKER_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_ori"
                 self.drone_ori_marker = VisualizationMarkers(marker_cfg)
-            self.drone_ori_marker.set_visibility(True)
+            self.drone_ori_marker.set_visibility(False)
         else:
             if hasattr(self, "goal_pos_visualizer"):
                 self.goal_pos_visualizer.set_visibility(False)
