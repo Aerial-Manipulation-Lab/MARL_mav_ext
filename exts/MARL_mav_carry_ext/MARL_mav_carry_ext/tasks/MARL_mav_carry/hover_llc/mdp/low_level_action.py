@@ -40,7 +40,6 @@ class LowLevelAction(ActionTerm):
         self._geometric_controller = GeometricController(self.num_envs)
         self.cfg = cfg
         self._ll_counter = 0
-        self._hl_counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
@@ -81,10 +80,10 @@ class LowLevelAction(ActionTerm):
             waypoint: The waypoints to be processed.
         Returns:
             The processed external forces to be applied to the rotors."""
-        if self._hl_counter % self.cfg.planner_decimation == 0:
-            self._waypoints = waypoints
-            self._hl_counter = 0
+        self._waypoints = waypoints
 
+    def apply_actions(self):
+        """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
@@ -116,6 +115,8 @@ class LowLevelAction(ActionTerm):
                 drone_setpoint["jerk"] = torch.zeros(self.num_envs, 3, device=self.device)
                 drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
                 drone_setpoint["yaw"] = self._constant_yaw
+                drone_setpoint["yaw_rate"] = torch.zeros(self.num_envs, 1, device=self.device)
+                drone_setpoint["yaw_acc"] = torch.zeros(self.num_envs, 1, device=self.device)
                 drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], drone_setpoint
                 )
@@ -128,12 +129,7 @@ class LowLevelAction(ActionTerm):
                     self.z_b_debug[:, i] = z_b_des
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._ll_counter = 0
-
         self._ll_counter += 1
-        self._hl_counter += 1
-
-    def apply_actions(self):
-        """Apply the processed external forces to the rotors/falcon bodies."""
         self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
 
     """
