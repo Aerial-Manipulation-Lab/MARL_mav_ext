@@ -43,7 +43,7 @@ class GeometricController:
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0]).to(self.device)
         self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0]).to(self.device)
         self.t_last = 0.0
-        self.falcon_mass = 0.617  # kg
+        self.falcon_mass = 0.6  # kg
         self.l = 0.075
         self._epsilon = torch.tensor(1e-6, device=self.device) # avoid division by zero
         self.kappa = 0.022
@@ -118,7 +118,7 @@ class GeometricController:
         )
         # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
         # print("acc_load", acc_load)
-        acc_cmd = des_acc - self.gravity # - acc_load
+        acc_cmd = des_acc - self.gravity - acc_load
         des_thrust = self.falcon_mass * acc_cmd
         z_b_des = normalize(des_thrust)  # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(des_thrust, dim=1, keepdim=True)
@@ -139,6 +139,7 @@ class GeometricController:
         # calculate the desired quaternion
         des_rot_matrix = torch.stack([x_b_des, y_b_des, z_b_des], dim=2)
         q_cmd = quat_from_matrix(des_rot_matrix)
+        # q_cmd = setpoint["q_cmd"]
         # angular velocity command
         # retrieve the current body axes of the drone
         current_rot_matrix = matrix_from_quat(state["quat"])
@@ -156,6 +157,7 @@ class GeometricController:
             -1, keepdim=True
         )  # needs to be yaw_dot, for now yaw = 0 = yaw_dot
         omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
+        # omega_b_ref = setpoint["des_ang_vel"]
 
         # angular acceleration command
         T_ddot = self.falcon_mass * torch.sum(
@@ -192,7 +194,7 @@ class GeometricController:
         q_e_x = quat_diff[..., 1].view(self.num_envs, 1)
         q_e_y = quat_diff[..., 2].view(self.num_envs, 1)
         q_e_z = quat_diff[..., 3].view(self.num_envs, 1)
-        norm_factor = (1 / (torch.sqrt(q_e_w.square() + q_e_z.square()) + self._epsilon)).view(self.num_envs, 1)
+        norm_factor = (1 / (torch.sqrt(q_e_w.square() + q_e_z.square())) + self._epsilon).view(self.num_envs, 1)
         zeros = torch.zeros((self.num_envs, 1), device=self.device)
         q_e_red = norm_factor * torch.cat((q_e_w * q_e_x - q_e_y * q_e_z, q_e_w * q_e_y + q_e_x * q_e_z, zeros), dim=-1)
         q_e_yaw = norm_factor * torch.cat([zeros, zeros, q_e_z], dim=-1)
@@ -202,24 +204,18 @@ class GeometricController:
             self.kp_att_xy * q_e_red
             + self.kp_att_z * torch.sign(q_e_w) * q_e_yaw
             + self.kp_rate * (omega_b_ref - ang_vel_body)
-            + alpha_b_ref
+            #+ alpha_b_ref
         )
 
         # calculate the thrust per propellor
         # inertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
-        product = alpha_b_des.matmul(self.inertia_mat.transpose(0, 1)) + torch.linalg.cross(
-            ang_vel_body, ang_vel_body.matmul(self.inertia_mat.transpose(0, 1))
+
+        product = self.inertia_mat.matmul(alpha_b_des.transpose(0,1)).transpose(0,1) + torch.linalg.cross(
+            ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0,1)).transpose(0,1)
         )
         rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
-        thrusts = rh_side.matmul(torch.linalg.pinv(self.G_1).transpose(0, 1))
+        thrusts = torch.linalg.pinv(self.G_1).matmul(rh_side.transpose(0, 1)).transpose(0, 1)
         thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
+        torques = self.G_1.matmul(thrusts.transpose(0, 1)).transpose(0, 1)
 
-        return thrusts, acc_cmd, q_cmd, z_b_des
-
-# notes on controller discrepancies
-# 1. The controller in the script uses a low pass filter for acceleration, which is not implemented in the geometric controller
-# 2. Drag compensation
-# 3. Agilicious uses different way to get the yaw
-# 4. No QP based controll allocation, might be an issue when the motors saturate at high thrusts
-# 5. Some implementations to avoid division by zero
-# 6. The CoM is moved down by 3 cm
+        return thrusts, acc_cmd, q_cmd, torques[:, 1:]
