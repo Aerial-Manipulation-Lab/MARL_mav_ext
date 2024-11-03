@@ -8,6 +8,7 @@ from omni.isaac.lab.utils.math import (
     quat_mul,
     quat_rotate,
     quat_rotate_inverse,
+    euler_xyz_from_quat,
 )
 
 from .utils import LowPassFilter
@@ -34,7 +35,7 @@ class GeometricController:
             torch.finfo(torch.float32).max,
         ).to(self.device)
 
-        self.p_offset = torch.tensor([[0.0, 0.0, 0.0]] * self.num_envs).to(self.device)
+        self.p_offset = torch.tensor([[0.0, 0.0, -0.03]] * self.num_envs).to(self.device)
         self.integration_max = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
 
         # sim and drone parameters
@@ -43,7 +44,7 @@ class GeometricController:
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0]).to(self.device)
         self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0]).to(self.device)
         self.t_last = 0.0
-        self.falcon_mass = 0.6  # kg
+        self.falcon_mass = 0.617  # kg
         self.l = 0.075
         self._epsilon = torch.tensor(1e-6, device=self.device) # avoid division by zero
         self.kappa = 0.022
@@ -109,19 +110,16 @@ class GeometricController:
         p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
         pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
         vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
-
         des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
         # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(1)  # sum over all propellors
         acc_load = (
             state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust / self.falcon_mass)
         )
-        # acc_load_filtered = self.filter_acc.add(acc_load).unsqueeze(0)
-        # print("acc_load", acc_load)
         acc_cmd = des_acc - self.gravity - acc_load
         des_thrust = self.falcon_mass * acc_cmd
-        z_b_des = normalize(des_thrust)  # desired new thrust direction
-        collective_thrust_des_magntiude = torch.norm(des_thrust, dim=1, keepdim=True)
+        z_b_des = normalize(acc_cmd)  # desired new thrust direction
+        collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1, keepdim=True) * self.falcon_mass
         current_collective_thrust_magnitude = torch.norm(current_collective_thrust, dim=1, keepdim=True)
 
         # attitude command
@@ -131,15 +129,12 @@ class GeometricController:
         x_intermediate_des = torch.cat(
             (torch.cos(setpoint_yaw), torch.sin(setpoint_yaw), torch.zeros_like(setpoint_yaw)), dim=1
         )
-        y_b_des = torch.linalg.cross(z_b_des, x_intermediate_des) / (
-            torch.norm(torch.linalg.cross(z_b_des, x_intermediate_des), dim=-1, keepdim=True) + self._epsilon
-        )  # avoid division by zero
-        x_b_des = torch.linalg.cross(y_b_des, z_b_des)
+        y_b_des = normalize(torch.linalg.cross(z_b_des, x_intermediate_des))# / (
+        x_b_des = normalize(torch.linalg.cross(y_b_des, z_b_des))
 
         # calculate the desired quaternion
         des_rot_matrix = torch.stack([x_b_des, y_b_des, z_b_des], dim=2)
         q_cmd = quat_from_matrix(des_rot_matrix)
-        # q_cmd = setpoint["q_cmd"]
         # angular velocity command
         # retrieve the current body axes of the drone
         current_rot_matrix = matrix_from_quat(state["quat"])
@@ -154,10 +149,9 @@ class GeometricController:
         omega_b_x = (-h_omega * y_b).sum(-1, keepdim=True)
         omega_b_y = (h_omega * x_b).sum(-1, keepdim=True)
         omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(
-            -1, keepdim=True
-        )  # needs to be yaw_dot, for now yaw = 0 = yaw_dot
+           -1, keepdim=True
+        )
         omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
-        # omega_b_ref = setpoint["des_ang_vel"]
 
         # angular acceleration command
         T_ddot = self.falcon_mass * torch.sum(
@@ -184,22 +178,21 @@ class GeometricController:
         h_alpha_y = (h_alpha * x_b).sum(-1, keepdim=True)
         h_alpha_z = setpoint["yaw_acc"] * (self.z_i * z_b).sum(
             -1, keepdim=True
-        )  # needs to be yaw_ddot, for now yaw = 0 = yaw_ddot
+        )
 
         alpha_b_ref = torch.cat((h_alpha_x, h_alpha_y, h_alpha_z), dim=-1)
 
         # tilt prioritized attitude control
-        quat_diff = quat_mul(q_cmd, quat_inv(state["quat"]))
+        quat_diff = quat_mul(quat_inv(state["quat"]), q_cmd)
         q_e_w = quat_diff[..., 0].view(self.num_envs, 1)
         q_e_x = quat_diff[..., 1].view(self.num_envs, 1)
         q_e_y = quat_diff[..., 2].view(self.num_envs, 1)
         q_e_z = quat_diff[..., 3].view(self.num_envs, 1)
-        norm_factor = (1 / (torch.sqrt(q_e_w.square() + q_e_z.square())) + self._epsilon).view(self.num_envs, 1)
+        norm_factor = (2 / (torch.sqrt(q_e_w.square() + q_e_z.square())) + self._epsilon).view(self.num_envs, 1)
         zeros = torch.zeros((self.num_envs, 1), device=self.device)
         q_e_red = norm_factor * torch.cat((q_e_w * q_e_x - q_e_y * q_e_z, q_e_w * q_e_y + q_e_x * q_e_z, zeros), dim=-1)
         q_e_yaw = norm_factor * torch.cat([zeros, zeros, q_e_z], dim=-1)
-
-        ang_vel_body = quat_rotate_inverse(state["quat"], state["ang_vel"])
+        ang_vel_body = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])
         alpha_b_des = (
             self.kp_att_xy * q_e_red
             + self.kp_att_z * torch.sign(q_e_w) * q_e_yaw
@@ -209,7 +202,8 @@ class GeometricController:
 
         # calculate the thrust per propellor
         # inertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
-
+        # print("inertia_mat", self.inertia_mat.shape)
+        # print("alpha_b_des", alpha_b_des.shape)
         product = self.inertia_mat.matmul(alpha_b_des.transpose(0,1)).transpose(0,1) + torch.linalg.cross(
             ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0,1)).transpose(0,1)
         )
@@ -218,4 +212,4 @@ class GeometricController:
         thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
         torques = self.G_1.matmul(thrusts.transpose(0, 1)).transpose(0, 1)
 
-        return thrusts, acc_cmd, q_cmd, torques[:, 1:]
+        return thrusts, acc_cmd, q_cmd, torques
