@@ -14,7 +14,7 @@ from MARL_mav_carry_ext.controllers import GeometricController
 from MARL_mav_carry_ext.assets import FALCON_CFG
 from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
-from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat
+from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat, matrix_from_euler, quat_from_matrix, quat_inv
 
 import csv
 
@@ -80,15 +80,13 @@ class FalconEnv(DirectRLEnv):
         self._actions = torch.zeros(self.num_envs, self._action_space, device=self.sim.device)
         self._previous_actions = torch.zeros_like(self._actions)
         self._forces = torch.zeros(self.num_envs, len(self._rotor_idx), 3, device=self.device)
+        self._collective_thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
         self._low_level_decimation = self.cfg.low_level_decimation
         self._high_level_decimation = self.cfg.decimation
         self._ll_counter = 0
-        self._hl_counter = 0
-        self._setpoint_id = 0
         self._planner_dt = 1/self._high_level_decimation
-        self._eval_time = 0.0
 
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -110,25 +108,25 @@ class FalconEnv(DirectRLEnv):
             self.des_ori_debug = torch.zeros(self.num_envs, 4, device=self.device)
 
         # load test trajectory
-        with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv", "r") as f:
-            reader = csv.reader(f, delimiter=",")
-            i = 0
-            references = []
-            for row in reader:
-                if i > 0:
-                    references.append([float(x) for x in row])
-                i += 1
-            self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
-
-        # with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv", "r") as f:
+        # with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv", "r") as f:
         #     reader = csv.reader(f, delimiter=",")
         #     i = 0
         #     references = []
         #     for row in reader:
-        #         if i > 1:
+        #         if i > 0:
         #             references.append([float(x) for x in row])
         #         i += 1
         #     self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
+
+        with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv", "r") as f:
+            reader = csv.reader(f, delimiter=",")
+            i = 0
+            references = []
+            for row in reader:
+                if i > 1:
+                    references.append([float(x) for x in row])
+                i += 1
+            self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
 
     def _setup_scene(self):
 
@@ -147,14 +145,6 @@ class FalconEnv(DirectRLEnv):
 
 
     def _pre_physics_step(self, actions: torch.Tensor):
-        # apply the low level controller here
-        # while (self._robot.data._sim_timestamp) > self._actions[0, 0]:
-        #     # print(self._robot.data._sim_timestamp)
-        #     # print(self._actions[0, 0])
-        #     self._setpoint_id += 1
-        #     self._actions = self._references[:, self._setpoint_id]
-        #     print("sampled behind")
-        # self._eval_time = (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
         pass
 
     def _apply_action(self):
@@ -171,28 +161,8 @@ class FalconEnv(DirectRLEnv):
             drone_states["lin_acc"] = observations[:, 13:16]
             drone_states["ang_acc"] = observations[:, 16:]
 
-            # linearly interpolate the setpoint
-            # difference_pos = (self._actions[:, 1:4] - self._previous_actions[:, 1:4])/self._planner_dt
-            # difference_vel = (self._actions[:, 8:11] - self._previous_actions[:, 8:11])/self._planner_dt
-            # difference_acc = (self._actions[:, 14:17] - self._previous_actions[:, 14:17])/self._planner_dt
-            # difference_jerk = (self._actions[:, 24:27] - self._previous_actions[:, 24:27])/self._planner_dt
-            # difference_snap = (self._actions[:, 27:] - self._previous_actions[:, 27:])/self._planner_dt
-            # difference_yaw_rate = (self._actions[:, 13] - self._previous_actions[:, 13])/self._planner_dt
-            # difference_yaw_acc = (self._actions[:, 19] - self._previous_actions[:, 19])/self._planner_dt
-
-            # self._desired_pos_w = difference_pos * self._eval_time + self._previous_actions[:, 1:4]
             self._desired_pos_w = self._actions[:, 1:4]
-            # print("desired pos shape: ", self._desired_pos_w.shape)
             drone_setpoint = {}
-            # drone_setpoint["pos"] = self._desired_pos_w
-            # drone_setpoint["lin_vel"] = difference_vel * self._eval_time + self._previous_actions[:, 8:11]
-            # drone_setpoint["lin_acc"] = difference_acc * self._eval_time + self._previous_actions[:, 14:17]
-            # drone_setpoint["jerk"] = difference_jerk * self._eval_time + self._previous_actions[:, 24:27]
-            # drone_setpoint["snap"] = difference_snap * self._eval_time + self._previous_actions[:, 27:]
-            # _, _, yaw = euler_xyz_from_quat(actions[:, 4:8])
-            # drone_setpoint["yaw"] = yaw.view(self.num_envs, 1)
-            # drone_setpoint["yaw_rate"] = difference_yaw_rate * self._eval_time + self._previous_actions[:, 13]
-            # drone_setpoint["yaw_acc"] = difference_yaw_acc * self._eval_time + self._previous_actions[:, 19]
 
             drone_setpoint["pos"] = self._desired_pos_w
             drone_setpoint["q_cmd"] = self._actions[:, 4:8]
@@ -202,21 +172,11 @@ class FalconEnv(DirectRLEnv):
             drone_setpoint["lin_acc"] = self._actions[:, 14:17]
             drone_setpoint["jerk"] = self._actions[:, 24:27]
             drone_setpoint["snap"] = self._actions[:, 27:]
-            _, _, yaw = euler_xyz_from_quat(self._actions[:, 4:8])
+            roll, pitch, yaw = euler_xyz_from_quat((self._actions[:, 4:8]))
             drone_setpoint["yaw"] = yaw.view(self.num_envs, 1)
-            drone_setpoint["yaw_rate"] = self._actions[:, 13]
-            drone_setpoint["yaw_acc"] = self._actions[:, 19]
-            # self._desired_pos_w = torch.tensor([[0.5, -0.5, 1.0]], device=self.device)
-            # drone_setpoint["pos"] = self._desired_pos_w 
-            # drone_setpoint["lin_vel"] = torch.zeros(self.num_envs, 3, device=self.device)
-            # drone_setpoint["lin_acc"] = torch.zeros(self.num_envs, 3, device=self.device)
-            # drone_setpoint["jerk"] = torch.zeros(self.num_envs, 3, device=self.device)
-            # drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
-            # _, _, yaw = euler_xyz_from_quat(self._actions[:, 4:8])
-            # drone_setpoint["yaw"] = torch.tensor([[0.0]], device=self.device)
-            # drone_setpoint["yaw_rate"] = torch.tensor([[0.0]], device=self.device)
-            # drone_setpoint["yaw_acc"] = torch.tensor([[0.0]], device=self.device)
-
+            drone_setpoint["yaw_rate"] = self._actions[:, 13].view(self.num_envs, 1)
+            drone_setpoint["yaw_acc"] = self._actions[:, 19].view(self.num_envs, 1)
+            
             drone_thrusts, acc_cmd, q_cmd, torques = self._geometric_controller.getCommand(
                         drone_states, self._forces, drone_setpoint
                     )
@@ -225,15 +185,14 @@ class FalconEnv(DirectRLEnv):
                 self.drone_positions_debug = drone_states["pos"]
                 self.des_ori_debug = q_cmd
 
-            # self._eval_time += (1/(self._high_level_decimation/self._low_level_decimation)) * self._planner_dt
             self._forces[..., 2] = drone_thrusts
-            self._moments[..., :] = torques
+            self._moments[..., :] = torques[:, 1:]
+            self._collective_thrust[..., 2] = torques[:, 0]
             self._ll_counter = 0
 
         self._ll_counter += 1
-        # self._hl_counter += 1
         self._robot.set_external_force_and_torque(self._forces, torch.zeros_like(self._forces), body_ids=self._rotor_idx)
-        self._robot.set_external_force_and_torque(torch.zeros_like(self._moments), self._moments, body_ids=self._falcon_idx)
+        # self._robot.set_external_force_and_torque(self._collective_thrust, self._moments, body_ids=self._falcon_idx)
 
     def _get_observations(self) -> dict:
         # observations from the example, not real ones

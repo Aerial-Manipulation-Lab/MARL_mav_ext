@@ -42,6 +42,7 @@ from MARL_mav_carry_ext.tasks.single_falcon.track_ref import FalconEnvCfg, Falco
 
 from omni.isaac.lab.envs import DirectRLEnv
 from omni.isaac.lab.utils.dict import print_dict
+from omni.isaac.lab.utils.timer import Timer
 
 def main():
     """Main function."""
@@ -52,7 +53,7 @@ def main():
     env = FalconEnv(cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
     if args_cli.video:
         video_kwargs = {
-            "video_folder": "./videos",
+            "video_folder": "./falcon_videos",
             "step_trigger": lambda step: step == 0,
             "video_length": args_cli.video_length,
             "disable_logger": True,
@@ -73,19 +74,37 @@ def main():
                 references.append([float(x) for x in row])
             i += 1
         references = torch.tensor(references, device=env.sim.device).repeat(env.num_envs, 1, 1)
-            
+
+    # with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv", "r") as f:
+    #     reader = csv.reader(f, delimiter=",")
+    #     i = 0
+    #     references = []
+    #     for row in reader:
+    #         if i > 0:
+    #             references.append([float(x) for x in row])
+    #         i += 1
+    #     references = torch.tensor(references, device=env.sim.device).repeat(env.num_envs, 1, 1)
+
+    timer = Timer()
+    timer.start()
     while simulation_app.is_running():
         with torch.inference_mode():
+            curr_t = timer.time_elapsed
             count = count % references.shape[1]
             waypoint = references[:, count]
+            wp_t = waypoint[0, 0]
             # step the environment
+
             obs, rew, terminated, truncated, info = env.step(waypoint)
+            if terminated.any() | truncated.any():
+                print("-" * 80)
+                print("[INFO]: Resetting environment...")
             # update counter
-            count += 2
+            count += 4
             
-            if args_cli.video:
-                if count/2 == args_cli.video_length:
-                    break
+            # if args_cli.video:
+            #     if count/2 == args_cli.video_length:
+                    # break
 
     # close the simulator
     env.close()

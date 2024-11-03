@@ -202,8 +202,6 @@ class GeometricController:
 
         # calculate the thrust per propellor
         # inertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
-        # print("inertia_mat", self.inertia_mat.shape)
-        # print("alpha_b_des", alpha_b_des.shape)
         product = self.inertia_mat.matmul(alpha_b_des.transpose(0,1)).transpose(0,1) + torch.linalg.cross(
             ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0,1)).transpose(0,1)
         )
