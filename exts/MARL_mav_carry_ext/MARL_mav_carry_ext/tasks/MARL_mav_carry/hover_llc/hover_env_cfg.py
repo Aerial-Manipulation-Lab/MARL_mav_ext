@@ -322,7 +322,7 @@ class HoverEnvCfg_llc(ManagerBasedRLEnvCfg):
         self.decimation = 10
         self.episode_length_s = 20.0
         # simulation settings
-        self.sim.dt = 0.0025
+        self.sim.dt = 0.004
         self.sim.render_interval = self.decimation
         self.sim.disable_contact_processing = True
         self.sim.gravity = (0.0, 0.0, -9.8066)
