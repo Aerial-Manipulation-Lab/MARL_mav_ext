@@ -114,8 +114,9 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     # compute the error
     positional_error = torch.norm((desired_pos - drone_pos_env) / num_drones, dim=-1)
     total_positional_error = positional_error.sum(dim=-1)
+    sep_reward = separation_reward(env, asset_cfg)
     reward_distance_scale = 1.0
-    reward_position = torch.exp(-total_positional_error * reward_distance_scale)
+    reward_position = torch.exp(-total_positional_error * reward_distance_scale) * sep_reward
     assert reward_position.shape == (env.scene.num_envs,)
     return reward_position
 
