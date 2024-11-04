@@ -161,7 +161,7 @@ class FalconEnv(DirectRLEnv):
             drone_states["lin_acc"] = observations[:, 13:16]
             drone_states["ang_acc"] = observations[:, 16:]
 
-            self._desired_pos_w = self._actions[:, 1:4]
+            self._desired_pos_w = self._actions[:, 1:4] - 0.03
             drone_setpoint = {}
 
             drone_setpoint["pos"] = self._desired_pos_w
