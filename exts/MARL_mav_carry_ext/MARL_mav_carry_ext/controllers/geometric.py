@@ -68,6 +68,7 @@ class GeometricController:
             ],
             device=self.device,
         )
+        self.G_1_inv = torch.linalg.pinv(self.G_1)
         self.inertia_mat = torch.diag(torch.tensor([0.00164, 0.00184, 0.0030], device=self.device))
         self.min_thrust = torch.tensor(0.0, device=self.device)
         self.max_thrust = torch.tensor(8.5, device=self.device)
@@ -206,7 +207,7 @@ class GeometricController:
             ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0,1)).transpose(0,1)
         )
         rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
-        thrusts = torch.linalg.pinv(self.G_1).matmul(rh_side.transpose(0, 1)).transpose(0, 1)
+        thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)
         thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
         torques = self.G_1.matmul(thrusts.transpose(0, 1)).transpose(0, 1)
 

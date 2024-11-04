@@ -26,9 +26,11 @@ class LowLevelAction(ActionTerm):
         self._env = env
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
+        self._falcon_idx = self._robot.find_bodies("Falcon.*_base_link")[0]
         self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._prev_forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
-        self._torques = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._collective_thrust = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
+        self._torques = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
         self._num_drones = cfg.num_drones
         self._waypoint_dim = cfg.waypoint_dim
         self._num_waypoints = cfg.num_waypoints
@@ -86,6 +88,8 @@ class LowLevelAction(ActionTerm):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
+            collective_thrusts = []
+            torques_list = []
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = observations[:, 19:28]
             drone_orientations = observations[:, 28:40]
@@ -117,7 +121,7 @@ class LowLevelAction(ActionTerm):
                 drone_setpoint["yaw"] = self._constant_yaw
                 drone_setpoint["yaw_rate"] = torch.zeros(self.num_envs, 1, device=self.device)
                 drone_setpoint["yaw_acc"] = torch.zeros(self.num_envs, 1, device=self.device)
-                drone_thrusts, acc_cmd, q_cmd, z_b_des = self._geometric_controller.getCommand(
+                drone_thrusts, acc_cmd, q_cmd, torques = self._geometric_controller.getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], drone_setpoint
                 )
                 thrusts.append(drone_thrusts)
@@ -126,12 +130,12 @@ class LowLevelAction(ActionTerm):
                     self.drone_goals_debug[:, i] = drone_setpoint["pos"] + self._env.scene.env_origins
                     self.des_acc_debug[:, i] = acc_cmd
                     self.des_ori_debug[:, i] = q_cmd
-                    self.z_b_debug[:, i] = z_b_des
+
+
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._ll_counter = 0
         self._ll_counter += 1
-        self._env.scene["robot"].set_external_force_and_torque(self._forces, self._torques, self._body_ids)
-
+        self._env.scene["robot"].set_external_force_and_torque(self._forces, torch.zeros_like(self._forces), self._body_ids)
     """
     visualizations
     """
@@ -146,7 +150,7 @@ class LowLevelAction(ActionTerm):
                 marker_cfg.prim_path = "/Visuals/Actions/drone_z_forces"
                 self.drone_force_z_visualizer = VisualizationMarkers(marker_cfg)
             # set their visibility to true
-            self.drone_force_z_visualizer.set_visibility(True)
+            self.drone_force_z_visualizer.set_visibility(False)
             if not hasattr(self, "drone_pos_marker"):
                 marker_cfg = DRONE_POS_MARKER_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_pos_markers"
@@ -156,12 +160,12 @@ class LowLevelAction(ActionTerm):
                 marker_cfg = ACC_MARKER_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_acc"
                 self.acc_marker = VisualizationMarkers(marker_cfg)
-            self.acc_marker.set_visibility(True)
+            self.acc_marker.set_visibility(False)
             if not hasattr(self, "drone_ori_marker"):
                 marker_cfg = ORIENTATION_MARKER_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_ori"
                 self.drone_ori_marker = VisualizationMarkers(marker_cfg)
-            self.drone_ori_marker.set_visibility(True)
+            self.drone_ori_marker.set_visibility(False)
 
         else:
             if hasattr(self, "drone_force_z_visualizer"):
@@ -181,7 +185,7 @@ class LowLevelAction(ActionTerm):
         # display markers
 
         # Get drone positions and orientations
-        rotor_idx = self._robot.find_bodies("Falcon.*rotor_.*")[0]
+        rotor_idx = self._body_ids
         rotor_pos_world_frame = self._robot.data.body_state_w[:, rotor_idx, :3].view(-1, 3)
         rotor_orientation = self._robot.data.body_state_w[:, rotor_idx, 3:7].view(-1, 4)
 
