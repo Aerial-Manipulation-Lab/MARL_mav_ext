@@ -8,7 +8,7 @@ from omni.isaac.lab.assets import RigidObject
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
-from omni.isaac.lab.utils.math import quat_error_magnitude
+from omni.isaac.lab.utils.math import quat_error_magnitude, quat_inv, quat_mul, euler_xyz_from_quat
 
 from .utils import *
 
@@ -296,6 +296,30 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force
+
+def angle_cable_load(env: ManagerBasedRLEnv, threshold: float = 0.261799388, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Reward for desired angle between load and cables"""
+    robot = env.scene[asset_cfg.name]
+    reward_weight = 1.2
+    base_rope_idx = robot.find_bodies("rope_.*_link_0")[0]
+    payload_idx = robot.find_bodies("load_link")[0]
+    rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
+    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
+    payload_orientation_inv = quat_inv(payload_orientation_world)
+    rope_orientations_payload = quat_mul(
+        payload_orientation_inv, rope_orientations_world
+    )  # cable angles relative to payload
+    desired_angles = torch.tensor([[-threshold, threshold],
+                                   [threshold, threshold],
+                                   [0, -threshold]], device=env.sim.device).repeat(env.scene.num_envs, 1, 1)
+    roll, pitch, yaw = euler_xyz_from_quat(rope_orientations_payload)  # yaw can be whatever
+    mapped_angle = torch.stack((torch.sin(roll.view(env.num_envs, 3)), torch.sin(pitch.view(env.num_envs, 3))), dim=-1)
+    angle_error = torch.norm(mapped_angle - desired_angles, dim=-1)
+    reward_angle = reward_weight * torch.exp(-angle_error.sum(dim=-1)/num_drones)
+
+    assert reward_angle.shape == (env.scene.num_envs,)
+    return reward_angle
+    
 
 
 """ TODO: rewards for:
