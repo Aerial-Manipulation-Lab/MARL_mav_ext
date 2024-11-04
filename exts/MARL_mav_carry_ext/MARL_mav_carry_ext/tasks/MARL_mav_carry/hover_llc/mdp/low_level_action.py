@@ -58,7 +58,6 @@ class LowLevelAction(ActionTerm):
             self.drone_goals_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
             self.des_acc_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
             self.des_ori_debug = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
-            self.z_b_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
         """
         properties
