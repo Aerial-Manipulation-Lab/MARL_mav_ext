@@ -39,7 +39,9 @@ FALCON_CFG = ArticulationCfg(
         copy_from_source=False,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.5),
+        pos=(0.0, 0.0, 1.0),
+        # rot=(0.7071068, 0, 0, 0.7071068),
+        rot=(1.0, 0, 0, 0.0),
         joint_pos={
             ".*": 0.0,
         },

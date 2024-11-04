@@ -3,3 +3,6 @@
 logs/
 wandb/
 outputs/
+videos/
+dump.prof
+profile.sh

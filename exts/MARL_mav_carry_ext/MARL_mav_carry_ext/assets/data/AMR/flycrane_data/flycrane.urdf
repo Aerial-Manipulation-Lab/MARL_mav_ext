@@ -2,7 +2,7 @@
 <robot name="flycrane">
   <link name="Falcon1/base_link"/>
   <joint name="Falcon1/base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.00"/>
+    <origin rpy="0 0 1.5708" xyz="0 0 0.00"/>
     <parent link="Falcon1/base_link"/>
     <child link="Falcon1/base_link_inertia"/>
   </joint>
@@ -30,7 +30,7 @@
     </collision>
   </link>
   <joint name="Falcon1/rotor_0_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon1/base_link"/>
@@ -44,7 +44,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
       </geometry>
@@ -57,7 +57,7 @@
     </collision>
   </link>
   <joint name="Falcon1/rotor_1_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon1/base_link"/>
@@ -84,7 +84,7 @@
     </collision>
   </link>
   <joint name="Falcon1/rotor_2_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon1/base_link"/>
@@ -111,7 +111,7 @@
     </collision>
   </link>
   <joint name="Falcon1/rotor_3_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon1/base_link"/>
@@ -125,7 +125,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
       </geometry>
@@ -183,7 +183,7 @@
   </xacro:macro>-->
   <link name="Falcon2/base_link"/>
   <joint name="Falcon2/base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <origin rpy="0 0 1.5708" xyz="0 0 0.0"/>
     <parent link="Falcon2/base_link"/>
     <child link="Falcon2/base_link_inertia"/>
   </joint>
@@ -212,7 +212,7 @@
   </link>
   <!-- attach multirotor_base_plugin to the base_link -->
   <joint name="Falcon2/rotor_0_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon2/base_link"/>
@@ -226,7 +226,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
       </geometry>
@@ -241,7 +241,7 @@
 
 
   <joint name="Falcon2/rotor_1_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon2/base_link"/>
@@ -270,7 +270,7 @@
 
 
   <joint name="Falcon2/rotor_2_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon2/base_link"/>
@@ -299,7 +299,7 @@
 
 
   <joint name="Falcon2/rotor_3_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon2/base_link"/>
@@ -313,7 +313,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
       </geometry>
@@ -375,7 +375,7 @@
   </xacro:macro>-->
   <link name="Falcon3/base_link"/>
   <joint name="Falcon3/base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <origin rpy="0 0 1.5708" xyz="0 0 0.0"/>
     <parent link="Falcon3/base_link"/>
     <child link="Falcon3/base_link_inertia"/>
   </joint>
@@ -405,7 +405,7 @@
   <!-- attach multirotor_base_plugin to the base_link -->
 
   <joint name="Falcon3/rotor_0_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon3/base_link"/>
@@ -419,7 +419,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
       </geometry>
@@ -434,7 +434,7 @@
 
 
   <joint name="Falcon3/rotor_1_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon3/base_link"/>
@@ -463,7 +463,7 @@
 
 
   <joint name="Falcon3/rotor_2_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon3/base_link"/>
@@ -492,7 +492,7 @@
 
 
   <joint name="Falcon3/rotor_3_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.02"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon3/base_link"/>
@@ -506,7 +506,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
         <!-- The propeller meshes have a radius of 1m -->
         <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
       </geometry>

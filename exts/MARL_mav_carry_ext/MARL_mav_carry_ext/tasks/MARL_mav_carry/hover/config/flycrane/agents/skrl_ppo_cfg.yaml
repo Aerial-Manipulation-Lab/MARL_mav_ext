@@ -16,7 +16,10 @@ models:
       - name: net
         input: STATES
         layers: [512, 256, 128]
-        activations: elu
+        activations:
+        - elu
+        - elu
+        - tanh
     output: ACTIONS
   value:  # see deterministic_model parameters
     class: DeterministicMixin
@@ -67,7 +70,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "flycrane_hover_ppo"
-    experiment_name: "hovering_test"
+    experiment_name: "hovering"
     write_interval: 100
     checkpoint_interval: 100000
 

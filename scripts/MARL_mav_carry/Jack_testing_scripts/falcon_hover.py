@@ -66,8 +66,9 @@ def main():
     sim.reset()
 
     # Fetch relevant parameters to make the quadcopter hover in place
-    prop_body_ids = robot.find_bodies("Falcon_rotor.*")[0]
+    prop_body_ids = robot.find_bodies("Falcon_base_link")[0]
     robot_mass = robot.root_physx_view.get_masses().sum()
+    print("falcon mass: ", robot_mass)
     gravity = torch.tensor(sim.cfg.gravity, device=sim.device).norm()
     # Now we are ready!
     print("[INFO]: Setup complete...")
@@ -78,6 +79,7 @@ def main():
     count = 0
     robot_root_state = robot.data.default_root_state[:, :7]
     robot_root_state[0, :3] += torch.tensor([1.5, 0.5, 0.42])
+    robot_root_state[0, 3:7] = torch.tensor([0.4645017, 0.1911519, 0.4645017, 0.7293403])
     robot_root_state[1, :3] += torch.tensor([-1.5, 0.5, 0.42])
     # Simulate physics
     while simulation_app.is_running():
@@ -94,10 +96,16 @@ def main():
             robot.reset()
             # reset command
             print(">>>>>>>> Reset!")
+        robot_state = robot.data.body_state_w[0, prop_body_ids, :]
+        print(f"robot position: {robot_state[0, :3]}")
+        print(f"robot orientation: {robot_state[0, 3:7]}")
+        print(f"robot linear velocity: {robot_state[0, 7:10]}")
+        print(f"robot angular velocity: {robot_state[0, 10:]}")
         # apply action to the robot (make the robot float in place)
-        forces = torch.zeros(robot.num_instances, robot.num_joints, 3, device=sim.device)
+        forces = torch.zeros(robot.num_instances, len(prop_body_ids), 3, device=sim.device)
         torques = torch.zeros_like(forces)
-        forces[..., 2] = robot_mass * gravity / (robot.num_joints * robot.num_instances)
+        forces[..., 2] = robot_mass * gravity / (len(prop_body_ids) * robot.num_instances)
+        torques[..., 2] = 1
         robot.set_external_force_and_torque(forces, torques, body_ids=prop_body_ids)
         robot.write_data_to_sim()
         # perform step
