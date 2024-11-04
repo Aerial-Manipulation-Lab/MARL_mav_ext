@@ -14,7 +14,8 @@ a more user-friendly way.
 
 import argparse
 import sys
-
+import cProfile
+import atexit
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
@@ -206,6 +207,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
 if __name__ == "__main__":
     # run the main function
-    main()
-    # close sim app
-    simulation_app.close()
+    print("running main")
+    cProfile.run("main()", "dump.prof")
+    atexit.register(simulation_app.close)
