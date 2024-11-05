@@ -44,6 +44,9 @@ parser.add_argument(
     choices=["PPO", "IPPO", "MAPPO"],
     help="The RL algorithm used for training the skrl agent.",
 )
+parser.add_argument("--resume", action="store_true", default=False, help="Resume training from a checkpoint.")
+parser.add_argument("--checkpoint", type=str, default=None, help="Path to the checkpoint to resume training.")
+
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -200,7 +203,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # run training
     runner.run()
-
+    if args_cli.resume:
+        runner.agent.load(args_cli.checkpoint)
     # close the simulator
     env.close()
 
