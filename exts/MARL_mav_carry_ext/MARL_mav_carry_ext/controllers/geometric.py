@@ -11,8 +11,6 @@ from omni.isaac.lab.utils.math import (
     euler_xyz_from_quat,
 )
 
-from .utils import LowPassFilter
-
 
 class GeometricController:
     """
@@ -23,26 +21,23 @@ class GeometricController:
     def __init__(self, num_envs: int):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.num_envs = num_envs
-        # self.drag_compensation = False # no aerodynamics in the sim yet
-        self.use_bodyrate_ref = False
 
-        self.p_err_max_ = torch.full((self.num_envs, 3), torch.finfo(torch.float32).max).to(self.device)
+        self.p_err_max_ = torch.full((self.num_envs, 3), torch.finfo(torch.float32).max, device=self.device)
         self.v_err_max_ = torch.full(
             (
                 self.num_envs,
                 3,
             ),
-            torch.finfo(torch.float32).max,
-        ).to(self.device)
+            torch.finfo(torch.float32).max, device=self.device)
 
-        self.p_offset = torch.tensor([[0.0, 0.0, -0.03]] * self.num_envs).to(self.device)
-        self.integration_max = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
+        self.p_offset = torch.tensor([[0.0, 0.0, -0.03]] * self.num_envs, device=self.device)
+        self.integration_max = torch.tensor([0.0, 0.0, 0.0], device=self.device)
 
         # sim and drone parameters
-        self.gravity = torch.tensor([[0.0, 0.0, -9.8066]] * self.num_envs).to(self.device)
+        self.gravity = torch.tensor([[0.0, 0.0, -9.8066]] * self.num_envs, device=self.device)
         self.z_i = torch.tensor([[0.0, 0.0, 1.0]] * self.num_envs, device=self.device)
-        self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0]).to(self.device)
-        self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0]).to(self.device)
+        self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
+        self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0], device=self.device)
         self.t_last = 0.0
         self.falcon_mass = 0.617  # kg
         self.l = 0.075
@@ -74,17 +69,17 @@ class GeometricController:
         self.max_thrust = torch.tensor(6.25, device=self.device)
 
         # controller parameters
-        self.kp_acc = torch.tensor([4.0, 4.0, 9.0]).to(self.device)
-        self.kd_acc = torch.tensor([4.0, 4.0, 6.0]).to(self.device)
-        self.ki_acc = torch.tensor([0.0, 0.0, 0.0]).to(self.device)
+        self.kp_acc = torch.tensor([4.0, 4.0, 9.0], device=self.device)
+        self.kd_acc = torch.tensor([4.0, 4.0, 6.0], device=self.device)
+        self.ki_acc = torch.tensor([0.0, 0.0, 0.0], device=self.device)
 
-        self.kp_rate = torch.tensor([25.0, 25.0, 8.0]).to(self.device)
+        self.kp_rate = torch.tensor([25.0, 25.0, 8.0], device=self.device)
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
 
-        self.filter_sampling_frequency = torch.tensor([50, 50, 50], device=self.device)
-        self.filter_cutoff_frequency = torch.tensor([20, 20, 20], device=self.device)
-        self.filter_cutoff_frequency_bodyrate = 20
+        # self.filter_sampling_frequency = torch.tensor([50, 50, 50], device=self.device)
+        # self.filter_cutoff_frequency = torch.tensor([20, 20, 20], device=self.device)
+        # self.filter_cutoff_frequency_bodyrate = 20
 
         # self.filter_acc = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.gravity)
 
@@ -118,7 +113,6 @@ class GeometricController:
             state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust / self.falcon_mass)
         )
         acc_cmd = des_acc - self.gravity - acc_load
-        des_thrust = self.falcon_mass * acc_cmd
         z_b_des = normalize(acc_cmd)  # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1, keepdim=True) * self.falcon_mass
         current_collective_thrust_magnitude = torch.norm(current_collective_thrust, dim=1, keepdim=True)
@@ -131,7 +125,7 @@ class GeometricController:
             (torch.cos(setpoint_yaw), torch.sin(setpoint_yaw), torch.zeros_like(setpoint_yaw)), dim=1
         )
         y_b_des = normalize(torch.linalg.cross(z_b_des, x_intermediate_des))# / (
-        x_b_des = normalize(torch.linalg.cross(y_b_des, z_b_des))
+        x_b_des = torch.linalg.cross(y_b_des, z_b_des)
 
         # calculate the desired quaternion
         des_rot_matrix = torch.stack([x_b_des, y_b_des, z_b_des], dim=2)
@@ -154,35 +148,6 @@ class GeometricController:
         )
         omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
 
-        # angular acceleration command
-        T_ddot = self.falcon_mass * torch.sum(
-            setpoint["snap"] * z_b, dim=-1, keepdim=True
-        ) + self.falcon_mass * torch.sum(h_omega * setpoint["jerk"], dim=-1, keepdim=True)
-        # Initialize h_alpha with zero values
-        h_alpha = torch.zeros_like(setpoint["snap"])
-
-        # Compute h_alpha for the environments where thrust is > 0.01 (apply division)
-        h_alpha[mask] = (self.falcon_mass / current_collective_thrust_magnitude[mask]) * setpoint["snap"][mask] - (
-            torch.linalg.cross(state["ang_vel"][mask], h_omega[mask])
-            + (2 * T_dot[mask] / current_collective_thrust_magnitude[mask]) * h_omega[mask]
-            + (T_ddot[mask] / current_collective_thrust_magnitude[mask]) * z_b[mask]
-        )
-
-        # For environments where thrust is <= 0.01 (no division applied)
-        h_alpha[~mask] = self.falcon_mass * setpoint["snap"][~mask] - (
-            torch.linalg.cross(state["ang_vel"][~mask], h_omega[~mask])
-            + (2 * T_dot[~mask]) * h_omega[~mask]
-            + T_ddot[~mask] * z_b[~mask]
-        )
-
-        h_alpha_x = (-h_alpha * y_b).sum(-1, keepdim=True)
-        h_alpha_y = (h_alpha * x_b).sum(-1, keepdim=True)
-        h_alpha_z = setpoint["yaw_acc"] * (self.z_i * z_b).sum(
-            -1, keepdim=True
-        )
-
-        alpha_b_ref = torch.cat((h_alpha_x, h_alpha_y, h_alpha_z), dim=-1)
-
         # tilt prioritized attitude control
         quat_diff = quat_mul(quat_inv(state["quat"]), q_cmd)
         q_e_w = quat_diff[..., 0].view(self.num_envs, 1)
@@ -198,7 +163,6 @@ class GeometricController:
             self.kp_att_xy * q_e_red
             + self.kp_att_z * torch.sign(q_e_w) * q_e_yaw
             + self.kp_rate * (omega_b_ref - ang_vel_body)
-            #+ alpha_b_ref
         )
 
         # calculate the thrust per propellor
@@ -208,7 +172,6 @@ class GeometricController:
         )
         rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
         thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)
-        thrusts = torch.max(self.min_thrust, torch.min(thrusts, self.max_thrust))
-        torques = self.G_1.matmul(thrusts.transpose(0, 1)).transpose(0, 1)
+        thrusts = torch.clamp(thrusts, self.min_thrust, self.max_thrust)
 
-        return thrusts, acc_cmd, q_cmd, torques
+        return thrusts, acc_cmd, q_cmd

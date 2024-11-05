@@ -36,14 +36,6 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
-    robot.spawn.activate_contact_sensors = True
-
-    # TODO: add joint constraints, either in URDF or here
-    contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
-    )
-    # frame_transformer = FrameTransformerCfg(prim_path="/World/defaultGroundPlane", target_frames={ENV_REGEX_NS})
-
 
 # MDP settings
 
@@ -246,10 +238,6 @@ class TerminationsCfg:
         func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
-    illegal_contact = DoneTerm(
-        func=mdp.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
-    )
     # end when angular velocity of payload is too high
     payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
@@ -267,30 +255,6 @@ class TerminationsCfg:
     )
     angle_load_cable = DoneTerm(
         func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_0_1 = DoneTerm(
-        func=mdp.cable_angle_0_1_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_1_2 = DoneTerm(
-        func=mdp.cable_angle_1_2_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_2_3 = DoneTerm(
-        func=mdp.cable_angle_2_3_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_3_4 = DoneTerm(
-        func=mdp.cable_angle_3_4_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_4_5 = DoneTerm(
-        func=mdp.cable_angle_4_5_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_5_6 = DoneTerm(
-        func=mdp.cable_angle_5_6_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})

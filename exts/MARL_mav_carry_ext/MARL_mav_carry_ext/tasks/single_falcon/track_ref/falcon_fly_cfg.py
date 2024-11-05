@@ -80,8 +80,6 @@ class FalconEnv(DirectRLEnv):
         self._actions = torch.zeros(self.num_envs, self._action_space, device=self.sim.device)
         self._previous_actions = torch.zeros_like(self._actions)
         self._forces = torch.zeros(self.num_envs, len(self._rotor_idx), 3, device=self.device)
-        self._collective_thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
-        self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
         self._low_level_decimation = self.cfg.low_level_decimation
         self._high_level_decimation = self.cfg.decimation
@@ -177,7 +175,7 @@ class FalconEnv(DirectRLEnv):
             drone_setpoint["yaw_rate"] = self._actions[:, 13].view(self.num_envs, 1)
             drone_setpoint["yaw_acc"] = self._actions[:, 19].view(self.num_envs, 1)
             
-            drone_thrusts, acc_cmd, q_cmd, torques = self._geometric_controller.getCommand(
+            drone_thrusts, acc_cmd, q_cmd = self._geometric_controller.getCommand(
                         drone_states, self._forces, drone_setpoint
                     )
             if self.cfg.debug_vis:
@@ -186,13 +184,10 @@ class FalconEnv(DirectRLEnv):
                 self.des_ori_debug = q_cmd
 
             self._forces[..., 2] = drone_thrusts
-            self._moments[..., :] = torques[:, 1:]
-            self._collective_thrust[..., 2] = torques[:, 0]
             self._ll_counter = 0
 
         self._ll_counter += 1
         self._robot.set_external_force_and_torque(self._forces, torch.zeros_like(self._forces), body_ids=self._rotor_idx)
-        # self._robot.set_external_force_and_torque(self._collective_thrust, self._moments, body_ids=self._falcon_idx)
 
     def _get_observations(self) -> dict:
         # observations from the example, not real ones
