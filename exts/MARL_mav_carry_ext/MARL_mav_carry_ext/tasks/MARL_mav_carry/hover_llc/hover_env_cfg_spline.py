@@ -287,37 +287,11 @@ class TerminationsCfg:
     # end when angular velocity of falcon is too high
     falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
-    nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
-    large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
     angle_drones_cable = DoneTerm(
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
     angle_load_cable = DoneTerm(
         func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_0_1 = DoneTerm(
-        func=mdp.cable_angle_0_1_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_1_2 = DoneTerm(
-        func=mdp.cable_angle_1_2_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_2_3 = DoneTerm(
-        func=mdp.cable_angle_2_3_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_3_4 = DoneTerm(
-        func=mdp.cable_angle_3_4_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_4_5 = DoneTerm(
-        func=mdp.cable_angle_4_5_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_5_6 = DoneTerm(
-        func=mdp.cable_angle_5_6_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
