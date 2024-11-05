@@ -71,7 +71,7 @@ class GeometricController:
         self.G_1_inv = torch.linalg.pinv(self.G_1)
         self.inertia_mat = torch.diag(torch.tensor([0.00164, 0.00184, 0.0030], device=self.device))
         self.min_thrust = torch.tensor(0.0, device=self.device)
-        self.max_thrust = torch.tensor(8.5, device=self.device)
+        self.max_thrust = torch.tensor(6.25, device=self.device)
 
         # controller parameters
         self.kp_acc = torch.tensor([4.0, 4.0, 9.0]).to(self.device)
