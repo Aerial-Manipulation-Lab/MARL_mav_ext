@@ -6,3 +6,4 @@ outputs/
 videos/
 dump.prof
 profile.sh
+*.svg

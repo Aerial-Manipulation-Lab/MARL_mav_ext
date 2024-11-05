@@ -23,7 +23,7 @@ payload_idx = [0]
 drone_idx = [71, 72, 73]
 base_rope_idx = [8, 9, 10]
 
-debug_vis_reward = True
+debug_vis_reward = False
 if debug_vis_reward:
     GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
         markers={
