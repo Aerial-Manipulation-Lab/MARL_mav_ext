@@ -18,6 +18,11 @@ if TYPE_CHECKING:
 # TODO: put this somewhere else
 num_drones = 3
 
+# Body indices found in the scene
+payload_idx = [0]
+drone_idx = [71, 72, 73]
+base_rope_idx = [8, 9, 10]
+
 debug_vis_reward = True
 if debug_vis_reward:
     GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
@@ -58,7 +63,6 @@ def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
     """Test reward function."""
     safe_distance = 0.44  # smallest distance where drones are just upright
     robot = env.scene[asset_cfg.name]
-    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
     pdist = torch.norm(rpos, dim=-1, keepdim=True)
@@ -76,7 +80,6 @@ def track_payload_pos(
 ) -> torch.Tensor:
     """Reward tracking of payload position commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
-    payload_idx = robot.find_bodies("load_link")[0]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
 
@@ -107,7 +110,6 @@ def track_payload_pos(
 def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for tracking the drone reference."""
     robot = env.scene[asset_cfg.name]
-    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_pos_world = robot.data.body_state_w[:, drone_idx, :3]
     drone_pos_env = drone_pos_world - env.scene.env_origins.unsqueeze(1)
     desired_pos = env.action_manager._terms["low_level_action"]._desired_position
@@ -126,7 +128,6 @@ def track_payload_orientation(
 ) -> torch.Tensor:
     """Reward tracking of payload orientation commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
-    payload_idx = robot.find_bodies("load_link")[0]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:]
@@ -169,7 +170,6 @@ def track_payload_pose(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
 def upright_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for keeping the payload up."""
     robot = env.scene[asset_cfg.name]
-    payload_idx = robot.find_bodies("load_link")[0]
     payload_orientation = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     payload_up = quat_axis(payload_orientation, axis=2)
     up = payload_up[:, 2]
@@ -188,7 +188,6 @@ def spinnage_reward_payload(
     """Reward for minimizing the angular velocities of the payload."""
     spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
-    payload_idx = robot.find_bodies("load_link")[0]
     payload_angular_velocity = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(payload_angular_velocity))
     sep_reward = separation_reward(env, asset_cfg)
@@ -203,7 +202,6 @@ def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = S
     """Reward for minimizing the angular velocities of the drones."""
     spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
-    drone_idx = robot.find_bodies("Falcon.*base_link")[0]
     drone_angular_velocity = (robot.data.body_state_w[:, drone_idx, 10:] / num_drones).square().sum(-1).sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(drone_angular_velocity))
     sep_reward = separation_reward(env, asset_cfg)
@@ -217,7 +215,6 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     """Reward for minimizing the linear velocities of the payload."""
     swing_weight = 0.8
     robot = env.scene[asset_cfg.name]
-    payload_idx = robot.find_bodies("load_link")[0]
     payload_linear_velocity = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1).abs().sum(-1)
     reward_swing = swing_weight * torch.exp(-torch.square(payload_linear_velocity))
     sep_reward = separation_reward(env, asset_cfg)
@@ -259,7 +256,7 @@ def snap_penalty_spline(env: ManagerBasedRLEnv) -> torch.Tensor:
 
 def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in action values."""
-    reward_action_smoothness_weight = 0.5
+    reward_action_smoothness_weight = 1.0
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
     action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
@@ -273,10 +270,10 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
 
 def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high force values."""
-    reward_effort_weight = 0.2
+    reward_effort_weight = 0.5
     action_forces = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
     normalized_forces = action_forces / 6.25
-    effort_norm = torch.sum(normalized_forces, dim=-1) / num_drones
+    effort_norm = torch.sum(normalized_forces, dim=-1) / num_drones / 4 # num propellers
     reward_effort = reward_effort_weight * torch.exp(-effort_norm)
     sep_reward = separation_reward(env)
     reward_effort = reward_effort * sep_reward  # from omnidrones paper
@@ -287,10 +284,10 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
 
 def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
-    reward_action_smoothness_force_weight = 0.5
+    reward_action_smoothness_force_weight = 0.8
     action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
-    action_smoothness_force = torch.norm((action_force - action_prev_force) / num_drones, dim=-1)
+    action_smoothness_force = torch.norm((action_force - action_prev_force) / num_drones / 4, dim=-1)
     reward_action_smoothness_force = reward_action_smoothness_force_weight * torch.exp(-action_smoothness_force)
     sep_reward = separation_reward(env)
     reward_action_smoothness_force = reward_action_smoothness_force * sep_reward  # from omnidrones paper
@@ -302,8 +299,6 @@ def angle_cable_load(env: ManagerBasedRLEnv, threshold: float = 0.261799388, ass
     """Reward for desired angle between load and cables"""
     robot = env.scene[asset_cfg.name]
     reward_weight = 1.2
-    base_rope_idx = robot.find_bodies("rope_.*_link_0")[0]
-    payload_idx = robot.find_bodies("load_link")[0]
     rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
     payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
     payload_orientation_inv = quat_inv(payload_orientation_world)
