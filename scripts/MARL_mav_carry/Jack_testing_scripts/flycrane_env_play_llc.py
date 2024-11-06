@@ -63,11 +63,6 @@ def main():
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
-    load_idx = env.scene["robot"].find_bodies("load_link")[0]
-    drone_idx = env.scene["robot"].find_bodies("Falcon.*base_link")[0]
-    base_rope_idx = env.scene["robot"].find_bodies("rope_.*_link_0")[0]
-    rope_6_idx = env.scene["robot"].find_bodies("rope_.*_link_6")[0]
-    print("rope 6 idx: ", rope_6_idx)
     
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
@@ -108,8 +103,9 @@ def main():
             # update counter
             count += 1
 
-            if count == args_cli.video_length:
-                break
+            if args_cli.video:
+                if count == args_cli.video_length:
+                    break
 
     # close the simulator
     env.close()
