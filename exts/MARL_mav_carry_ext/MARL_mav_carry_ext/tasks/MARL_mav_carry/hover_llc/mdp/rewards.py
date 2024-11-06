@@ -23,7 +23,7 @@ payload_idx = [0]
 drone_idx = [71, 72, 73]
 base_rope_idx = [8, 9, 10]
 
-debug_vis_reward = False
+debug_vis_reward = True
 if debug_vis_reward:
     GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
         markers={
@@ -65,9 +65,9 @@ def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
     robot = env.scene[asset_cfg.name]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
-    pdist = torch.norm(rpos, dim=-1, keepdim=True)
+    pdist = get_drone_pdist(pdist)
     separation = (
-        get_drone_pdist(pdist).min(dim=-1).values.min(dim=-1).values
+        pdist.min(dim=-1).values.min(dim=-1).values
     )  # get the smallest distance between drones in the swarm
     reward_separation = torch.square(separation / safe_distance).clamp(0, 1)
 
@@ -91,9 +91,9 @@ def track_payload_pos(
     reward_distance_scale = 1.2
     reward_position = torch.exp(-positional_error * reward_distance_scale)
 
-    marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
 
     if debug_vis:
+        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
         # set their visibility to true
         payload_pos_marker.set_visibility(True)
         desired_pos_world = desired_pos + env.scene.env_origins
@@ -136,12 +136,8 @@ def track_payload_orientation(
     reward_distance_scale = 1.2
     reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
 
-    if env.scene.num_envs > 1:
-        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
-    else:
-        marker_indices = [0, 1]
-
     if debug_vis:
+        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
         payload_orientation_marker.set_visibility(True)
         orientations = torch.cat((desired_quat, payload_quat), dim=0)
         desired_pos = env.command_manager.get_command(command_name)[
@@ -161,8 +157,7 @@ def track_payload_pose(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
     position_reward = track_payload_pos(env, debug_vis_reward, "pose_command", asset_cfg)
     orientation_reward = track_payload_orientation(env, debug_vis_reward, "pose_command", asset_cfg)
     reward_pose = position_reward + orientation_reward
-    sep_reward = separation_reward(env, asset_cfg)
-    reward_pose = reward_pose * sep_reward  # from omnidrones paper
+    reward_pose = reward_pose
     assert reward_pose.shape == (env.scene.num_envs,)
     return reward_pose
 
@@ -260,9 +255,8 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
     action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
-    reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness)
-    sep_reward = separation_reward(env)
-    reward_action_smoothness = reward_action_smoothness * sep_reward  # from omnidrones paper
+    scaling_factor = 5
+    reward_action_smoothness = reward_action_smoothness_weight * torch.exp(-action_smoothness * scaling_factor)
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
@@ -273,10 +267,25 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     reward_effort_weight = 0.5
     action_forces = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
     normalized_forces = action_forces / 6.25
-    effort_norm = torch.sum(normalized_forces, dim=-1) / num_drones / 4 # num propellers
-    reward_effort = reward_effort_weight * torch.exp(-effort_norm)
+    effort_sum = torch.sum(normalized_forces, dim=-1) / num_drones / 4 # num propellers
+    reward_effort = reward_effort_weight * torch.exp(-effort_sum)
     sep_reward = separation_reward(env)
-    reward_effort = reward_effort * sep_reward  # from omnidrones paper
+    reward_effort = reward_effort  
+
+    assert reward_effort.shape == (env.scene.num_envs,)
+    return reward_effort
+
+def action_penalty_rel(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high force values."""
+    reward_effort_weight = 0.2
+    action_forces = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
+    normalized_forces = action_forces / 6.25
+    average_force_prop = torch.sum(normalized_forces, dim=-1) / num_drones / 4 # num propellers
+    min_effort_prop = 0.5702
+    effective_effort = torch.max(average_force_prop - min_effort_prop, torch.zeros_like(average_force_prop))
+    scaling_factor = 5
+    reward_effort = reward_effort_weight * torch.exp(-effective_effort * scaling_factor)
+    reward_effort = reward_effort  
 
     assert reward_effort.shape == (env.scene.num_envs,)
     return reward_effort
@@ -284,13 +293,12 @@ def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
 
 def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
-    reward_action_smoothness_force_weight = 0.8
+    reward_action_smoothness_force_weight = 0.5
     action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
-    action_smoothness_force = torch.norm((action_force - action_prev_force) / num_drones / 4, dim=-1)
-    reward_action_smoothness_force = reward_action_smoothness_force_weight * torch.exp(-action_smoothness_force)
-    sep_reward = separation_reward(env)
-    reward_action_smoothness_force = reward_action_smoothness_force * sep_reward  # from omnidrones paper
+    action_smoothness_force = torch.sum(action_force - action_prev_force, dim = -1) / num_drones / 4 # num propellors
+    scaling_factor = 10
+    reward_action_smoothness_force = reward_action_smoothness_force_weight * torch.exp(-action_smoothness_force * scaling_factor)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force
