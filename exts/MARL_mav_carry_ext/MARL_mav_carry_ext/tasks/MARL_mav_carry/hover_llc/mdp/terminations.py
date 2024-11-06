@@ -3,6 +3,7 @@ import torch
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils.math import euler_xyz_from_quat, quat_inv, quat_mul
+from .utils import get_drone_pdist, get_drone_rpos
 
 # Body indices found in the scene
 payload_idx = [0]
@@ -113,3 +114,18 @@ def bounding_box(
     is_body_pos_outside = (body_pos_env.abs() > threshold).any(dim=-1).any(dim=-1)
     assert is_body_pos_outside.shape == (env.num_envs,)
     return is_body_pos_outside
+
+def drone_collision(
+    env: ManagerBasedRLEnv, threshold: float = 0.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when the drones collide."""
+    robot = env.scene[asset_cfg.name]
+    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
+    rpos = get_drone_rpos(drone_pos_world_frame)
+    pdist = get_drone_pdist(rpos)
+    separation = pdist.min(dim=-1).values.min(dim=-1).values # get the smallest distance between drones in the swarm
+    is_drone_collision = (separation
+        < threshold
+    )
+    assert is_drone_collision.shape == (env.num_envs,)
+    return is_drone_collision
