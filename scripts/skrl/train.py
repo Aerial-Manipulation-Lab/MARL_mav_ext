@@ -204,11 +204,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
     runner = Runner(env, agent_cfg)
+    if args_cli.resume:
+        runner.agent.load(args_cli.checkpoint)
 
     # run training
     runner.run()
-    if args_cli.resume:
-        runner.agent.load(args_cli.checkpoint)
     # close the simulator
     env.close()
 
