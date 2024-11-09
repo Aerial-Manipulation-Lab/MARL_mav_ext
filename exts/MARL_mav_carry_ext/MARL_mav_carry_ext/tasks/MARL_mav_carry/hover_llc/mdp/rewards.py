@@ -254,7 +254,7 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
     action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
-    scaling_factor = 4
+    scaling_factor = 5
     reward_action_smoothness = torch.exp(-action_smoothness * scaling_factor)
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
