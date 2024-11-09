@@ -71,6 +71,39 @@ def main():
     mass_left_side = 2 * falcon_mass + 2 * rope_mass + 0.5 * payload_mass
     mass_right_side = falcon_mass + rope_mass + 0.5 * payload_mass
 
+    stretch_position = torch.tensor(
+                    [
+                        [
+                            0.9,
+                            -0.9,
+                            2.5,  # drone 1
+                            -0.9,
+                            0.0,
+                            2.5,  # drone 2
+                            0.9,
+                            0.9,
+                            2.5,
+                        ]
+                    ],
+                    dtype=torch.float32,
+                )
+    
+    straight_up_position = torch.tensor(
+                    [
+                        [
+                            0.27,
+                            0.22,
+                            2.141,  # drone 1
+                            0.27,
+                            -0.22,
+                            2.141,  # drone 2
+                            -0.27,
+                            0.0,
+                            2.141,
+                        ]
+                    ],
+                    dtype=torch.float32,
+                )
     count = 0
     while simulation_app.is_running():
         with torch.inference_mode():
@@ -80,22 +113,8 @@ def main():
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:] = torch.tensor(
-                    [
-                        [
-                            0.5,
-                            -0.5,
-                            2.5,  # drone 1
-                            -0.5,
-                            0.0,
-                            2.5,  # drone 2
-                            0.5,
-                            0.5,
-                            2.5,
-                        ]
-                    ],
-                    dtype=torch.float32,
-                )  # drone 3
+                waypoint[:] = stretch_position
+                waypoint[1] = straight_up_position
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # print current orientation of pole

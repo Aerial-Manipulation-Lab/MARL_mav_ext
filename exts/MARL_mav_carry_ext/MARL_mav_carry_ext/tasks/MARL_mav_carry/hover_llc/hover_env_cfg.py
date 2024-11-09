@@ -191,7 +191,7 @@ class RewardsCfg:
 
     pose_reward = RewTerm(
         func=mdp.track_payload_pose,
-        weight=1.0,
+        weight=1.5,
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -232,20 +232,18 @@ class RewardsCfg:
 
     force_penalty = RewTerm(
         func=mdp.action_penalty_rel,
-        weight=1.0,
+        weight=0.2,
     )
 
     force_smoothness = RewTerm(
         func=mdp.action_smoothness_force_reward,
-        weight=1.0,
+        weight=0.5,
     )
 
-    # cable_angle_reward = RewTerm(
-    #     func=mdp.angle_cable_load,
-    #     weight=1.0,
-    #     params={"threshold": 0.261799388, "asset_cfg": SceneEntityCfg("robot")},
-    # )
-
+    downwash_reward = RewTerm(
+        func=mdp.downwash_reward,
+        weight=0.5,
+    )
 
 @configclass
 class TerminationsCfg:
@@ -269,7 +267,7 @@ class TerminationsCfg:
     )
 
     # end when angular velocity of falcon is too high
-    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
+    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 15.0})
 
     angle_drones_cable = DoneTerm(
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}

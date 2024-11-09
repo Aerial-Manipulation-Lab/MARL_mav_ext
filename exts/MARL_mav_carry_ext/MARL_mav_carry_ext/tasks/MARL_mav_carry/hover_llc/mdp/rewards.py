@@ -9,7 +9,7 @@ from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.utils.math import quat_error_magnitude, quat_inv, quat_mul, euler_xyz_from_quat
-
+from .marker_utils import DRONE_POS_MARKER_CFG
 from .utils import *
 
 if TYPE_CHECKING:
@@ -254,7 +254,7 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
     action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
-    scaling_factor = 5
+    scaling_factor = 4
     reward_action_smoothness = torch.exp(-action_smoothness * scaling_factor)
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
@@ -316,9 +316,48 @@ def angle_cable_load(env: ManagerBasedRLEnv, threshold: float = 0.261799388, ass
 
     assert reward_angle.shape == (env.scene.num_envs,)
     return reward_angle
-    
 
 
-""" TODO: rewards for:
-- Joint limits (angles between cables) of cable joints
-"""
+def downwash_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), debug_vis : bool = True) -> torch.Tensor:
+    """Reward for keeping the downwash wake away from the payload"""
+    robot = env.scene[asset_cfg.name]
+    reward_weight = 0.5
+
+    # Plane equation for the payload
+    payload_pose_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
+    payload_orientation = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_length = torch.tensor([[0.275, 0.225, 0]] * env.num_envs, device=env.sim.device)
+    len_payload_env = quat_rotate(payload_orientation, payload_length)
+    edge_payload_min = payload_pose_env - len_payload_env
+    edge_payload_max = payload_pose_env + len_payload_env
+    plane_vec1 = edge_payload_max - payload_pose_env
+    plane_vec2 = edge_payload_min - payload_pose_env
+    normal = torch.linalg.cross(plane_vec1, plane_vec2)
+    d = torch.sum(normal * payload_pose_env, dim=-1).unsqueeze(-1).unsqueeze(-1)  # Shape (num_envs, 1, 1)
+
+    # Line equations for each drone's thrust direction
+    drone_pos_env = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    drone_orientation = robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
+    thrust_directions = quat_rotate(
+        drone_orientation,
+        torch.tensor([[0, 0, 1.0]] * env.num_envs * num_drones, device=env.sim.device)
+    ).view(env.num_envs, num_drones, 3)
+
+    # Calculate intersection points with the plane
+    # t = (d - normal * drone_pos) / (normal * thrust_direction)
+    numerator = d - torch.sum(normal.unsqueeze(1) * drone_pos_env, dim=-1, keepdim=True)
+    denominator = torch.sum(normal.unsqueeze(1) * thrust_directions, dim=-1, keepdim=True) + 1e-6  # Avoid division by zero
+    t = numerator / denominator
+
+    # Intersection points on the plane for each drone
+    line_point_proj = drone_pos_env + t * thrust_directions  # Shape (num_envs, num_drones, 3)
+
+    # Calculate distance between intersection points and payload position
+    line_dist = torch.norm(line_point_proj - payload_pose_env.unsqueeze(1), dim=-1)  # Shape (num_envs, num_drones)
+    straight_line_dist = torch.tensor([[1.1941, 1.1941, 1.1735]] * env.num_envs, device='cuda:0') # line dist when drones are straight under the load
+    diff_line_dist = line_dist - straight_line_dist
+    # Reward: penalize based on distance from the intersection point to the payload position
+    reward_downwash = reward_weight * torch.max(1 - torch.exp(-diff_line_dist * 15), torch.tensor(0.0, device=env.sim.device)).mean(dim=-1)   # Mean over drones
+
+    assert reward_downwash.shape == (env.num_envs,)
+    return reward_downwash
