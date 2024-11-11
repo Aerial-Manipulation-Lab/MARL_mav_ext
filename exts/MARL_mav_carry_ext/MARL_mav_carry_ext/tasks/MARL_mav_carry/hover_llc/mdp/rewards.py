@@ -88,7 +88,7 @@ def track_payload_pos(
     ]  # relative goal generated in robot root frame, use a goal in env frame
     # compute the error
     positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
-    reward_distance_scale = 1.2
+    reward_distance_scale = 1.5
     reward_position = torch.exp(-positional_error * reward_distance_scale)
 
 
@@ -133,7 +133,7 @@ def track_payload_orientation(
     desired_quat = env.command_manager.get_command(command_name)[..., 3:]
     # compute the error
     orientation_error = quat_error_magnitude(desired_quat, payload_quat)
-    reward_distance_scale = 1.2
+    reward_distance_scale = 1.5
     reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
 
     if debug_vis:
@@ -357,7 +357,7 @@ def downwash_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnt
     straight_line_dist = torch.tensor([[1.1941, 1.1941, 1.1735]] * env.num_envs, device='cuda:0') # line dist when drones are straight under the load
     diff_line_dist = line_dist - straight_line_dist
     # Reward: penalize based on distance from the intersection point to the payload position
-    reward_downwash = reward_weight * torch.max(1 - torch.exp(-diff_line_dist * 15), torch.tensor(0.0, device=env.sim.device)).mean(dim=-1)   # Mean over drones
-
+    reward_downwash = reward_weight * torch.max(1 - torch.exp(-diff_line_dist * 15), torch.tensor(0.0, device=env.sim.device)).min(dim=-1)[0]   # Min distance from the payload
+    
     assert reward_downwash.shape == (env.num_envs,)
     return reward_downwash
