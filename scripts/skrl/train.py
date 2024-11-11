@@ -217,4 +217,4 @@ if __name__ == "__main__":
     # run the main function
     print("running main")
     main()
-    simulation_app.close
+    simulation_app.close()
