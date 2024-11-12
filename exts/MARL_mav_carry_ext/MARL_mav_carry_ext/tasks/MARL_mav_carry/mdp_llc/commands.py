@@ -193,3 +193,170 @@ class UniformPoseCommandGlobalCfg(CommandTermCfg):
 
     ranges: Ranges = MISSING
     """Ranges for the commands."""
+
+class RefTrajectoryCommand(CommandTerm):
+    """Command generator for generating pose commands from a reference trajectory with time based sampling.
+
+    The command generator generates poses by sampling positions and orientations from a reference trajectory
+    given by the user. The reference trajectory is a sequence of poses (x, y, z, qw, qx, qy, qz) and twist (vx, vy, vz, wx, wy, wz).
+
+    The sampling method is based on the time based sampler implemented in the Agilicious framework.
+    """
+
+    cfg: RefTrajectoryCommandCfg
+    """Configuration for the command generator."""
+
+    def __init__(self, cfg: UniformPoseCommandGlobalCfg, env: ManagerBasedEnv):
+        """Initialize the command generator class.
+
+        Args:
+            cfg: The configuration parameters for the command generator.
+            env: The environment object.
+        """
+        # initialize the base class
+        super().__init__(cfg, env)
+
+        # extract the robot and body index for which the command is generated
+        self.robot: Articulation = env.scene[cfg.asset_name]
+        self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]
+
+        # create buffers
+        # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
+        self.pose_command_w = torch.zeros(self.num_envs, 7, device=self.device)
+        self.pose_command_w[:, 3] = 1.0
+        self.twist_command_b = torch.zeros(self.num_envs, 6, device=self.device)
+        self.sim_time = torch.zeros(self.num_envs, device=self.device)
+
+        # -- metrics
+        self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["linear_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["angular_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
+
+        self.reference = cfg.reference_trajectory
+
+    def __str__(self) -> str:
+        msg = "UniformPoseCommandGlobal:\n"
+        msg += f"\tCommand dimension: {tuple(self.command.shape[1:])}\n"
+        msg += f"\tResampling time range: {self.cfg.resampling_time_range}\n"
+        return msg
+
+    """
+    Properties
+    """
+
+    @property
+    def command(self) -> torch.Tensor:
+        """The desired pose + twist command. Shape is (num_envs, 13).
+
+        The first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
+        The next six elements correspond to the linear and angular velocities.
+        """
+        return torch.cat((self.pose_command_w, self.twist_command_b), dim=-1)
+
+    """
+    Implementation specific functions.
+    """
+
+    def _update_metrics(self):
+        # compute the error
+        pos_error, rot_error = compute_pose_error(
+            self.pose_command_w[:, :3],
+            self.pose_command_w[:, 3:],
+            self.robot.data.body_state_w[:, self.body_idx, :3] - self.env.scene.env_origins,
+            self.robot.data.body_state_w[:, self.body_idx, 3:7],
+        )
+        self.metrics["position_error"] = torch.norm(pos_error, dim=-1)
+        self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
+        # compute the velocity error
+        self.metrics["linear_velocity_error"] = torch.norm(
+            self.twist_command_b[:, :3] - self.robot.data.body_state_w[:, self.body_idx, 7:10], dim=-1
+        )
+        self.metrics["angular_velocity_error"] = torch.norm(
+            self.twist_command_b[:, 3:] - self.robot.data.body_state_w[:, self.body_idx, 10:], dim=-1
+        )
+
+    def _resample_command(self, env_ids: Sequence[int]):
+        # reset sim time to 0 of the selected envs
+        self.sim_time[env_ids] = 0.0
+
+    def _update_command(self):
+        """Update the sim time of each env and do time based sampling of the reference trajectory."""
+        # get the time range of the reference trajectory
+        setpoints = self.reference[:, 0] > self.sim_time
+        setpoint_idx = torch.argmax(future_setpoints.float(), dim=1)
+        actions = self.reference[:, setpoint_idx.data[0]]
+        # get the time based sampling
+        pose = actions[:, 1:8]
+        twist = actions[:, 8:14]
+        # update the command
+        self.pose_command_w = pose
+        self.twist_command_b = twist
+        for i, t in enumerate(current_time):
+            # find the index of the reference trajectory
+            idx = torch.searchsorted(time_range, t, right=True)
+            # get the reference pose and twist
+            pose = ref_traj[idx, 1:8]
+            twist = ref_traj[idx, 8:]
+            # update the command
+            self.pose_command_w[i] = pose
+            self.twist_command_b[i] = twist
+            
+        # update the sim time
+        self.sim_time += self.env.sim_dt
+
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        # create markers if necessary for the first tome
+        if debug_vis:
+            if not hasattr(self, "goal_pose_visualizer"):
+                marker_cfg = FRAME_MARKER_CFG.copy()
+                marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+                # -- goal pose
+                marker_cfg.prim_path = "/Visuals/Command/goal_pose"
+                self.goal_pose_visualizer = VisualizationMarkers(marker_cfg)
+                # -- current body pose
+                marker_cfg.prim_path = "/Visuals/Command/body_pose"
+                self.body_pose_visualizer = VisualizationMarkers(marker_cfg)
+            # set their visibility to true
+            self.goal_pose_visualizer.set_visibility(True)
+            self.body_pose_visualizer.set_visibility(True)
+        else:
+            if hasattr(self, "goal_pose_visualizer"):
+                self.goal_pose_visualizer.set_visibility(False)
+                self.body_pose_visualizer.set_visibility(False)
+
+    def _debug_vis_callback(self, event):
+        # check if robot is initialized
+        # note: this is needed in-case the robot is de-initialized. we can't access the data
+        if not self.robot.is_initialized:
+            return
+        # update the markers
+        # -- goal pose
+        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3], self.pose_command_w[:, 3:])
+        # print("The tracking error of the position is ", self.metrics["position_error"])
+        # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
+
+        # -- current body pose
+        body_pose_w = self.robot.data.body_state_w[:, self.body_idx]
+        self.body_pose_visualizer.visualize(body_pose_w[:, :3], body_pose_w[:, 3:7])
+
+
+@configclass
+class RefTrajectoryCommandCfg(CommandTermCfg):
+    """Configuration for uniform pose command generator."""
+
+    class_type: type = RefTrajectoryCommand
+
+    asset_name: str = MISSING
+    """Name of the asset in the environment for which the commands are generated."""
+    body_name: str = MISSING
+    """Name of the body in the asset for which the commands are generated."""
+
+    make_quat_unique: bool = False
+    """Whether to make the quaternion unique or not. Defaults to False.
+
+    If True, the quaternion is made unique by ensuring the real part is positive.
+    """
+
+    reference_trajectory: torch.Tensor = MISSING
+    """Reference trajectory to sample the commands from."""
