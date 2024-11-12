@@ -107,9 +107,9 @@ class FalconEnv(DirectRLEnv):
             self.des_ori_debug = torch.zeros(self.num_envs, 4, device=self.device)
 
         # load test trajectory
-        # self._references = import_ref_from_csv("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv").repeat(self.num_envs, 1, 1)
+        # self._references = import_ref_from_csv("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/loop_10.csv").repeat(self.num_envs, 1, 1)
 
-        self._references = import_ref_from_csv("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv").repeat(self.num_envs, 1, 1)
+        self._references = import_ref_from_csv("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/circle_2m_5N.csv").repeat(self.num_envs, 1, 1)
 
     def _setup_scene(self):
 
