@@ -44,7 +44,11 @@ parser.add_argument(
 )
 parser.add_argument("--resume", action="store_true", default=False, help="Resume training from a checkpoint.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to the checkpoint to resume training.")
-
+parser.add_argument("--suggested_lr", type=float, default=None, help="Suggested learning rate from optuna.")
+parser.add_argument("--suggested_mini_batches", type=int, default=None, help="Suggested mini-batches from optuna.")
+parser.add_argument("--suggested_lambda", type=float, default=None, help="Suggested lambda from optuna.")
+parser.add_argument("--suggested_rollouts", type=int, default=None, help="Suggested rollouts from optuna.")
+parser.add_argument("--timesteps", type=int, default=None, help="Number of timesteps to train.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -67,9 +71,11 @@ import gymnasium as gym
 import os
 from datetime import datetime
 import random
+import optuna
 
 import skrl
 from packaging import version
+import numpy as np
 
 # check for minimum supported skrl version
 SKRL_VERSION = "1.3.0"
@@ -98,7 +104,6 @@ from omni.isaac.lab.envs import (
     multi_agent_to_single_agent,
 )
 from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 
@@ -160,39 +165,16 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent_cfg["seed"] = args_cli.seed if args_cli.seed is not None else agent_cfg["seed"]
     env_cfg.seed = agent_cfg["seed"]
 
-    # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "skrl", agent_cfg["agent"]["experiment"]["directory"])
-    log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Logging experiment in directory: {log_root_path}")
-    # specify directory for logging runs: {time-stamp}_{run_name}
-    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + f"_{algorithm}_{args_cli.ml_framework}"
-    if agent_cfg["agent"]["experiment"]["experiment_name"]:
-        log_dir += f'_{agent_cfg["agent"]["experiment"]["experiment_name"]}'
-    # set directory into agent config
-    agent_cfg["agent"]["experiment"]["directory"] = log_root_path
-    agent_cfg["agent"]["experiment"]["experiment_name"] = log_dir
-    # update log_dir
-    log_dir = os.path.join(log_root_path, log_dir)
-
-    # dump the configuration into log-directory
-    dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
-    dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
+    # optimize parameters with optuna
+    # agent_cfg["agent"]["policy"]["hidden_units"] = trial.suggest_int("hidden_units", 32, 256)
+    agent_cfg["trainer"]["timesteps"] = args_cli.timesteps
+    agent_cfg["agent"]["learning_rate"] = args_cli.suggested_lr
+    agent_cfg["agent"]["mini_batches"] = args_cli.suggested_mini_batches
+    agent_cfg["agent"]["lambda"] = args_cli.suggested_lambda
+    agent_cfg["agent"]["rollouts"] = args_cli.suggested_rollouts
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
-    # wrap for video recording
-    if args_cli.video:
-        video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "train"),
-            "step_trigger": lambda step: step % args_cli.video_interval == 0,
-            "video_length": args_cli.video_length,
-            "disable_logger": True,
-        }
-        print("[INFO] Recording videos during training.")
-        print_dict(video_kwargs, nesting=4)
-        env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
@@ -207,8 +189,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     if args_cli.resume:
         runner.agent.load(args_cli.checkpoint)
 
+
     # run training
     runner.run()
+
+    mean_final_reward = np.mean(np.array(runner.agent._track_rewards))
+    print("Mean rewards are", np.mean(np.array(runner.agent._track_rewards)))
     # close the simulator
     env.close()
 
@@ -217,4 +203,4 @@ if __name__ == "__main__":
     # run the main function
     print("running main")
     main()
-    simulation_app.close()
+    simulation_app.close

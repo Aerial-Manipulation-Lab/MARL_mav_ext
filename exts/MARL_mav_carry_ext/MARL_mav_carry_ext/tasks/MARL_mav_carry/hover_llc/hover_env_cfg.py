@@ -36,14 +36,6 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
-    robot.spawn.activate_contact_sensors = True
-
-    # TODO: add joint constraints, either in URDF or here
-    contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
-    )
-    # frame_transformer = FrameTransformerCfg(prim_path="/World/defaultGroundPlane", target_frames={ENV_REGEX_NS})
-
 
 # MDP settings
 
@@ -150,6 +142,29 @@ class EventCfg:
         },
     )
 
+    # reset_base = EventTerm(
+    #     func=mdp.reset_root_state_uniform,
+    #     mode="reset",
+    #     params={
+    #         "pose_range": {
+    #             "x": (0.0, 0.0),
+    #             "y": (0.0, 0.0),
+    #             "z": (1.0, 1.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (0.0, 0.0),
+    #         },
+    #         "velocity_range": {
+    #             "x": (-0.0, 0.0),
+    #             "y": (-0.0, 0.0),
+    #             "z": (-0.0, 0.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (-0.0, 0.0),
+    #         },
+    #     },
+    # )
+
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="reset",
@@ -176,39 +191,39 @@ class RewardsCfg:
 
     pose_reward = RewTerm(
         func=mdp.track_payload_pose,
-        weight=1.0,
+        weight=1.5,
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
-    drone_ref_reward = RewTerm(
-        func=mdp.track_drone_reference,
-        weight=1.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
+    # drone_ref_reward = RewTerm(
+    #     func=mdp.track_drone_reference,
+    #     weight=1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
 
-    up_reward = RewTerm(
-        func=mdp.upright_reward,
-        weight=1.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
+    # up_reward = RewTerm(
+    #     func=mdp.upright_reward,
+    #     weight=1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
 
-    spin_payload = RewTerm(
-        func=mdp.spinnage_reward_payload,
-        weight=1.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
+    # spin_payload = RewTerm(
+    #     func=mdp.spinnage_reward_payload,
+    #     weight=1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
 
-    swing_payload = RewTerm(
-        func=mdp.swing_reward,
-        weight=1.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
+    # swing_payload = RewTerm(
+    #     func=mdp.swing_reward,
+    #     weight=1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
 
-    spin_falcon = RewTerm(
-        func=mdp.spinnage_reward_drones,
-        weight=1.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
+    # spin_falcon = RewTerm(
+    #     func=mdp.spinnage_reward_drones,
+    #     weight=1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
 
     policy_action_smoothness = RewTerm(
         func=mdp.action_smoothness_reward,
@@ -216,21 +231,19 @@ class RewardsCfg:
     )
 
     force_penalty = RewTerm(
-        func=mdp.action_penalty_force,
-        weight=1.0,
+        func=mdp.action_penalty_rel,
+        weight=0.2,
     )
 
     force_smoothness = RewTerm(
         func=mdp.action_smoothness_force_reward,
-        weight=1.0,
+        weight=0.5,
     )
 
-    # cable_angle_reward = RewTerm(
-    #     func=mdp.angle_cable_load,
-    #     weight=1.0,
-    #     params={"threshold": 0.261799388, "asset_cfg": SceneEntityCfg("robot")},
-    # )
-
+    downwash_reward = RewTerm(
+        func=mdp.downwash_reward,
+        weight=0.5,
+    )
 
 @configclass
 class TerminationsCfg:
@@ -246,10 +259,6 @@ class TerminationsCfg:
         func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
-    illegal_contact = DoneTerm(
-        func=mdp.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.5},
-    )
     # end when angular velocity of payload is too high
     payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
@@ -260,8 +269,6 @@ class TerminationsCfg:
     # end when angular velocity of falcon is too high
     falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
-    nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
-    large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
     angle_drones_cable = DoneTerm(
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
@@ -269,29 +276,7 @@ class TerminationsCfg:
         func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
 
-    cable_angle_0_1 = DoneTerm(
-        func=mdp.cable_angle_0_1_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_1_2 = DoneTerm(
-        func=mdp.cable_angle_1_2_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_2_3 = DoneTerm(
-        func=mdp.cable_angle_2_3_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_3_4 = DoneTerm(
-        func=mdp.cable_angle_3_4_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_4_5 = DoneTerm(
-        func=mdp.cable_angle_4_5_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
-
-    cable_angle_5_6 = DoneTerm(
-        func=mdp.cable_angle_5_6_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
-    )
+    drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
 
@@ -322,7 +307,7 @@ class HoverEnvCfg_llc(ManagerBasedRLEnvCfg):
         self.decimation = 10
         self.episode_length_s = 20.0
         # simulation settings
-        self.sim.dt = 0.0025
+        self.sim.dt = 0.004
         self.sim.render_interval = self.decimation
         self.sim.disable_contact_processing = True
         self.sim.gravity = (0.0, 0.0, -9.8066)

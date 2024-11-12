@@ -127,17 +127,40 @@ class EventCfg:
     Resetting states on resets, disturbances, etc.
     """
 
+    # reset_base = EventTerm(
+    #     func=mdp.reset_root_state_uniform,
+    #     mode="reset",
+    #     params={
+    #         "pose_range": {
+    #             "x": (-1.0, 1.0),
+    #             "y": (-1.0, 1.0),
+    #             "z": (0.5, 1.5),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (-math.pi, math.pi),
+    #         },
+    #         "velocity_range": {
+    #             "x": (-0.0, 0.0),
+    #             "y": (-0.0, 0.0),
+    #             "z": (-0.0, 0.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (-0.0, 0.0),
+    #         },
+    #     },
+    # )
+
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
             "pose_range": {
-                "x": (-1.0, 1.0),
-                "y": (-1.0, 1.0),
-                "z": (0.5, 1.5),
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (1.0, 1.0),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
-                "yaw": (-math.pi, math.pi),
+                "yaw": (0.0, 0.0),
             },
             "velocity_range": {
                 "x": (-0.0, 0.0),
@@ -264,14 +287,13 @@ class TerminationsCfg:
     # end when angular velocity of falcon is too high
     falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
-    nan_states = DoneTerm(func=mdp.nan_states, params={"asset_cfg": SceneEntityCfg("robot")})
-    large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
     angle_drones_cable = DoneTerm(
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
     angle_load_cable = DoneTerm(
         func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
+
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
 
 
@@ -301,7 +323,7 @@ class HoverEnvCfg_llc_spline(ManagerBasedRLEnvCfg):
         self.decimation = 10
         self.episode_length_s = 20.0
         # simulation settings
-        self.sim.dt = 0.002
+        self.sim.dt = 0.0025
         self.sim.render_interval = self.decimation
         self.sim.disable_contact_processing = True
         self.sim.gravity = (0.0, 0.0, -9.8066)

@@ -6,3 +6,6 @@ outputs/
 videos/
 dump.prof
 profile.sh
+*.svg
+*.sqlite3
+*.db

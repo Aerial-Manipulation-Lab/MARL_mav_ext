@@ -45,6 +45,64 @@ from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg_spline impo
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.utils.dict import print_dict
 
+# test_times = torch.tensor([0.0000, 0.2500, 0.5000, 0.7500, 1.0000]) * 2
+# starting_point = torch.tensor([0.27, 0.22, 2.1410, 0, 0, 0, 0, 0, 0])
+
+# # get spline coefficients
+# coeffs = septic_spline.get_coeffs(test_waypoint, test_times, env.scene.num_envs)    
+# # evaluate spline
+# positions = []
+# velocities = []
+# accelerations = []
+# jerks = []
+# snaps = []
+
+# eval_times = torch.linspace(0, 2, 100)
+# for eval_time in eval_times:
+#     position, velocity, acceleration, jerk, snap = septic_spline.evaluate_trajectory(coeffs, test_times, eval_time)
+#     positions.append(position[0].cpu())
+#     velocities.append(velocity[0].cpu())
+#     accelerations.append(acceleration[0].cpu())
+#     jerks.append(jerk[0].cpu())
+#     snaps.append(snap[0].cpu())
+
+#     # Plot velocities against time
+#     plt.figure()
+#     plt.plot(eval_times, positions)
+#     plt.xlabel('Time')
+#     plt.ylabel('positions')
+#     plt.title('positions vs Time')
+#     plt.legend(['X', 'Y', 'Z'])
+#     # Plot velocities against time
+#     plt.figure()
+#     plt.plot(eval_times, velocities)
+#     plt.xlabel('Time')
+#     plt.ylabel('Velocities')
+#     plt.title('Velocities vs Time')
+#     plt.legend(['X', 'Y', 'Z'])
+#     # Plot accelerations against time
+#     plt.figure()
+#     plt.plot(eval_times, accelerations)
+#     plt.xlabel('Time')
+#     plt.ylabel('Accelerations')
+#     plt.title('Accelerations vs Time')
+#     plt.legend(['X', 'Y', 'Z'])
+#     # Plot jerks against time
+#     plt.figure()
+#     plt.plot(eval_times, jerks)
+#     plt.xlabel('Time')
+#     plt.ylabel('Jerks')
+#     plt.title('Jerks vs Time')
+#     plt.legend(['X', 'Y', 'Z'])
+#     # Plot snaps against time
+#     plt.figure()
+#     plt.plot(eval_times, snaps)
+#     plt.xlabel('Time')
+#     plt.ylabel('Snaps')
+#     plt.title('Snaps vs Time')
+#     plt.show()
+
+
 def main():
     """Main function."""
     # create environment config
@@ -104,9 +162,10 @@ def main():
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # update counter
             count += 1
-
-            if count == args_cli.video_length:
-                break
+            
+            if args_cli.video:
+                if count == args_cli.video_length:
+                    break
 
     # close the simulator
     env.close()

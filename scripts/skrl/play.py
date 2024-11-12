@@ -57,6 +57,7 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import os
 import torch
+import numpy as np
 
 import skrl
 from packaging import version

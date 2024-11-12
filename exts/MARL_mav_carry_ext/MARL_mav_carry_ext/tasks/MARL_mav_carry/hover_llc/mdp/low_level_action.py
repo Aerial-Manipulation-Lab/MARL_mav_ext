@@ -45,20 +45,12 @@ class LowLevelAction(ActionTerm):
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
-        # output bounds
-        self._max_pos = 5.0  # max 5 meters from origin
-        self._max_vel = 10  # max 10 m/s from learning agile flight in the wild paper
-        self._max_acc = 3 * 9.8066  # max 3g
-        self._max_jerk = 55  # arbitrary estimation
-        self._max_snap = 175  # arbitrary estimation
-
         # debug
         if cfg.debug_vis:
             self.drone_positions_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
             self.drone_goals_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
             self.des_acc_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
             self.des_ori_debug = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
-            self.z_b_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
         """
         properties
@@ -88,8 +80,6 @@ class LowLevelAction(ActionTerm):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
-            collective_thrusts = []
-            torques_list = []
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = observations[:, 19:28]
             drone_orientations = observations[:, 28:40]
@@ -121,7 +111,7 @@ class LowLevelAction(ActionTerm):
                 drone_setpoint["yaw"] = self._constant_yaw
                 drone_setpoint["yaw_rate"] = torch.zeros(self.num_envs, 1, device=self.device)
                 drone_setpoint["yaw_acc"] = torch.zeros(self.num_envs, 1, device=self.device)
-                drone_thrusts, acc_cmd, q_cmd, torques = self._geometric_controller.getCommand(
+                drone_thrusts, acc_cmd, q_cmd = self._geometric_controller.getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], drone_setpoint
                 )
                 thrusts.append(drone_thrusts)
