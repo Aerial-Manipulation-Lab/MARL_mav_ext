@@ -62,23 +62,23 @@ def payload_angular_acceleration(
     return robot.data.body_acc_w[:, payload_idx, 3:].view(env.num_envs, -1)
 
 
-def payload_positional_error(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def payload_positional_error(env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload position error."""
     robot: Articulation = env.scene[asset_cfg.name]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
-    desired_pos = env.command_manager.get_command("pose_command")[..., :3]
+    desired_pos = env.command_manager.get_command(command_name)[..., :3]
     positional_error = desired_pos - payload_pos_env
     return positional_error
 
 
 def payload_orientation_error(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload orientation error."""
     robot: Articulation = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
-    desired_quat = env.command_manager.get_command("pose_command")[..., 3:]
+    desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
     orientation_error = payload_quat - desired_quat
     return orientation_error
 

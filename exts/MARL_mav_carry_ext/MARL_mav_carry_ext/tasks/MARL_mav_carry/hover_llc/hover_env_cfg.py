@@ -95,8 +95,8 @@ class ObservationsCfg:
         drone_angular_accelerations = ObsTerm(func=mdp.drone_angular_acceleration)
 
         # goal error terms
-        payload_positional_error = ObsTerm(func=mdp.payload_positional_error)
-        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)
+        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_command"})
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_command"})
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
