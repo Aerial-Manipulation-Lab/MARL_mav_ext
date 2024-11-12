@@ -101,6 +101,7 @@ from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
+from omni.isaac.lab_tasks.utils import get_checkpoint_path
 
 # register the gym environment
 
@@ -174,6 +175,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # update log_dir
     log_dir = os.path.join(log_root_path, log_dir)
 
+    # load checkpoint
+    if args_cli.resume:
+        if args_cli.checkpoint:
+            resume_path = args_cli.checkpoint
+        else:
+            resume_path = get_checkpoint_path(
+                log_root_path, run_dir=f".*_{algorithm}_{args_cli.ml_framework}", other_dirs=["checkpoints"]
+            )
+
+        print(f"[INFO] Loading model checkpoint from: {resume_path}")
+
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
@@ -204,8 +216,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
     runner = Runner(env, agent_cfg)
+    
     if args_cli.resume:
-        runner.agent.load(args_cli.checkpoint)
+        runner.agent.load(resume_path)
 
     # run training
     runner.run()
