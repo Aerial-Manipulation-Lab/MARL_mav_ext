@@ -117,6 +117,7 @@ def main():
                 waypoint[1] = straight_up_position
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
+            print("sim timestep: ", env.scene["robot"].data._sim_timestamp)
             # print current orientation of pole
             # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
             # update counter
