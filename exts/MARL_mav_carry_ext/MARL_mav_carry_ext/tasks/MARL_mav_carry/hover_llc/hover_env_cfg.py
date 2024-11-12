@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp as mdp
+import MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc as mdp
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
@@ -190,40 +190,10 @@ class RewardsCfg:
     """Rewards for the hovering task."""
 
     pose_reward = RewTerm(
-        func=mdp.track_payload_pose,
+        func=mdp.track_payload_pose_command,
         weight=1.5,
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
-
-    # drone_ref_reward = RewTerm(
-    #     func=mdp.track_drone_reference,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # up_reward = RewTerm(
-    #     func=mdp.upright_reward,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # spin_payload = RewTerm(
-    #     func=mdp.spinnage_reward_payload,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # swing_payload = RewTerm(
-    #     func=mdp.swing_reward,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # spin_falcon = RewTerm(
-    #     func=mdp.spinnage_reward_drones,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
 
     policy_action_smoothness = RewTerm(
         func=mdp.action_smoothness_reward,
@@ -265,6 +235,8 @@ class TerminationsCfg:
     angle_load_cable = DoneTerm(
         func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
+
+    drone_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10})
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
 
