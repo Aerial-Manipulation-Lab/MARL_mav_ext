@@ -48,7 +48,7 @@ parser.add_argument("--suggested_lr", type=float, default=None, help="Suggested 
 parser.add_argument("--suggested_mini_batches", type=int, default=None, help="Suggested mini-batches from optuna.")
 parser.add_argument("--suggested_lambda", type=float, default=None, help="Suggested lambda from optuna.")
 parser.add_argument("--suggested_rollouts", type=int, default=None, help="Suggested rollouts from optuna.")
-
+parser.add_argument("--timesteps", type=int, default=None, help="Number of timesteps to train.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -167,7 +167,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # optimize parameters with optuna
     # agent_cfg["agent"]["policy"]["hidden_units"] = trial.suggest_int("hidden_units", 32, 256)
-    agent_cfg["trainer"]["timesteps"] = 10
+    agent_cfg["trainer"]["timesteps"] = args_cli.timesteps
     agent_cfg["agent"]["learning_rate"] = args_cli.suggested_lr
     agent_cfg["agent"]["mini_batches"] = args_cli.suggested_mini_batches
     agent_cfg["agent"]["lambda"] = args_cli.suggested_lambda
