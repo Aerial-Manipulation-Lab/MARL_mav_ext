@@ -47,7 +47,7 @@ class CommandsCfg:
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(30, 30),  # out of range of max episode length for now
+        resampling_time_range=(5, 5),  # out of range of max episode length for now
         debug_vis=False,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
             pos_x=(-1.0, 1.0),
@@ -258,16 +258,6 @@ class TerminationsCfg:
     payload_fly_low = DoneTerm(
         func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
-
-    # end when angular velocity of payload is too high
-    payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
-
-    payload_angle = DoneTerm(
-        func=mdp.payload_angle_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
-    )
-
-    # end when angular velocity of falcon is too high
-    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
     angle_drones_cable = DoneTerm(
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
