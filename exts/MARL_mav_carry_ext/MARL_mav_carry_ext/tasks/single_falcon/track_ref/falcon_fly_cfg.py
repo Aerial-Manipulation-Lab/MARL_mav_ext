@@ -14,7 +14,8 @@ from MARL_mav_carry_ext.controllers import GeometricController
 from MARL_mav_carry_ext.assets import FALCON_CFG
 from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
-from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat, matrix_from_euler, quat_from_matrix, quat_inv
+from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_from_csv
 
 import csv
 
@@ -106,25 +107,9 @@ class FalconEnv(DirectRLEnv):
             self.des_ori_debug = torch.zeros(self.num_envs, 4, device=self.device)
 
         # load test trajectory
-        # with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv", "r") as f:
-        #     reader = csv.reader(f, delimiter=",")
-        #     i = 0
-        #     references = []
-        #     for row in reader:
-        #         if i > 0:
-        #             references.append([float(x) for x in row])
-        #         i += 1
-        #     self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
+        # self._references = import_ref_from_csv("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv").repeat(self.num_envs, 1, 1)
 
-        with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv", "r") as f:
-            reader = csv.reader(f, delimiter=",")
-            i = 0
-            references = []
-            for row in reader:
-                if i > 1:
-                    references.append([float(x) for x in row])
-                i += 1
-            self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
+        self._references = import_ref_from_csv("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv").repeat(self.num_envs, 1, 1)
 
     def _setup_scene(self):
 
