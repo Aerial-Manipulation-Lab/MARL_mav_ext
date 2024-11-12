@@ -73,7 +73,7 @@ agent:
     directory: "flycrane_hover_ppo"
     experiment_name: "delete_me"
     write_interval: 100
-    checkpoint_interval: 5000
+    checkpoint_interval: 2500
 
     # wandb: True
 

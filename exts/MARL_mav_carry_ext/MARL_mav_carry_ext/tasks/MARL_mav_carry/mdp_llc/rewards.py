@@ -75,7 +75,7 @@ def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
     return separation
 
 
-def track_payload_pos(
+def track_payload_pos_command(
     env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward tracking of payload position commands."""
@@ -123,7 +123,7 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     return reward_position
 
 
-def track_payload_orientation(
+def track_payload_orientation_command(
     env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward tracking of payload orientation commands."""
@@ -152,10 +152,10 @@ def track_payload_orientation(
     return reward_orientation
 
 
-def track_payload_pose(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def track_payload_pose_command(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for the desired pose"""
-    position_reward = track_payload_pos(env, debug_vis_reward, "pose_command", asset_cfg)
-    orientation_reward = track_payload_orientation(env, debug_vis_reward, "pose_command", asset_cfg)
+    position_reward = track_payload_pos_command(env, debug_vis_reward, "pose_command", asset_cfg)
+    orientation_reward = track_payload_orientation_command(env, debug_vis_reward, "pose_command", asset_cfg)
     reward_pose = position_reward + orientation_reward
 
     assert reward_pose.shape == (env.scene.num_envs,)

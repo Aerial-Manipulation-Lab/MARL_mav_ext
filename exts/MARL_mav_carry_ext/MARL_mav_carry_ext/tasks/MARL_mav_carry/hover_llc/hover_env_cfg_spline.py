@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp as mdp
+import MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc as mdp
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
@@ -198,7 +198,7 @@ class RewardsCfg:
     """Rewards for the hovering task."""
 
     pose_reward = RewTerm(
-        func=mdp.track_payload_pose,
+        func=mdp.track_payload_pose_command,
         weight=1.0,
         params={"asset_cfg": SceneEntityCfg("robot")},
     )

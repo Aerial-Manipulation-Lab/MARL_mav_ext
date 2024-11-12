@@ -13,7 +13,7 @@ from omni.isaac.lab.scene import InteractiveSceneCfg
 from MARL_mav_carry_ext.controllers import GeometricController
 from MARL_mav_carry_ext.assets import FALCON_CFG
 from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
 from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat, matrix_from_euler, quat_from_matrix, quat_inv
 
 import csv
