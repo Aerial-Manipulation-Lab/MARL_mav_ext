@@ -25,21 +25,6 @@ base_rope_idx = [8, 9, 10]
 
 debug_vis_reward = True
 if debug_vis_reward:
-    GOAL_POS_MARKER_CFG = VisualizationMarkersCfg(
-        markers={
-            "goal_pos_marker": sim_utils.SphereCfg(
-                radius=0.05,
-                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
-            ),
-            "current_pos_marker": sim_utils.SphereCfg(
-                radius=0.05,
-                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
-            ),
-        }
-    )
-    pos_marker_cfg = GOAL_POS_MARKER_CFG.copy()
-    pos_marker_cfg.prim_path = "/Visuals/payload_pos"
-    payload_pos_marker = VisualizationMarkers(pos_marker_cfg)
 
     GOAL_ORIENTATION_MARKER_CFG = VisualizationMarkersCfg(
         markers={
@@ -75,38 +60,6 @@ def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
     return separation
 
 
-def track_payload_pos_command(
-    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
-    """Reward tracking of payload position commands."""
-    robot: RigidObject = env.scene[asset_cfg.name]
-    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
-    payload_pos_env = payload_pos_world - env.scene.env_origins
-
-    desired_pos = env.command_manager.get_command(command_name)[
-        ..., :3
-    ]  # relative goal generated in robot root frame, use a goal in env frame
-    # compute the error
-    positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
-    reward_distance_scale = 1.5
-    reward_position = torch.exp(-positional_error * reward_distance_scale)
-
-
-    if debug_vis:
-        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
-        # set their visibility to true
-        payload_pos_marker.set_visibility(True)
-        desired_pos_world = desired_pos + env.scene.env_origins
-        positions = torch.cat(
-            (desired_pos_world, payload_pos_world), dim=0
-        )  # visualize the payload positions in world frame
-        payload_pos_marker.visualize(translations=positions, marker_indices=marker_indices)
-
-    assert reward_position.shape == (env.scene.num_envs,)
-
-    return reward_position
-
-
 def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for tracking the drone reference."""
     robot = env.scene[asset_cfg.name]
@@ -123,6 +76,27 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     return reward_position
 
 
+def track_payload_pos_command(
+    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Reward tracking of payload position commands."""
+    robot: RigidObject = env.scene[asset_cfg.name]
+    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_env = payload_pos_world - env.scene.env_origins
+
+    desired_pos = env.command_manager.get_command(command_name)[
+        ..., :3
+    ]  # relative goal generated in robot root frame, use a goal in env frame
+    # compute the error
+    positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
+    reward_distance_scale = 1.5
+    reward_position = torch.exp(-positional_error * reward_distance_scale)
+
+    assert reward_position.shape == (env.scene.num_envs,)
+
+    return reward_position
+
+
 def track_payload_orientation_command(
     env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -130,7 +104,7 @@ def track_payload_orientation_command(
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
-    desired_quat = env.command_manager.get_command(command_name)[..., 3:]
+    desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
     # compute the error
     orientation_error = quat_error_magnitude(desired_quat, payload_quat)
     reward_distance_scale = 1.5
@@ -152,14 +126,63 @@ def track_payload_orientation_command(
     return reward_orientation
 
 
-def track_payload_pose_command(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def track_payload_pose_command(env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for the desired pose"""
-    position_reward = track_payload_pos_command(env, debug_vis_reward, "pose_command", asset_cfg)
-    orientation_reward = track_payload_orientation_command(env, debug_vis_reward, "pose_command", asset_cfg)
+    position_reward = track_payload_pos_command(env, debug_vis_reward, command_name, asset_cfg)
+    orientation_reward = track_payload_orientation_command(env, debug_vis_reward, command_name, asset_cfg)
     reward_pose = position_reward + orientation_reward
 
     assert reward_pose.shape == (env.scene.num_envs,)
     return reward_pose
+
+def track_payload_lin_vel_command(
+    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Reward tracking of payload linear velocity commands."""
+    robot: RigidObject = env.scene[asset_cfg.name]
+    payload_lin_vel = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1)
+
+    desired_vel = env.command_manager.get_command(command_name)[
+        ..., 7:10
+    ] 
+
+    lin_vel_error = torch.norm(desired_vel - payload_lin_vel, dim=-1)
+    reward_distance_scale = 15.0
+    reward_lin_vel = torch.exp(-lin_vel_error * reward_distance_scale)
+
+    assert reward_lin_vel.shape == (env.scene.num_envs,)
+
+    return reward_lin_vel
+
+
+def track_payload_ang_vel_command(
+    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Reward tracking of payload angular velocity commands."""
+    robot: RigidObject = env.scene[asset_cfg.name]
+    payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1)
+
+    desired_vel = env.command_manager.get_command(command_name)[
+        ..., 10:
+    ] 
+
+    ang_vel_error = torch.norm(desired_vel - payload_ang_vel, dim=-1)
+    reward_distance_scale = 15.0
+    reward_ang_vel = torch.exp(-ang_vel_error * reward_distance_scale)
+
+    assert reward_ang_vel.shape == (env.scene.num_envs,)
+
+    return reward_ang_vel
+
+
+def track_payload_twist_command(env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Reward for the desired twist"""
+    lin_vel_reward = track_payload_lin_vel_command(env, debug_vis_reward, command_name, asset_cfg)
+    ang_vel_reward = track_payload_ang_vel_command(env, debug_vis_reward, command_name, asset_cfg)
+    reward_twist = lin_vel_reward + ang_vel_reward
+
+    assert reward_twist.shape == (env.scene.num_envs,)
+    return reward_twist
 
 
 def upright_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
