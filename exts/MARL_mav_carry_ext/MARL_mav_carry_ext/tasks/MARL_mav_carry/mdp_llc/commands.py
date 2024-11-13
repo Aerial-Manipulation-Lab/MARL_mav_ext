@@ -194,6 +194,7 @@ class UniformPoseCommandGlobalCfg(CommandTermCfg):
     ranges: Ranges = MISSING
     """Ranges for the commands."""
 
+
 class RefTrajectoryCommand(CommandTerm):
     """Command generator for generating pose commands from a reference trajectory with time based sampling.
 
@@ -219,7 +220,7 @@ class RefTrajectoryCommand(CommandTerm):
         # extract the robot and body index for which the command is generated
         self.robot: Articulation = env.scene[cfg.asset_name]
         self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]
-        self.sim_dt = self._env.sim.get_rendering_dt() # TODO: rendering dt has to be the same as planner dt
+        self.sim_dt = self._env.sim.get_rendering_dt()  # TODO: rendering dt has to be the same as planner dt
 
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
@@ -324,7 +325,9 @@ class RefTrajectoryCommand(CommandTerm):
             return
         # update the markers
         # -- goal pose
-        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:7])
+        self.goal_pose_visualizer.visualize(
+            self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:7]
+        )
         # print("The tracking error of the position is ", self.metrics["position_error"])
         # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
 

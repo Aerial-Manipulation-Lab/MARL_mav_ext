@@ -10,7 +10,7 @@
 
 Author - [Jack Zeng](https://github.com/Jackkert)
 
-## Overview 
+## Overview
 This repository is an NVIDIA Isaac Lab extension that contains the environment and algorithm to control a multi-drone transport system (flycrane). As of now, 1 task has been implemented:
 
 - `Hover` The flycrane makes the payload hover at the intial pose:
@@ -18,9 +18,9 @@ This repository is an NVIDIA Isaac Lab extension that contains the environment a
 
 https://github.com/user-attachments/assets/3da98247-0004-44f3-95c0-acbaa4afa166
 
-In the video, the flycrane during training can be seen holding the payload in place. 
+In the video, the flycrane during training can be seen holding the payload in place.
 
-*Tasks in progress*: 
+*Tasks in progress*:
 
 - Hover the payload at different reference positions
 
@@ -53,7 +53,7 @@ As of now, only the hover environment has been implemented. The environments can
 
 ### Flycrane hover environment
 
-In the [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover](https://github.com/Jackkert/MARL_mav_ext/tree/main/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover) folder, the environment can be found in `hover_env_cfg.py`. Following the Isaac Lab structure the environment is implemented as a [`ManagerBasedRLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/omni.isaac.lab.envs.html#omni.isaac.lab.envs.ManagerBasedRLEnv). Later, the environment will likely be rewritten to the [`DirectMARLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/omni.isaac.lab.envs.html#omni.isaac.lab.envs.DirectMARLEnv) class. 
+In the [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover](https://github.com/Jackkert/MARL_mav_ext/tree/main/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover) folder, the environment can be found in `hover_env_cfg.py`. Following the Isaac Lab structure the environment is implemented as a [`ManagerBasedRLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/omni.isaac.lab.envs.html#omni.isaac.lab.envs.ManagerBasedRLEnv). Later, the environment will likely be rewritten to the [`DirectMARLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/omni.isaac.lab.envs.html#omni.isaac.lab.envs.DirectMARLEnv) class.
 
 The manager based environment consists of multiple modules, and their configs can be found in the `hover_env_cfg.py` file:
 
@@ -101,10 +101,10 @@ reward = reward_separation * (
 All helper functions are implemented in the [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover/mdp](https://github.com/Jackkert/MARL_mav_ext/tree/main/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover/mdp) folder in their respective python file.
 
 ## Training and playing
-Isaac Lab offers different wrappers for different RL libraries to make it easy to switch between libraries. The scripts for the corresponding libraries are implemented in [scripts](https://github.com/Jackkert/MARL_mav_ext/tree/main/scripts). The useable libraries are rl_games, rsl_rl and skrl. 
+Isaac Lab offers different wrappers for different RL libraries to make it easy to switch between libraries. The scripts for the corresponding libraries are implemented in [scripts](https://github.com/Jackkert/MARL_mav_ext/tree/main/scripts). The useable libraries are rl_games, rsl_rl and skrl.
 
 ### Agents
-The agent configurations for the flycrane are under [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover/config/flycrane/agents](https://github.com/Jackkert/MARL_mav_ext/tree/main/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover/config/flycrane/agents). The environments are registered as a gym environment and the parameters of the agents can be changed here. 
+The agent configurations for the flycrane are under [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover/config/flycrane/agents](https://github.com/Jackkert/MARL_mav_ext/tree/main/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/MARL_mav_carry/hover/config/flycrane/agents). The environments are registered as a gym environment and the parameters of the agents can be changed here.
 
 ### Training
 To train the agent, for example using rsl_rl. You can run the following command from the command line:

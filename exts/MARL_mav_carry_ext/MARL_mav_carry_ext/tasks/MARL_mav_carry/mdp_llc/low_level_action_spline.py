@@ -92,7 +92,9 @@ class LowLevelAction_spline(ActionTerm):
         Returns:
             The processed external forces to be applied to the rotors."""
         self._waypoints = waypoints
-        self._eval_time = 1 / (self.cfg.planner_decimation / self.cfg.low_level_decimation) * (self._planner_dt / self._time_horizon)
+        self._eval_time = (
+            1 / (self.cfg.planner_decimation / self.cfg.low_level_decimation) * (self._planner_dt / self._time_horizon)
+        )
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
@@ -166,7 +168,11 @@ class LowLevelAction_spline(ActionTerm):
                     self.des_ori_debug[:, i] = q_cmd
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._ll_counter = 0
-            self._eval_time += 1 / (self.cfg.planner_decimation / self.cfg.low_level_decimation) * (self._planner_dt / self._time_horizon)
+            self._eval_time += (
+                1
+                / (self.cfg.planner_decimation / self.cfg.low_level_decimation)
+                * (self._planner_dt / self._time_horizon)
+            )
 
         self._ll_counter += 1
 
@@ -263,7 +269,7 @@ class LowLevelAction_spline(ActionTerm):
         # )
         # self.drone_pos_marker.visualize(translations=positions, marker_indices=marker_idx)
         marker_idx = [1] * self.num_envs + [2] * self.num_envs + [3] * self.num_envs
-        self.drone_pos_marker.visualize(translations=self._desired_position.view(-1,3), marker_indices=marker_idx)
+        self.drone_pos_marker.visualize(translations=self._desired_position.view(-1, 3), marker_indices=marker_idx)
 
         # drone desired accelerations
 

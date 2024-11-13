@@ -1,7 +1,8 @@
+import csv
 import functools
 import torch
 from torch.func import vmap
-import csv
+
 
 # @manual_batch
 def off_diag(a: torch.Tensor) -> torch.Tensor:
@@ -58,8 +59,9 @@ def quat_axis(q: torch.Tensor, axis: int = 0):
     basis_vec[:, axis] = 1
     return quat_rotate(q, basis_vec)
 
+
 def import_ref_from_csv(file_path) -> torch.Tensor:
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         reader = csv.reader(f, delimiter=",")
         i = 0
         references = []

@@ -56,10 +56,10 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
-import os
-import torch
 import numpy as np
+import os
 import random
+import torch
 
 import skrl
 from packaging import version

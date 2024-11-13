@@ -37,6 +37,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
 
+
 # MDP settings
 
 
@@ -214,6 +215,7 @@ class RewardsCfg:
         func=mdp.downwash_reward,
         weight=0.5,
     )
+
 
 @configclass
 class TerminationsCfg:

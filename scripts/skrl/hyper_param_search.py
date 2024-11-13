@@ -14,6 +14,7 @@ a more user-friendly way.
 
 import argparse
 import sys
+
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
@@ -68,14 +69,14 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
+import numpy as np
 import os
-from datetime import datetime
 import random
-import optuna
+from datetime import datetime
 
+import optuna
 import skrl
 from packaging import version
-import numpy as np
 
 # check for minimum supported skrl version
 SKRL_VERSION = "1.3.0"
@@ -188,7 +189,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = Runner(env, agent_cfg)
     if args_cli.resume:
         runner.agent.load(args_cli.checkpoint)
-
 
     # run training
     runner.run()

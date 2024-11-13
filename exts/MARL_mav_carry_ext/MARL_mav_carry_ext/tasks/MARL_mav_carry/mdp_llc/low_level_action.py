@@ -121,11 +121,13 @@ class LowLevelAction(ActionTerm):
                     self.des_acc_debug[:, i] = acc_cmd
                     self.des_ori_debug[:, i] = q_cmd
 
-
             self._forces[..., 2] = torch.cat(thrusts, dim=-1)
             self._ll_counter = 0
         self._ll_counter += 1
-        self._env.scene["robot"].set_external_force_and_torque(self._forces, torch.zeros_like(self._forces), self._body_ids)
+        self._env.scene["robot"].set_external_force_and_torque(
+            self._forces, torch.zeros_like(self._forces), self._body_ids
+        )
+
     """
     visualizations
     """

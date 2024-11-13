@@ -35,14 +35,15 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import csv
-import matplotlib.pyplot as plt
 import gymnasium as gym
+import matplotlib.pyplot as plt
 
-from MARL_mav_carry_ext.tasks.single_falcon.track_ref import FalconEnvCfg, FalconEnv
+from MARL_mav_carry_ext.tasks.single_falcon.track_ref import FalconEnv, FalconEnvCfg
 
 from omni.isaac.lab.envs import DirectRLEnv
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.timer import Timer
+
 
 def main():
     """Main function."""
@@ -65,7 +66,9 @@ def main():
     count = 0
 
     # test trajectory
-    with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv", "r") as f:
+    with open(
+        "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv",
+    ) as f:
         reader = csv.reader(f, delimiter=",")
         i = 0
         references = []
@@ -101,13 +104,14 @@ def main():
                 print("[INFO]: Resetting environment...")
             # update counter
             count += 4
-            
+
             # if args_cli.video:
             #     if count/2 == args_cli.video_length:
-                    # break
+            # break
 
     # close the simulator
     env.close()
+
 
 if __name__ == "__main__":
     # run the main function

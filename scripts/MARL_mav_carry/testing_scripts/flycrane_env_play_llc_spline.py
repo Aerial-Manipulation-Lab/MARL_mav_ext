@@ -11,8 +11,8 @@ This script demonstrates how to simulate a quadcopter.
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-import torch
 import os
+import torch
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -35,9 +35,9 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
+import gymnasium as gym
 import math
 import matplotlib.pyplot as plt
-import gymnasium as gym
 
 from MARL_mav_carry_ext.splines import septic_spline
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg_spline import HoverEnvCfg_llc_spline
@@ -49,7 +49,7 @@ from omni.isaac.lab.utils.dict import print_dict
 # starting_point = torch.tensor([0.27, 0.22, 2.1410, 0, 0, 0, 0, 0, 0])
 
 # # get spline coefficients
-# coeffs = septic_spline.get_coeffs(test_waypoint, test_times, env.scene.num_envs)    
+# coeffs = septic_spline.get_coeffs(test_waypoint, test_times, env.scene.num_envs)
 # # evaluate spline
 # positions = []
 # velocities = []
@@ -162,7 +162,7 @@ def main():
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # update counter
             count += 1
-            
+
             if args_cli.video:
                 if count == args_cli.video_length:
                     break

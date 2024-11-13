@@ -38,6 +38,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
 
+
 # MDP settings
 
 
@@ -50,7 +51,9 @@ class CommandsCfg:
         body_name="load_link",
         resampling_time_range=(40, 40),  # out of range of max episode length for now
         debug_vis=True,
-        reference_trajectory = import_ref_from_csv("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/figure_eight_v1_a05_yaw025.csv")
+        reference_trajectory=import_ref_from_csv(
+            "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/figure_eight_v1_a05_yaw025.csv"
+        ),
     )
 
 
@@ -89,8 +92,12 @@ class ObservationsCfg:
         drone_angular_accelerations = ObsTerm(func=mdp.drone_angular_acceleration)
 
         # goal error terms
-        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_twist_command"})
-        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_twist_command"})
+        payload_positional_error = ObsTerm(
+            func=mdp.payload_positional_error, params={"command_name": "pose_twist_command"}
+        )
+        payload_orientation_error = ObsTerm(
+            func=mdp.payload_orientation_error, params={"command_name": "pose_twist_command"}
+        )
         # payload_linear_velocity_error = ObsTerm(func=mdp.payload_linear_velocity_error, params={"command_name": "pose_twist_command"})
         # payload_angular_velocity_error = ObsTerm(func=mdp.payload_angular_velocity_error, params={"command_name": "pose_twist_command"})
 
@@ -194,6 +201,7 @@ class RewardsCfg:
         weight=0.5,
     )
 
+
 @configclass
 class TerminationsCfg:
     """Terminal conditions for the hovering task.
@@ -251,6 +259,6 @@ class TrackEnvCfg(ManagerBasedRLEnvCfg):
         self.episode_length_s = 40.0
         # simulation settings
         self.sim.dt = 0.004
-        self.sim.render_interval = self.decimation # rendering interval has to be planner decimation
+        self.sim.render_interval = self.decimation  # rendering interval has to be planner decimation
         self.sim.disable_contact_processing = True
         self.sim.gravity = (0.0, 0.0, -9.8066)

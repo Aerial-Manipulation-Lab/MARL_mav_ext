@@ -3,7 +3,7 @@ import torch
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import ManagerBasedEnv
 from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import quat_inv, quat_mul, quat_conjugate
+from omni.isaac.lab.utils.math import quat_conjugate, quat_inv, quat_mul
 
 from .utils import get_drone_pdist, get_drone_rpos
 
@@ -15,6 +15,7 @@ Observations for the payload
 payload_idx = [0]
 drone_idx = [71, 72, 73]
 base_rope_idx = [8, 9, 10]
+
 
 def payload_position(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload pose xyz, quat in env frame."""
@@ -62,7 +63,9 @@ def payload_angular_acceleration(
     return robot.data.body_acc_w[:, payload_idx, 3:].view(env.num_envs, -1)
 
 
-def payload_positional_error(env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def payload_positional_error(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
     """Payload position error."""
     robot: Articulation = env.scene[asset_cfg.name]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
@@ -82,6 +85,7 @@ def payload_orientation_error(
     orientation_error = quat_mul(desired_quat, quat_conjugate(payload_quat))
     return orientation_error
 
+
 def payload_linear_velocity_error(
     env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -90,7 +94,7 @@ def payload_linear_velocity_error(
     payload_lin_vel = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1)
     desired_lin_vel = env.command_manager.get_command(command_name)[..., 7:10]
     lin_vel_error = desired_lin_vel - payload_lin_vel
-    
+
     return lin_vel_error
 
 
@@ -104,6 +108,7 @@ def payload_angular_velocity_error(
     ang_vel_error = desired_ang_vel - payload_ang_vel
 
     return ang_vel_error
+
 
 def cable_angle(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Angle of cable between cable and payload."""

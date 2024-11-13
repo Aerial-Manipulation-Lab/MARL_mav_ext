@@ -14,6 +14,7 @@ a more user-friendly way.
 
 import argparse
 import sys
+
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
@@ -65,8 +66,8 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import os
-from datetime import datetime
 import random
+from datetime import datetime
 
 import skrl
 from packaging import version
@@ -99,10 +100,9 @@ from omni.isaac.lab.envs import (
 )
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
+from omni.isaac.lab_tasks.utils import get_checkpoint_path
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
-from omni.isaac.lab_tasks.utils import get_checkpoint_path
-
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
@@ -191,7 +191,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
     runner = Runner(env, agent_cfg)
-    
+
     if args_cli.resume:
         runner.agent.load(resume_path)
 

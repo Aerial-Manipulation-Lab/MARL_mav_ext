@@ -11,8 +11,8 @@ This script demonstrates how to simulate a quadcopter.
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-import torch
 import os
+import torch
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -35,14 +35,15 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
+import gymnasium as gym
 import math
 import matplotlib.pyplot as plt
-import gymnasium as gym
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
 
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.utils.dict import print_dict
+
 
 def main():
     """Main function."""
@@ -63,7 +64,7 @@ def main():
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
-    
+
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
     rope_mass = 0.0033692587500000004 * 7 + 0.001 * 14
@@ -72,38 +73,38 @@ def main():
     mass_right_side = falcon_mass + rope_mass + 0.5 * payload_mass
 
     stretch_position = torch.tensor(
-                    [
-                        [
-                            0.9,
-                            -0.9,
-                            2.5,  # drone 1
-                            -0.9,
-                            0.0,
-                            2.5,  # drone 2
-                            0.9,
-                            0.9,
-                            2.5,
-                        ]
-                    ],
-                    dtype=torch.float32,
-                )
-    
+        [
+            [
+                0.9,
+                -0.9,
+                2.5,  # drone 1
+                -0.9,
+                0.0,
+                2.5,  # drone 2
+                0.9,
+                0.9,
+                2.5,
+            ]
+        ],
+        dtype=torch.float32,
+    )
+
     straight_up_position = torch.tensor(
-                    [
-                        [
-                            0.27,
-                            0.22,
-                            2.141,  # drone 1
-                            0.27,
-                            -0.22,
-                            2.141,  # drone 2
-                            -0.27,
-                            0.0,
-                            2.141,
-                        ]
-                    ],
-                    dtype=torch.float32,
-                )
+        [
+            [
+                0.27,
+                0.22,
+                2.141,  # drone 1
+                0.27,
+                -0.22,
+                2.141,  # drone 2
+                -0.27,
+                0.0,
+                2.141,
+            ]
+        ],
+        dtype=torch.float32,
+    )
     count = 0
     while simulation_app.is_running():
         with torch.inference_mode():
