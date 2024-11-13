@@ -103,31 +103,6 @@ from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 from omni.isaac.lab_tasks.utils import get_checkpoint_path
 
-# register the gym environment
-
-gym.register(
-    id="Isaac-flycrane-payload-hovering-llc-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
-
-gym.register(
-    id="Isaac-flycrane-payload-hovering-llc-spline-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc_spline,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()

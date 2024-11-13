@@ -69,18 +69,6 @@ from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import Hove
 
 # register the gym environment
 
-gym.register(
-    id="Isaac-flycrane-payload-hovering-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
-
 # check for minimum supported skrl version
 SKRL_VERSION = "1.3.0"
 if version.parse(skrl.__version__) < version.parse(SKRL_VERSION):
