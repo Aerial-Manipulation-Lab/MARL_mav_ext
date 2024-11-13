@@ -36,6 +36,11 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
+    robot.spawn.activate_contact_sensors = True
+    
+    contact_forces = ContactSensorCfg(
+    prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
+    )
 
 
 # MDP settings
@@ -225,6 +230,13 @@ class TerminationsCfg:
 
     # end when sim times out
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
+
+
+    illegal_contact = DoneTerm(
+        func=mdp.illegal_contact,
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.1},
+    )
+
     # end when falcons crash
     falcon_fly_low = DoneTerm(func=mdp.falcon_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1})
     payload_fly_low = DoneTerm(
@@ -241,6 +253,8 @@ class TerminationsCfg:
     payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
     drone_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10})
+
+    large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
 

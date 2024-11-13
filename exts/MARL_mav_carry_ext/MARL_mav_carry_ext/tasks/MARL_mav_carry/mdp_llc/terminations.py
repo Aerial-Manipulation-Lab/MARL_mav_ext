@@ -117,6 +117,16 @@ def bounding_box(
     assert is_body_pos_outside.shape == (env.num_envs,)
     return is_body_pos_outside
 
+def large_states(
+    env: ManagerBasedRLEnv, threshold: float = 1e3, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when any body states are too large."""
+    robot = env.scene[asset_cfg.name]
+    body_idx = robot.find_bodies(".*")[0]
+    body_states = robot.data.body_state_w[:, body_idx, :]
+    is_large_states = (body_states.abs() > threshold).any(dim=-1).any(dim=-1)
+    assert is_large_states.shape == (env.num_envs,)
+    return is_large_states
 
 def drone_collision(
     env: ManagerBasedRLEnv, threshold: float = 0.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
