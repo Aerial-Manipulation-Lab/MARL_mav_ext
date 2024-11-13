@@ -3,7 +3,7 @@ import torch
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import ManagerBasedEnv
 from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import quat_inv, quat_mul
+from omni.isaac.lab.utils.math import quat_inv, quat_mul, quat_conjugate
 
 from .utils import get_drone_pdist, get_drone_rpos
 
@@ -79,9 +79,31 @@ def payload_orientation_error(
     robot: Articulation = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
-    orientation_error = payload_quat - desired_quat
+    orientation_error = quat_mul(desired_quat, quat_conjugate(payload_quat))
     return orientation_error
 
+def payload_linear_velocity_error(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload linear velocity error."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_lin_vel = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1)
+    desired_lin_vel = env.command_manager.get_command(command_name)[..., 7:10]
+    lin_vel_error = desired_lin_vel - payload_lin_vel
+    
+    return lin_vel_error
+
+
+def payload_angular_velocity_error(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload angular velocity error."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:13].squeeze(1)
+    desired_ang_vel = env.command_manager.get_command(command_name)[..., 10:13]
+    ang_vel_error = desired_ang_vel - payload_ang_vel
+
+    return ang_vel_error
 
 def cable_angle(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Angle of cable between cable and payload."""
