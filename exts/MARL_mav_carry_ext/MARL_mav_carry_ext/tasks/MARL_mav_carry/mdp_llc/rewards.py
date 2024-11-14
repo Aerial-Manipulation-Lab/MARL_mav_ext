@@ -20,8 +20,13 @@ if TYPE_CHECKING:
 num_drones = 3
 
 # Body indices found in the scene
+# payload_idx = [0]
+# drone_idx = [71, 72, 73]
+# base_rope_idx = [8, 9, 10]
+
+# for the case when the rod is used
 payload_idx = [0]
-drone_idx = [71, 72, 73]
+drone_idx = [17, 18, 19]
 base_rope_idx = [8, 9, 10]
 
 debug_vis_reward = True

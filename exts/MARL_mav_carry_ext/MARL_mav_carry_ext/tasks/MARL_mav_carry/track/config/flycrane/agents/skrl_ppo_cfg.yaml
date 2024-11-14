@@ -70,8 +70,8 @@ agent:
   time_limit_bootstrap: False
   # logging and checkpoint
   experiment:
-    directory: "flycrane_track_ppo"
-    experiment_name: "same_as_hover_rew"
+    directory: "flycrane_rod_track_ppo"
+    experiment_name: "only_pose_rew"
     write_interval: 100
     checkpoint_interval: 5000
 

@@ -7,10 +7,16 @@ from omni.isaac.lab.utils.math import euler_xyz_from_quat, quat_inv, quat_mul
 from .utils import get_drone_pdist, get_drone_rpos
 
 # Body indices found in the scene
+# payload_idx = [0]
+# drone_idx = [71, 72, 73]
+# base_rope_idx = [8, 9, 10]
+# top_rope_idx = [62, 63, 64]
+
+# for the case when the rod is used
 payload_idx = [0]
-drone_idx = [71, 72, 73]
+drone_idx = [17, 18, 19]
 base_rope_idx = [8, 9, 10]
-top_rope_idx = [62, 63, 64]
+top_rope_idx = [8, 9, 10]
 
 
 def falcon_fly_low(

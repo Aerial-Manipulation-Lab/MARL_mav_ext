@@ -75,13 +75,13 @@ def main():
     stretch_position = torch.tensor(
         [
             [
-                0.9,
+                2.7,
                 -0.9,
                 2.5,  # drone 1
-                -0.9,
+                2.0,
                 0.0,
                 2.5,  # drone 2
-                0.9,
+                2.7,
                 0.9,
                 2.5,
             ]

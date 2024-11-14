@@ -38,7 +38,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
     robot.spawn.activate_contact_sensors = True
-    
+
     contact_forces = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
     )
@@ -54,7 +54,7 @@ class CommandsCfg:
         asset_name="robot",
         body_name="load_link",
         resampling_time_range=(40, 40),  # out of range of max episode length for now
-        debug_vis=True,
+        debug_vis=False,
         reference_trajectory=import_ref_from_csv(
             "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/figure_eight_v1_a05_yaw025.csv"
         ),
@@ -179,31 +179,31 @@ class RewardsCfg:
         params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
     )
 
-    twist_reward = RewTerm(
-        func=mdp.track_payload_twist_command,
-        weight=1.5,
-        params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
-    )
+    # twist_reward = RewTerm(
+    #     func=mdp.track_payload_twist_command,
+    #     weight=1.5,
+    #     params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
+    # )
 
-    policy_action_smoothness = RewTerm(
-        func=mdp.action_smoothness_reward,
-        weight=1.0,
-    )
+    # policy_action_smoothness = RewTerm(
+    #     func=mdp.action_smoothness_reward,
+    #     weight=1.0,
+    # )
 
-    force_penalty = RewTerm(
-        func=mdp.action_penalty_rel,
-        weight=0.2,
-    )
+    # force_penalty = RewTerm(
+    #     func=mdp.action_penalty_rel,
+    #     weight=0.2,
+    # )
 
-    force_smoothness = RewTerm(
-        func=mdp.action_smoothness_force_reward,
-        weight=0.5,
-    )
+    # force_smoothness = RewTerm(
+    #     func=mdp.action_smoothness_force_reward,
+    #     weight=0.5,
+    # )
 
-    downwash_reward = RewTerm(
-        func=mdp.downwash_reward,
-        weight=0.5,
-    )
+    # downwash_reward = RewTerm(
+    #     func=mdp.downwash_reward,
+    #     weight=0.5,
+    # )
 
 
 @configclass
@@ -232,10 +232,6 @@ class TerminationsCfg:
     angle_load_cable = DoneTerm(
         func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
-
-    drone_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10})
-
-    payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
 

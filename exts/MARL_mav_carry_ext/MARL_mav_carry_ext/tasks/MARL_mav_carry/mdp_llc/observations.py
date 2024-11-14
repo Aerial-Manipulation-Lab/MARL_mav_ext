@@ -12,10 +12,14 @@ Observations for the payload
 """
 
 # Body indices found in the scene
-payload_idx = [0]
-drone_idx = [71, 72, 73]
-base_rope_idx = [8, 9, 10]
+# payload_idx = [0]
+# drone_idx = [71, 72, 73]
+# base_rope_idx = [8, 9, 10]
 
+# for the case when the rod is used
+payload_idx = [0]
+drone_idx = [17, 18, 19]
+base_rope_idx = [8, 9, 10]
 
 def payload_position(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload pose xyz, quat in env frame."""
