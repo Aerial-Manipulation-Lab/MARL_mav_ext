@@ -217,16 +217,20 @@ class RefTrajectoryCommand(CommandTerm):
         # initialize the base class
         super().__init__(cfg, env)
 
+        # parameters for the trajectory
+        self.reference = cfg.reference_trajectory.repeat(self.num_envs, 1, 1)
+        self.num_points = cfg.num_points
+        self.time_horizon = cfg.time_horizon
+
         # extract the robot and body index for which the command is generated
         self.robot: Articulation = env.scene[cfg.asset_name]
         self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]
         self.sim_dt = self._env.sim.get_rendering_dt()  # TODO: rendering dt has to be the same as planner dt
-
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
-        self.pose_command_w = torch.zeros(self.num_envs, 7, device=self.device)
-        self.pose_command_w[:, 3] = 1.0
-        self.twist_command_b = torch.zeros(self.num_envs, 6, device=self.device)
+        self.pose_command_w = torch.zeros(self.num_envs, self.num_points, 7, device=self.device)
+        self.pose_command_w[..., 3] = 1.0
+        self.twist_command_b = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
         self.sim_time = torch.zeros(self.num_envs, device=self.device)
 
         # -- metrics
@@ -234,8 +238,6 @@ class RefTrajectoryCommand(CommandTerm):
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["linear_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["angular_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
-
-        self.reference = cfg.reference_trajectory.repeat(self.num_envs, 1, 1)
 
     def __str__(self) -> str:
         msg = "UniformPoseCommandGlobal:\n"
@@ -249,7 +251,7 @@ class RefTrajectoryCommand(CommandTerm):
 
     @property
     def command(self) -> torch.Tensor:
-        """The desired pose + twist command. Shape is (num_envs, 13).
+        """The desired pose + twist command. Shape is (num_envs, num_points, 13).
 
         The first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
         The next six elements correspond to the linear and angular velocities.
@@ -261,10 +263,10 @@ class RefTrajectoryCommand(CommandTerm):
     """
 
     def _update_metrics(self):
-        # compute the error
+        # compute the error between the payload and the first point in the trajectory
         pos_error, rot_error = compute_pose_error(
-            self.pose_command_w[:, :3],
-            self.pose_command_w[:, 3:],
+            self.pose_command_w[:, 0, :3],
+            self.pose_command_w[:, 0, 3:],
             self.robot.data.body_state_w[:, self.body_idx, :3] - self._env.scene.env_origins,
             self.robot.data.body_state_w[:, self.body_idx, 3:7],
         )
@@ -272,10 +274,10 @@ class RefTrajectoryCommand(CommandTerm):
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
         # compute the velocity error
         self.metrics["linear_velocity_error"] = torch.norm(
-            self.twist_command_b[:, :3] - self.robot.data.body_state_w[:, self.body_idx, 7:10], dim=-1
+            self.twist_command_b[:, 0, :3] - self.robot.data.body_state_w[:, self.body_idx, 7:10], dim=-1
         )
         self.metrics["angular_velocity_error"] = torch.norm(
-            self.twist_command_b[:, 3:] - self.robot.data.body_state_w[:, self.body_idx, 10:], dim=-1
+            self.twist_command_b[:, 0, 3:] - self.robot.data.body_state_w[:, self.body_idx, 10:], dim=-1
         )
 
     def _resample_command(self, env_ids: Sequence[int]):
@@ -285,15 +287,27 @@ class RefTrajectoryCommand(CommandTerm):
     def _update_command(self):
         """Update the sim time of each env and do time based sampling of the reference trajectory."""
         # get the time range of the reference trajectory
-        setpoints = self.reference[:, :, 0] > self.sim_time.unsqueeze(1)
-        setpoint_idx = torch.argmax(setpoints.float(), dim=1)
-        actions = self.reference[:, setpoint_idx.data[0]]
+        timestamps = self.sim_time.unsqueeze(1) + torch.arange(self.num_points, device=self.device) / ((self.num_points - 1)/ self.time_horizon) 
+
+        # Compute a boolean mask indicating which reference setpoints are greater than timestamps
+        setpoints = self.reference[:, :, 0].unsqueeze(1) > timestamps.unsqueeze(-1)  # Shape: (num_envs, num_points, num_setpoints)
+
+        # Find the indices of the first setpoint greater than each timestamp
+        setpoint_idxs = torch.argmax(setpoints.float(), dim=-1)  # Shape: (num_envs, num_points)
+
+        # Gather the actions corresponding to these indices
+        actions = torch.gather(
+            self.reference,  # Shape: (num_envs, num_setpoints, action_dim)
+            dim=1,
+            index=setpoint_idxs.unsqueeze(-1).expand(-1, -1, self.reference.shape[-1])  # Shape: (num_envs, num_points, action_dim)
+        )  # Shape: (num_envs, num_points, action_dim)
+
         # get the time based sampling
-        pose = actions[:, 1:8]
-        twist = actions[:, 8:14]
+        pose = actions[..., 1:8]
+        twist = actions[..., 8:14]
         # update the command
-        self.pose_command_w = pose
-        self.twist_command_b = twist
+        self.pose_command_w[:] = pose
+        self.twist_command_b[:] = twist
 
         # update the sim time
         self.sim_time += self.sim_dt
@@ -325,8 +339,10 @@ class RefTrajectoryCommand(CommandTerm):
             return
         # update the markers
         # -- goal pose
+        marker_idx = [0] * self.num_points * self.num_envs
+        positions = self.pose_command_w[..., :3] + self._env.scene.env_origins.unsqueeze(1)
         self.goal_pose_visualizer.visualize(
-            self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:7]
+            positions.view(-1, 3), self.pose_command_w[..., 3:7].view(-1, 4), marker_indices=marker_idx
         )
         # print("The tracking error of the position is ", self.metrics["position_error"])
         # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
@@ -355,3 +371,7 @@ class RefTrajectoryCommandCfg(CommandTermCfg):
 
     reference_trajectory: torch.Tensor = MISSING
     """Reference trajectory to sample the commands from."""
+    num_points: int = MISSING
+    """Number of points in the reference trajectory."""
+    time_horizon: float = MISSING
+    """Time horizon of the number of points sampled from the reference trajectory."""

@@ -200,3 +200,49 @@ def drone_pdist_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     rpos = get_drone_rpos(drone_pos_world_frame)
     pdist = torch.norm(rpos, dim=-1, keepdim=True)
     return pdist.view(env.num_envs, -1)
+
+# Observations for when sampling multiple points on a trajectory
+
+def payload_positional_error_traj(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload position error between the payload and all sampled points."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3]
+    payload_pos_env = payload_pos_world - env.scene.env_origins.unsqueeze(1)
+    desired_pos = env.command_manager.get_command(command_name)[..., :3]
+    positional_error = (desired_pos - payload_pos_env).view(env.num_envs, -1)
+    return positional_error
+
+
+def payload_orientation_error_traj(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload orientation error between the payload and all sampled points."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
+    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, desired_quat.shape[1], 1)
+    orientation_error = quat_mul(desired_quat.view(-1, 4), quat_conjugate(payload_quat.view(-1, 4))).view(env.num_envs, -1)
+    return orientation_error
+
+
+def payload_linear_velocity_error_traj(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload linear velocity error between the payload and all sampled points."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_lin_vel = robot.data.body_state_w[:, payload_idx, 7:10]
+    desired_lin_vel = env.command_manager.get_command(command_name)[..., 7:10]
+    lin_vel_error = (desired_lin_vel - payload_lin_vel).view(env.num_envs, -1)
+    return lin_vel_error
+
+
+def payload_angular_velocity_error_traj(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload angular velocity error between the payload and all sampled points."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:13]
+    desired_ang_vel = env.command_manager.get_command(command_name)[..., 10:13]
+    ang_vel_error = (desired_ang_vel - payload_ang_vel).view(env.num_envs, -1)
+    return ang_vel_error
