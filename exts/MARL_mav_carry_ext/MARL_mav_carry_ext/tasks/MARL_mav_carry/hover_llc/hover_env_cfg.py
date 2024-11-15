@@ -87,7 +87,7 @@ class ObservationsCfg:
         """Observation terms for the policy."""
 
         # payload and drone states
-        payload_pose = ObsTerm(func=mdp.payload_position)  # can add noise later
+        payload_pos = ObsTerm(func=mdp.payload_position)  # can add noise later
         payload_orientation = ObsTerm(func=mdp.payload_orientation)
         payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)
         payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)
