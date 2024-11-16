@@ -146,3 +146,26 @@ def drone_collision(
     is_drone_collision = separation < threshold
     assert is_drone_collision.shape == (env.num_envs,)
     return is_drone_collision
+
+def payload_target_distance(
+        env: ManagerBasedRLEnv, threshold: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when the payload is outisde a certain distance of the target."""
+    robot = env.scene[asset_cfg.name]
+    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_env = payload_pos_world - env.scene.env_origins
+
+    desired_pos = env.command_manager.get_command(command_name)[
+        ..., :3
+    ] 
+
+    # for the trajectory case
+    if len(desired_pos.shape) > 2:
+        desired_pos = desired_pos[:,0]
+
+    target_rpos = desired_pos - payload_pos_env
+    dist = target_rpos.norm(dim=-1)
+    is_target_far = dist > threshold
+
+    assert is_target_far.shape == (env.num_envs,)
+    return is_target_far

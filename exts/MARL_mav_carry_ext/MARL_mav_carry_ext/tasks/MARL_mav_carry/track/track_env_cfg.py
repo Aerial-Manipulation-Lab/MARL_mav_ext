@@ -59,7 +59,7 @@ class CommandsCfg:
             "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/figure_eight_v1_a05_yaw025.csv"
         ),
         num_points=4,
-        time_horizon=1,
+        time_horizon=2.5,
     )
 
 
@@ -241,6 +241,7 @@ class TerminationsCfg:
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
+    target_too_far = DoneTerm(func=mdp.payload_target_distance, params={"threshold": 1.0, "command_name": "pose_twist_command"})
 
 @configclass
 class CurriculumCfg:
