@@ -10,10 +10,9 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import euler_xyz_from_quat, normalize, quat_from_angle_axis, quat_inv, quat_mul, yaw_quat
+from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis
 
 from .marker_utils import ACC_MARKER_CFG, DRONE_POS_MARKER_CFG, FORCE_MARKER_Z_CFG, ORIENTATION_MARKER_CFG
-from .observations import *
 
 
 class LowLevelAction(ActionTerm):
@@ -23,24 +22,28 @@ class LowLevelAction(ActionTerm):
 
     def __init__(self, cfg: LowLevelActionCfg, env: ManagerBasedRLEnv):
         super().__init__(cfg, env)
+        
+        # simulation environment
         self._env = env
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
         self._falcon_idx = self._robot.find_bodies("Falcon.*_base_link")[0]
-        self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
-        self._prev_forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
-        self._collective_thrust = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
-        self._torques = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
+
+        # configuration
+        self.cfg = cfg
         self._num_drones = cfg.num_drones
         self._waypoint_dim = cfg.waypoint_dim
         self._num_waypoints = cfg.num_waypoints
-        self._times = (torch.arange(self._num_waypoints + 1).float()) / self._num_waypoints  # normalized time vector
-        self._time_horizon = cfg.time_horizon  # sec
+
+        # buffers
+        self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._prev_forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._waypoints = torch.zeros(
             env.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device
         )
+
+        # controller
         self._geometric_controller = GeometricController(self.num_envs)
-        self.cfg = cfg
         self._ll_counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
