@@ -54,7 +54,7 @@ class CommandsCfg:
         asset_name="robot",
         body_name="load_link",
         resampling_time_range=(40, 40),  # out of range of max episode length for now
-        debug_vis=False,
+        debug_vis=True,
         reference_trajectory=import_ref_from_csv(
             "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/figure_eight_v1_a05_yaw025.csv"
         ),
@@ -104,8 +104,8 @@ class ObservationsCfg:
         payload_orientation_error = ObsTerm(
             func=mdp.payload_orientation_error_traj, params={"command_name": "pose_twist_command"}
         )
-        # payload_linear_velocity_error = ObsTerm(func=mdp.payload_linear_velocity_error_traj, params={"command_name": "pose_twist_command"})
-        # payload_angular_velocity_error = ObsTerm(func=mdp.payload_angular_velocity_error_traj, params={"command_name": "pose_twist_command"})
+        payload_linear_velocity_error = ObsTerm(func=mdp.payload_linear_velocity_error_traj, params={"command_name": "pose_twist_command"})
+        payload_angular_velocity_error = ObsTerm(func=mdp.payload_angular_velocity_error_traj, params={"command_name": "pose_twist_command"})
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
@@ -181,31 +181,31 @@ class RewardsCfg:
         params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
     )
 
-    # twist_reward = RewTerm(
-    #     func=mdp.track_payload_twist_command,
-    #     weight=1.5,
-    #     params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
-    # )
+    twist_reward = RewTerm(
+        func=mdp.track_payload_twist_command,
+        weight=1.5,
+        params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
+    )
 
-    # policy_action_smoothness = RewTerm(
-    #     func=mdp.action_smoothness_reward,
-    #     weight=1.0,
-    # )
+    policy_action_smoothness = RewTerm(
+        func=mdp.action_smoothness_reward,
+        weight=1.0,
+    )
 
-    # force_penalty = RewTerm(
-    #     func=mdp.action_penalty_rel,
-    #     weight=0.2,
-    # )
+    force_penalty = RewTerm(
+        func=mdp.action_penalty_rel,
+        weight=0.2,
+    )
 
-    # force_smoothness = RewTerm(
-    #     func=mdp.action_smoothness_force_reward,
-    #     weight=0.5,
-    # )
+    force_smoothness = RewTerm(
+        func=mdp.action_smoothness_force_reward,
+        weight=0.5,
+    )
 
-    # downwash_reward = RewTerm(
-    #     func=mdp.downwash_reward,
-    #     weight=0.5,
-    # )
+    downwash_reward = RewTerm(
+        func=mdp.downwash_reward,
+        weight=0.5,
+    )
 
 
 @configclass

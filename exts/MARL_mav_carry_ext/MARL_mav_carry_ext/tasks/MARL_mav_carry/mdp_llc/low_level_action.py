@@ -104,10 +104,10 @@ class LowLevelAction(ActionTerm):
                 drone_setpoint = {}
                 drone_setpoint["pos"] = drone_waypoints[:, :3]
                 self._desired_position[:, i] = drone_setpoint["pos"]
-                drone_setpoint["lin_vel"] = torch.zeros(self.num_envs, 3, device=self.device)
-                drone_setpoint["lin_acc"] = torch.zeros(self.num_envs, 3, device=self.device)
-                drone_setpoint["jerk"] = torch.zeros(self.num_envs, 3, device=self.device)
-                drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
+                drone_setpoint["lin_vel"] = drone_waypoints[:, 3:6]
+                drone_setpoint["lin_acc"] = drone_waypoints[:, 6:9]
+                drone_setpoint["jerk"] = drone_waypoints[:, 9:12]
+                # drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
                 drone_setpoint["yaw"] = self._constant_yaw
                 drone_setpoint["yaw_rate"] = torch.zeros(self.num_envs, 1, device=self.device)
                 drone_setpoint["yaw_acc"] = torch.zeros(self.num_envs, 1, device=self.device)
@@ -268,15 +268,13 @@ class LowLevelActionCfg(ActionTermCfg):
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
     num_drones: int = 3
     """Number of drones."""
-    waypoint_dim: int = 3
-    """Dimension of the waypoints: [pos]."""
+    waypoint_dim: int = 12
+    """Dimension of the waypoints: [pos, vel, acc, jerk]."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
     time_horizon: int = 2
     """Time horizon of the trajectory in seconds."""
     low_level_decimation: int = 2
     """Decimation factor for the low level action term."""
-    planner_decimation: int = 10
-    """Decimation factor for the RL planner term."""
     debug_vis: bool = False
     """Whether to visualize debug information. Defaults to False."""
