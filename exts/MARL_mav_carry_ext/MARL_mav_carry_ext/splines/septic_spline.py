@@ -12,8 +12,8 @@ def septic_trajectory(start, end, t_start, t_end, num_envs):
             [7 * T**6, 6 * T**5, 5 * T**4, 4 * T**3, 3 * T**2, 2 * T, 1, 0],  # v(t1)
             [0, 0, 0, 0, 0, 2, 0, 0],  # a(t0)
             [42 * T**5, 30 * T**4, 20 * T**3, 12 * T**2, 6 * T, 2, 0, 0],  # a(t1)
+            [0, 0, 0, 0, 6, 0, 0, 0],  # j(t0)
             [210 * T**4, 120 * T**3, 60 * T**2, 24 * T, 6, 0, 0, 0],  # j(t1)
-            [840 * T**3, 360 * T**2, 120 * T, 24, 0, 0, 0, 0],  # s(t1)
         ],
         dtype=torch.float32,
         device=torch.device("cuda"),
@@ -29,8 +29,8 @@ def septic_trajectory(start, end, t_start, t_end, num_envs):
                 end["vel"][:, 0],
                 start["acc"][:, 0],
                 end["acc"][:, 0],
+                start["jerk"][:, 0],
                 end["jerk"][:, 0],
-                end["snap"][:, 0],
             ],
             dim=1,
         )
@@ -46,8 +46,8 @@ def septic_trajectory(start, end, t_start, t_end, num_envs):
                 end["vel"][:, 1],
                 start["acc"][:, 1],
                 end["acc"][:, 1],
+                start["jerk"][:, 1],
                 end["jerk"][:, 1],
-                end["snap"][:, 1],
             ],
             dim=1,
         )
@@ -63,8 +63,8 @@ def septic_trajectory(start, end, t_start, t_end, num_envs):
                 end["vel"][:, 2],
                 start["acc"][:, 2],
                 end["acc"][:, 2],
+                start["jerk"][:, 2],
                 end["jerk"][:, 2],
-                end["snap"][:, 2],
             ],
             dim=1,
         )
@@ -94,23 +94,33 @@ def compute_derivatives(coeffs, power):
 
 
 # Generate a septic segment
-def get_coeffs(start_waypoint, end_waypoint, times, num_envs):
+def get_coeffs(waypoints, times, num_envs):
+    n_points = len(times)
+    waypoint_id_increment = waypoints.shape[-1] // n_points
     coeffs_list = []
 
-    start = {"pos": start_waypoint[:, :3], "vel": start_waypoint[:, 3:6], "acc": start_waypoint[:, 6:9]}
-    end = {
-        "pos": end_waypoint[:, :3],
-        "vel": end_waypoint[:, 3:6],
-        "acc": end_waypoint[:, 6:9],
-        "jerk": end_waypoint[:, 9:12],
-        "snap": end_waypoint[:, 12:15],
-    }
-    t_start = times[0]
-    t_end = times[-1]
+    for i in range(n_points - 1):
+        curr_point_id = i * waypoint_id_increment
+        start = {
+            "pos": waypoints[:, curr_point_id : curr_point_id + 3],
+            "vel": waypoints[:, curr_point_id + 3 : curr_point_id + 6],
+            "acc": waypoints[:, curr_point_id + 6 : curr_point_id + 9],
+            "jerk": waypoints[:, curr_point_id + 9 : curr_point_id + 12],
+        }
+        next_point_id = (i + 1) * waypoint_id_increment
+        end = {
+            "pos": waypoints[:, next_point_id : next_point_id + 3],
+            "vel": waypoints[:, next_point_id + 3 : next_point_id + 6],
+            "acc": waypoints[:, next_point_id + 6 : next_point_id + 9],
+            "jerk": waypoints[:, next_point_id + 9 : next_point_id + 12],
+        }
+        t_start = times[i]
+        t_end = times[i + 1]
 
-    coeffs_x, coeffs_y, coeffs_z = septic_trajectory(start, end, t_start, t_end, num_envs)
+        # Calculate the position trajectory (septic polynomial)
+        coeffs_x, coeffs_y, coeffs_z = septic_trajectory(start, end, t_start, t_end, num_envs)
 
-    coeffs_list.append((coeffs_x, coeffs_y, coeffs_z))
+        coeffs_list.append((coeffs_x, coeffs_y, coeffs_z))
 
     return coeffs_list
 
