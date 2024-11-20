@@ -175,14 +175,26 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the tracking task."""
 
-    pose_reward = RewTerm(
-        func=mdp.track_payload_pose_command,
+    position_reward = RewTerm(
+        func=mdp.track_payload_pos_command,
         weight=1.5,
         params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
     )
 
-    twist_reward = RewTerm(
-        func=mdp.track_payload_twist_command,
+    orientation_reward = RewTerm(
+        func=mdp.track_payload_orientation_command,
+        weight=8.0,
+        params={"command_name": "pose_twist_command", "debug_vis": False, "asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    linear_velocity_reward = RewTerm(
+        func=mdp.track_payload_lin_vel_command,
+        weight=1.5,
+        params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    angular_velocity_reward = RewTerm(
+        func=mdp.track_payload_ang_vel_command,
         weight=1.5,
         params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
     )
