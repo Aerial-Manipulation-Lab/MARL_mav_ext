@@ -80,7 +80,7 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
 
 
 def track_payload_pos_command(
-    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward tracking of payload position commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
@@ -156,7 +156,7 @@ def track_payload_pose_command(
 
 
 def track_payload_lin_vel_command(
-    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward tracking of payload linear velocity commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
@@ -178,7 +178,7 @@ def track_payload_lin_vel_command(
 
 
 def track_payload_ang_vel_command(
-    env: ManagerBasedRLEnv, debug_vis: bool, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward tracking of payload angular velocity commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
