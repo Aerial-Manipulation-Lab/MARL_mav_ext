@@ -288,6 +288,7 @@ class RefTrajectoryCommand(CommandTerm):
         """Update the sim time of each env and do time based sampling of the reference trajectory."""
         # get the time range of the reference trajectory
         timestamps = self.sim_time.unsqueeze(1) + torch.arange(self.num_points, device=self.device) / ((self.num_points - 1)/ self.time_horizon) 
+        timestamps = torch.clamp(timestamps, max=self.reference[:, -2, 0].unsqueeze(1))
 
         # Compute a boolean mask indicating which reference setpoints are greater than timestamps
         setpoints = self.reference[:, :, 0].unsqueeze(1) > timestamps.unsqueeze(-1)  # Shape: (num_envs, num_points, num_setpoints)
