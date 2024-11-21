@@ -45,8 +45,8 @@ class ManagerBasedPlotter():
         # references
         load_pos_ref = self.env.command_manager._terms[self.command_name].pose_command_w[..., :3][0]
         load_orientation_ref = self.env.command_manager._terms[self.command_name].pose_command_w[..., 3:7][0]
-        load_vel_ref = self.env.command_manager._terms[self.command_name].twist_command_b[..., 0:3][0]
-        load_ang_vel_ref = self.env.command_manager._terms[self.command_name].twist_command_b[..., 3:][0]
+        load_vel_ref = self.env.command_manager._terms[self.command_name].twist_command[..., 0:3][0]
+        load_ang_vel_ref = self.env.command_manager._terms[self.command_name].twist_command[..., 3:][0]
 
         # get the first point from the commanded trajectory
         if load_pos_ref.shape[0] > 1:
@@ -189,14 +189,14 @@ class ManagerBasedPlotter():
                         colors = ['red', 'green', 'blue', 'purple']
                         plot_entries(ax, time_data, ref_data, colors, linestyle="--")
                         plot_entries(ax, time_data, actual_data, colors, linestyle="-")
-                        ax.legend(['W_ref', 'W', 'X_ref', 'X', 'Y_ref', 'Y', 'Z_ref', 'Z'])
+                        ax.legend(['W_ref', 'X_ref', 'Y_ref', 'Z_ref', 'W', 'X', 'Y', 'Z'])
                     else:
                         ref_data = [entry[:3] for entry in data]
                         actual_data = [entry[3:] for entry in data]
                         colors = ['red', 'green', 'blue']
                         plot_entries(ax, time_data, ref_data, colors, linestyle="--")
                         plot_entries(ax, time_data, actual_data, colors, linestyle="-")
-                        ax.legend(['X_ref', 'X', 'Y_ref', 'Y', 'Z_ref', 'Z'])
+                        ax.legend(['X_ref', 'Y_ref', 'Z_ref', 'X', 'Y', 'Z'])
                 else:
                     if "error" in key:
                         ax.plot(time_data, data, color='red')
