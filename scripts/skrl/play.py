@@ -64,8 +64,7 @@ import torch
 import skrl
 from packaging import version
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.config.flycrane import agents
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
+from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
 
 # register the gym environment
 
@@ -91,7 +90,6 @@ from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
-
 
 def main():
     """Play with skrl agent."""
@@ -162,6 +160,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
+    plotter = ManagerBasedPlotter(env, command_name="pose_twist_command")
 
     # reset environment
     obs, _ = env.reset()
@@ -173,16 +172,20 @@ def main():
             # agent stepping
             actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
             # env stepping
+            plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
+
+        timestep += 1
         if args_cli.video:
-            timestep += 1
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
 
     # close the simulator
     env.close()
-
+    
+    plot_path = os.path.join(log_dir, "plots", "play")
+    plotter.plot(save=True, save_dir=plot_path)
 
 if __name__ == "__main__":
     # run the main function

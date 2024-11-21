@@ -4,6 +4,7 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
 import math 
 import torch
+import os
 
 class ManagerBasedPlotter():
     def __init__(self, env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
@@ -135,99 +136,92 @@ class ManagerBasedPlotter():
         self.collect_drone_data()
 
 
-    def plot(self):
-        """Plot the data."""
+    def plot(self, save=False, save_dir="plots", file_format="png"):
+        """Plot the data and optionally save the plots to files."""
+        # Consolidate all data into one dictionary
         all_data = {
-        **{key: self.metrics[key] for key in self.metrics},
-        **{key: self.load_data[key] for key in self.load_data},
-        **{f"{key} Drone {drone_num}": self.drone_data_by_id[drone_num][key]
-           for drone_num in self.drone_data_by_id
-           for key in self.drone_data_by_id[drone_num]}
+            **self.metrics,
+            **self.load_data,
+            **{f"{key} Drone {drone_num}": self.drone_data_by_id[drone_num][key]
+            for drone_num in self.drone_data_by_id
+            for key in self.drone_data_by_id[drone_num]}
         }
-        
+
         # Determine the number of subplots needed
         num_plots = len(all_data)
         plots_per_figure = 6
         num_figures = math.ceil(num_plots / plots_per_figure)
 
-        # Create subplots
+        # Define reusable plotting logic
+        def plot_entries(ax, time_data, data, colors, linestyle, labels=None):
+            for i, color in enumerate(colors):
+                ax.plot(
+                    time_data,
+                    [entry[i] for entry in data],
+                    linestyle=linestyle,
+                    color=color,
+                )
+            if labels:
+                ax.legend(labels)
+
+        # Ensure the save directory exists if saving
+        if save:
+            os.makedirs(save_dir, exist_ok=True)
+
+        # Plot all data
         keys = list(all_data.keys())
+        time_data = [i * self.sim_dt for i in range(len(next(iter(all_data.values()))))]
+
         for fig_idx in range(num_figures):
-            plt.figure(figsize=(15, 10))  # Adjust figure size as needed
+            fig = plt.figure(figsize=(15, 10))
             start_idx = fig_idx * plots_per_figure
             end_idx = min(start_idx + plots_per_figure, num_plots)
-            
+
             for subplot_idx, key_idx in enumerate(range(start_idx, end_idx)):
                 key = keys[key_idx]
-                ax = plt.subplot(2, 3, subplot_idx + 1)  # 2 rows, 3 columns
-                
-                # Plot data
+                ax = plt.subplot(2, 3, subplot_idx + 1)
+                data = all_data[key]
+
                 if "both" in key:
                     if "orientation" in key:
-                        ref_data = [entry[:4] for entry in all_data[key]]
-                        actual_data = [entry[4:] for entry in all_data[key]]
-                        # Define your colors
+                        ref_data = [entry[:4] for entry in data]
+                        actual_data = [entry[4:] for entry in data]
                         colors = ['red', 'green', 'blue', 'purple']
-
-                        # Plot each entry in ref_data with a different color
-                        for i, color in enumerate(colors):
-                            ax.plot(
-                                [j * self.sim_dt for j in range(len(ref_data))], 
-                                [data[i] for data in ref_data],  # Extract the i-th entry from each sublist
-                                linestyle="--",
-                                color=color,
-                            )
-                            ax.plot(
-                                [j * self.sim_dt for j in range(len(actual_data))], 
-                                [data[i] for data in actual_data],  # Extract the i-th entry from each sublist
-                                color=color,
-                            )
+                        plot_entries(ax, time_data, ref_data, colors, linestyle="--")
+                        plot_entries(ax, time_data, actual_data, colors, linestyle="-")
                         ax.legend(['W_ref', 'W', 'X_ref', 'X', 'Y_ref', 'Y', 'Z_ref', 'Z'])
-
                     else:
-                        # Plot each entry in ref_data with a different color
-                        ref_data = [entry[:3] for entry in all_data[key]]
-                        actual_data = [entry[3:] for entry in all_data[key]]
+                        ref_data = [entry[:3] for entry in data]
+                        actual_data = [entry[3:] for entry in data]
                         colors = ['red', 'green', 'blue']
-                        for i, color in enumerate(colors):
-                            ax.plot(
-                                [j * self.sim_dt for j in range(len(ref_data))], 
-                                [data[i] for data in ref_data],  # Extract the i-th entry from each sublist
-                                linestyle="--",
-                                color=color,
-                            )
-                            ax.plot(
-                                [j * self.sim_dt for j in range(len(actual_data))], 
-                                [data[i] for data in actual_data],  # Extract the i-th entry from each sublist
-                                color=color,
-                            )
+                        plot_entries(ax, time_data, ref_data, colors, linestyle="--")
+                        plot_entries(ax, time_data, actual_data, colors, linestyle="-")
                         ax.legend(['X_ref', 'X', 'Y_ref', 'Y', 'Z_ref', 'Z'])
                 else:
                     if "error" in key:
-                        ax.plot(
-                            [j * self.sim_dt for j in range(len(all_data[key]))], 
-                            all_data[key], color = 'red'
-                        )
+                        ax.plot(time_data, data, color='red')
                         ax.legend(['Norm error'])
                     else:
-                        ax.plot(
-                                [j * self.sim_dt for j in range(len(all_data[key]))], 
-                                all_data[key]
-                            )
+                        ax.plot(time_data, data)
                         if "orientation" in key:
                             ax.legend(['W', 'X', 'Y', 'Z'])
                         elif "rotor_forces" in key:
                             ax.legend(['Rotor 1', 'Rotor 2', 'Rotor 3', 'Rotor 4'])
                         else:
                             ax.legend(['X', 'Y', 'Z'])
-                    
+
                 ax.set_title(key)
                 ax.set_xlabel("Time")
-                ax.set_ylabel(key.split(" ")[0])  # Short label for Y-axis
-            
-        plt.tight_layout()  # Adjust layout to avoid overlap
+                ax.set_ylabel(key.split(" ")[0])
+
+
+            # Save the figure if requested
+            if save:
+                save_path = os.path.join(save_dir, f"figure_{fig_idx + 1}.{file_format}")
+                fig.savefig(save_path)
+                print(f"Figure saved: {save_path}")
+
+        plt.tight_layout()
         plt.show()
 
-    def save(self):
-        """Save the data."""
-        pass
+        
