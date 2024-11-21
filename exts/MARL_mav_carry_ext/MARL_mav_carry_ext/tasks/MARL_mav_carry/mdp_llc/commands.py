@@ -287,21 +287,28 @@ class RefTrajectoryCommand(CommandTerm):
     def _update_command(self):
         """Update the sim time of each env and do time based sampling of the reference trajectory."""
         # get the time range of the reference trajectory
-        timestamps = self.sim_time.unsqueeze(1) + torch.arange(self.num_points, device=self.device) / ((self.num_points - 1)/ self.time_horizon) 
-        timestamps = torch.clamp(timestamps, max=self.reference[:, -2, 0].unsqueeze(1))
+        if self.num_points > 1:
+            timestamps = self.sim_time.unsqueeze(1) + torch.arange(self.num_points, device=self.device) / ((self.num_points - 1)/ self.time_horizon) 
+            timestamps = torch.clamp(timestamps, max=self.reference[:, -2, 0].unsqueeze(1))
 
-        # Compute a boolean mask indicating which reference setpoints are greater than timestamps
-        setpoints = self.reference[:, :, 0].unsqueeze(1) > timestamps.unsqueeze(-1)  # Shape: (num_envs, num_points, num_setpoints)
+            setpoints = self.reference[:, :, 0].unsqueeze(1) > timestamps.unsqueeze(-1)  # Shape: (num_envs, num_points, num_setpoints)
+            # Compute a boolean mask indicating which reference setpoints are greater than timestamps
 
-        # Find the indices of the first setpoint greater than each timestamp
-        setpoint_idxs = torch.argmax(setpoints.float(), dim=-1)  # Shape: (num_envs, num_points)
+            # Find the indices of the first setpoint greater than each timestamp
+            setpoint_idxs = torch.argmax(setpoints.float(), dim=-1)  # Shape: (num_envs, num_points)
 
-        # Gather the actions corresponding to these indices
-        actions = torch.gather(
-            self.reference,  # Shape: (num_envs, num_setpoints, action_dim)
-            dim=1,
-            index=setpoint_idxs.unsqueeze(-1).expand(-1, -1, self.reference.shape[-1])  # Shape: (num_envs, num_points, action_dim)
-        )  # Shape: (num_envs, num_points, action_dim)
+            # Gather the actions corresponding to these indices
+            actions = torch.gather(
+                self.reference,  # Shape: (num_envs, num_setpoints, action_dim)
+                dim=1,
+                index=setpoint_idxs.unsqueeze(-1).expand(-1, -1, self.reference.shape[-1])  # Shape: (num_envs, num_points, action_dim)
+            )  # Shape: (num_envs, num_points, action_dim)
+        
+        else:
+            # get the time range of the reference trajectory
+            setpoints = self.reference[:, :, 0] > self.sim_time.unsqueeze(1)
+            setpoint_idx = torch.argmax(setpoints.float(), dim=1)
+            actions = self.reference[:, setpoint_idx.data[0]].unsqueeze(1)
 
         # get the time based sampling
         pose = actions[..., 1:8]
