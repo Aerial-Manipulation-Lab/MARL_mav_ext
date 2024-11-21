@@ -246,3 +246,23 @@ def payload_angular_velocity_error_traj(
     desired_ang_vel = env.command_manager.get_command(command_name)[..., 10:13]
     ang_vel_error = (desired_ang_vel - payload_ang_vel).view(env.num_envs, -1)
     return ang_vel_error
+
+def payload_linear_acc_error_traj(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload linear acceleration error between the payload and all sampled points."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_lin_acc = robot.data.body_acc_w[:, payload_idx, 0:3]
+    desired_lin_acc = env.command_manager.get_command(command_name)[..., 13:16]
+    lin_acc_error = (desired_lin_acc - payload_lin_acc).view(env.num_envs, -1)
+    return lin_acc_error
+
+def payload_angular_acc_error_traj(
+    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload angular acceleration error between the payload and all sampled points."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_ang_acc = robot.data.body_acc_w[:, payload_idx, 3:6]
+    desired_ang_acc = env.command_manager.get_command(command_name)[..., 3:6]
+    ang_acc_error = (desired_ang_acc - payload_ang_acc).view(env.num_envs, -1)
+    return ang_acc_error

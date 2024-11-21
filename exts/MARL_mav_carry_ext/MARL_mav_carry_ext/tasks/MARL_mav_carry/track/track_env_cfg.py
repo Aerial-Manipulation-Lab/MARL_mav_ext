@@ -106,6 +106,8 @@ class ObservationsCfg:
         )
         payload_linear_velocity_error = ObsTerm(func=mdp.payload_linear_velocity_error_traj, params={"command_name": "pose_twist_command"})
         payload_angular_velocity_error = ObsTerm(func=mdp.payload_angular_velocity_error_traj, params={"command_name": "pose_twist_command"})
+        payload_linear_acceleration_error = ObsTerm(func=mdp.payload_linear_acc_error_traj, params={"command_name": "pose_twist_command"})
+        payload_angular_acceleration_error = ObsTerm(func=mdp.payload_angular_acc_error_traj, params={"command_name": "pose_twist_command"})
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)

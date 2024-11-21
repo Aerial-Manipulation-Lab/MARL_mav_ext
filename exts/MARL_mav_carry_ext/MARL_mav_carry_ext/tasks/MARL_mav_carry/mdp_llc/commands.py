@@ -230,7 +230,8 @@ class RefTrajectoryCommand(CommandTerm):
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
         self.pose_command_w = torch.zeros(self.num_envs, self.num_points, 7, device=self.device)
         self.pose_command_w[..., 3] = 1.0
-        self.twist_command_b = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
+        self.twist_command = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
+        self.acc_command = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
         self.sim_time = torch.zeros(self.num_envs, device=self.device)
 
         # -- metrics
@@ -238,6 +239,8 @@ class RefTrajectoryCommand(CommandTerm):
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["linear_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["angular_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["linear_acceleration_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["angular_acceleration_error"] = torch.zeros(self.num_envs, device=self.device)
 
     def __str__(self) -> str:
         msg = "UniformPoseCommandGlobal:\n"
@@ -256,7 +259,7 @@ class RefTrajectoryCommand(CommandTerm):
         The first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
         The next six elements correspond to the linear and angular velocities.
         """
-        return torch.cat((self.pose_command_w, self.twist_command_b), dim=-1)
+        return torch.cat((self.pose_command_w, self.twist_command, self.acc_command), dim=-1)
 
     """
     Implementation specific functions.
@@ -274,10 +277,17 @@ class RefTrajectoryCommand(CommandTerm):
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
         # compute the velocity error
         self.metrics["linear_velocity_error"] = torch.norm(
-            self.twist_command_b[:, 0, :3] - self.robot.data.body_state_w[:, self.body_idx, 7:10], dim=-1
+            self.twist_command[:, 0, :3] - self.robot.data.body_state_w[:, self.body_idx, 7:10], dim=-1
         )
         self.metrics["angular_velocity_error"] = torch.norm(
-            self.twist_command_b[:, 0, 3:] - self.robot.data.body_state_w[:, self.body_idx, 10:], dim=-1
+            self.twist_command[:, 0, 3:] - self.robot.data.body_state_w[:, self.body_idx, 10:], dim=-1
+        )
+        # compute the acceleration error
+        self.metrics["linear_acceleration_error"] = torch.norm(
+            self.acc_command[:, 0, :3] - self.robot.data.body_acc_w[:, self.body_idx, 0:3], dim=-1
+        )
+        self.metrics["angular_acceleration_error"] = torch.norm(
+            self.acc_command[:, 0, 3:] - self.robot.data.body_acc_w[:, self.body_idx, 3:], dim=-1
         )
 
     def _resample_command(self, env_ids: Sequence[int]):
@@ -313,9 +323,11 @@ class RefTrajectoryCommand(CommandTerm):
         # get the time based sampling
         pose = actions[..., 1:8]
         twist = actions[..., 8:14]
+        acc = actions[..., 14:20]
         # update the command
         self.pose_command_w[:] = pose
-        self.twist_command_b[:] = twist
+        self.twist_command[:] = twist
+        self.acc_command[:] = acc
 
         # update the sim time
         self.sim_time += self.sim_dt

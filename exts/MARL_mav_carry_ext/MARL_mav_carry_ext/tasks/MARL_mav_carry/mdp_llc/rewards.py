@@ -184,7 +184,7 @@ def track_payload_ang_vel_command(
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1)
 
-    desired_vel = env.command_manager.get_command(command_name)[..., 10:]
+    desired_vel = env.command_manager.get_command(command_name)[..., 10:13]
     
     # for the trajectory case
     if len(desired_vel.shape) > 2:
@@ -303,7 +303,7 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
     action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
-    scaling_factor = 5
+    scaling_factor = 5 / 4 # 4 is the amount of inputs (pos, vel, acc, jerk)
     reward_action_smoothness = torch.exp(-action_smoothness * scaling_factor)
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
