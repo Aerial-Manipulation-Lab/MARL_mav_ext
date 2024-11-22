@@ -195,10 +195,16 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the hovering task."""
 
-    pose_reward = RewTerm(
-        func=mdp.track_payload_pose_command,
+    pos_reward = RewTerm(
+        func=mdp.track_payload_pos_command,
         weight=1.5,
-        params={"command_name": "pose_command", "asset_cfg": SceneEntityCfg("robot")},
+        params={"command_name": "pose_command"},
+    )
+
+    ori_reward = RewTerm(
+        func=mdp.track_payload_orientation_command,
+        weight=8.0,
+        params={"command_name": "pose_command", "debug_vis": False},
     )
 
     policy_action_smoothness = RewTerm(

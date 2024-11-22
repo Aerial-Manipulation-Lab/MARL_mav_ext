@@ -116,11 +116,11 @@ def main():
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:] = stretch_position
-                waypoint[1] = straight_up_position
+                waypoint[:, :3] = stretch_position[:, :3]
+                waypoint[:, 12:15] = straight_up_position[:, 3:6]
+                waypoint[:, 24:27] = stretch_position[:, 6:9]
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
-            print("sim timestep: ", env.scene["robot"].data._sim_timestamp)
             # print current orientation of pole
             # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
             # update counter

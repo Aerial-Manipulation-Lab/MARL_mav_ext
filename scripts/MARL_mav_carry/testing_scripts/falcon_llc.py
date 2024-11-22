@@ -67,7 +67,7 @@ def main():
 
     # test trajectory
     with open(
-        "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv",
+        "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/loop_10.csv",
     ) as f:
         reader = csv.reader(f, delimiter=",")
         i = 0
