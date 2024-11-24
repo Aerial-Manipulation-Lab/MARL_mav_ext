@@ -134,6 +134,19 @@ def large_states(
     assert is_large_states.shape == (env.num_envs,)
     return is_large_states
 
+def nan_obs(
+    env: ManagerBasedRLEnv, group_name: str) -> torch.Tensor:
+    """Terminate when any observation is NaN."""
+    obs = env.obs_buf
+    if obs: # prevent error when obs is empty dict
+        is_nan_obs = torch.isnan(obs[group_name]).any(dim=-1)
+        assert is_nan_obs.shape == (env.num_envs,)
+        return is_nan_obs
+    else:
+        is_nan_obs = torch.tensor([False]*env.num_envs, device=env.sim.device)
+        assert is_nan_obs.shape == (env.num_envs,)
+        return is_nan_obs
+
 def drone_collision(
     env: ManagerBasedRLEnv, threshold: float = 0.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -146,6 +159,49 @@ def drone_collision(
     is_drone_collision = separation < threshold
     assert is_drone_collision.shape == (env.num_envs,)
     return is_drone_collision
+
+def cable_collision(
+    env: ManagerBasedRLEnv, threshold: float = 0.0, num_points: int = 5, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Check for collisions between cables.
+
+    A collision is detected if the minimum Euclidean distance between any two points
+    on different cables is below the threshold.
+    """
+    robot = env.scene[asset_cfg.name]
+    cable_bottom_pos_env = robot.data.body_state_w[:, base_rope_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    cable_top_pos_env = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    cable_directions = cable_top_pos_env - cable_bottom_pos_env  # (num_envs, num_cables, 3)
+
+    # Create linearly spaced points for interpolation (num_points,)
+    linspace_points = torch.linspace(0, 1, num_points, device=env.device).view(1, 1, num_points, 1)  # (1, 1, num_points, 1)
+
+    # Compute cable points (num_envs, num_cables, num_points, 3)
+    cable_points = cable_bottom_pos_env.unsqueeze(2) + linspace_points * cable_directions.unsqueeze(2)  # (num_envs, num_cables, num_points, 3)
+
+    # Expand cable points for pairwise comparison
+    cable_points_a = cable_points.unsqueeze(2)  # (num_envs, num_cables, 1, num_points, 3)
+    cable_points_b = cable_points.unsqueeze(1)  # (num_envs, 1, num_cables, num_points, 3)
+
+    # Compute pairwise differences (num_envs, num_cables, num_cables, num_points, 3)
+    pairwise_diff = cable_points_a - cable_points_b
+
+    # Compute pairwise Euclidean distances (num_envs, num_cables, num_cables, num_points)
+    pairwise_distances = torch.norm(pairwise_diff, dim=-1)
+
+    # Ignore self-distances by setting diagonal elements to 1000
+    mask = torch.eye(cable_directions.shape[1], device=env.device).unsqueeze(0).unsqueeze(-1)  # Shape: (1, num_cables, num_cables, 1)
+    pairwise_distances = pairwise_distances + mask * 1000
+
+    # Find the minimum distance across all cable pairs and points in each environment
+    min_distances, _ = torch.min(pairwise_distances.view(env.num_envs, -1), dim=-1)  # Shape: (num_envs,)
+
+    # Check if the minimum distance is below the threshold
+    is_cable_collision = min_distances < threshold  # Shape: (num_envs,)
+
+    assert is_cable_collision.shape == (env.num_envs,)
+    return is_cable_collision
+
 
 def payload_target_distance(
         env: ManagerBasedRLEnv, threshold: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

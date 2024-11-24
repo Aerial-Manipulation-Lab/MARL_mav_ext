@@ -258,6 +258,11 @@ class TerminationsCfg:
 
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
 
+    nan_observations = DoneTerm(func=mdp.nan_obs, params={"group_name": "policy"})
+
+    cables_collide = DoneTerm(func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2, "num_points": 10})
+
+
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
