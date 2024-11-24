@@ -302,8 +302,19 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in action values."""
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
-    action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
-    scaling_factor = 5 / 4 # 4 is the amount of inputs (pos, vel, acc, jerk)
+    # in the case of 4 input terms
+    ref_pos_0 = action[..., :3]
+    ref_pos_1 = action[..., 12:15]
+    ref_pos_2 = action[..., 24:27]
+    pref_ref_pos_0 = action_prev[..., :3]
+    pref_ref_pos_1 = action_prev[..., 12:15]
+    pref_ref_pos_2 = action_prev[..., 24:27]
+
+    ref_pos = torch.cat((ref_pos_0, ref_pos_1, ref_pos_2), dim=1)
+    pref_ref_pos = torch.cat((pref_ref_pos_0, pref_ref_pos_1, pref_ref_pos_2), dim=1)
+
+    action_smoothness = torch.norm((ref_pos - pref_ref_pos) / num_drones, dim=-1)
+    scaling_factor = 5
     reward_action_smoothness = torch.exp(-action_smoothness * scaling_factor)
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
