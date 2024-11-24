@@ -20,6 +20,7 @@ from omni.isaac.lab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Play a checkpoint of an RL agent from skrl.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--save_plots", action="store_true", default=False, help="Save plots during training.")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
@@ -172,7 +173,8 @@ def main():
             # agent stepping
             actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
             # env stepping
-            plotter.collect_data()
+            if env.num_envs ==1:
+                plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
 
         timestep += 1
@@ -184,8 +186,14 @@ def main():
     # close the simulator
     env.close()
     
-    plot_path = os.path.join(log_dir, "plots", "play")
-    plotter.plot(save=True, save_dir=plot_path)
+    if env.num_envs==1:
+        if args_cli.save_plots:
+            # save plots
+            plot_path = os.path.join(log_dir, "plots", "play")  
+            plotter.plot(save=True, save_dir=plot_path)
+        else:
+            # show plots
+            plotter.plot(save=False)
 
 if __name__ == "__main__":
     # run the main function
