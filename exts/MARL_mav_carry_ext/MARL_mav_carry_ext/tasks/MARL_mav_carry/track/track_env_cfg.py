@@ -253,7 +253,7 @@ class TerminationsCfg:
 
     nan_observation = DoneTerm(func=mdp.nan_obs, params={"group_name": "policy"})
 
-    cables_collide = DoneTerm(func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2, "num_points": 10})
+    cables_collide = DoneTerm(func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1, "num_points": 6})
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.4})
 

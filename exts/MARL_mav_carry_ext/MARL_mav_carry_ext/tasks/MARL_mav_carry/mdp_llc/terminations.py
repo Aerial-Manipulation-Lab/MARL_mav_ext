@@ -179,21 +179,28 @@ def cable_collision(
     # Compute cable points (num_envs, num_cables, num_points, 3)
     cable_points = cable_bottom_pos_env.unsqueeze(2) + linspace_points * cable_directions.unsqueeze(2)  # (num_envs, num_cables, num_points, 3)
 
-    # Expand cable points for pairwise comparison
-    cable_points_a = cable_points.unsqueeze(2)  # (num_envs, num_cables, 1, num_points, 3)
-    cable_points_b = cable_points.unsqueeze(1)  # (num_envs, 1, num_cables, num_points, 3)
+    # Flatten cable points for easier distance calculation (num_envs, num_cables * num_points, 3)
+    cable_points_flat = cable_points.view(env.num_envs, -1, 3)
 
-    # Compute pairwise differences (num_envs, num_cables, num_cables, num_points, 3)
-    pairwise_diff = cable_points_a - cable_points_b
+    # Pairwise distance calculation
+    cable_points_a = cable_points_flat.unsqueeze(2)  # (num_envs, num_points_total, 1, 3)
+    cable_points_b = cable_points_flat.unsqueeze(1)  # (num_envs, 1, num_points_total, 3)
+    pairwise_diff = cable_points_a - cable_points_b  # (num_envs, num_points_total, num_points_total, 3)
+    pairwise_distances = torch.norm(pairwise_diff, dim=-1)  # (num_envs, num_points_total, num_points_total)
 
-    # Compute pairwise Euclidean distances (num_envs, num_cables, num_cables, num_points)
-    pairwise_distances = torch.norm(pairwise_diff, dim=-1)
+    # Mask to ignore self-distances and distances within the same cable
+    num_cables = cable_bottom_pos_env.shape[1]
+    points_per_cable = num_points
 
-    # Ignore self-distances by setting diagonal elements to 1000
-    mask = torch.eye(cable_directions.shape[1], device=env.device).unsqueeze(0).unsqueeze(-1)  # Shape: (1, num_cables, num_cables, 1)
-    pairwise_distances = pairwise_distances + mask * 1000
+    # Create mask to ignore points on the same cable
+    cable_indices = torch.arange(num_cables, device=env.device).repeat_interleave(points_per_cable)  # (num_points_total,)
+    same_cable_mask = cable_indices.unsqueeze(0) == cable_indices.unsqueeze(1)  # (num_points_total, num_points_total)
+    same_cable_mask = same_cable_mask.unsqueeze(0).expand(env.num_envs, -1, -1)  # (num_envs, num_points_total, num_points_total)
 
-    # Find the minimum distance across all cable pairs and points in each environment
+    # Apply mask: set ignored distances to a large value
+    pairwise_distances[same_cable_mask] = 1000.0
+
+    # Find the minimum distance across all points in each environment
     min_distances, _ = torch.min(pairwise_distances.view(env.num_envs, -1), dim=-1)  # Shape: (num_envs,)
 
     # Check if the minimum distance is below the threshold
