@@ -50,12 +50,12 @@ if debug_vis_reward:
 
 
 def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
-    """Test reward function."""
+    """Separation reward function."""
     safe_distance = 0.44  # smallest distance where drones are just upright
     robot = env.scene[asset_cfg.name]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
-    pdist = get_drone_pdist(pdist)
+    pdist = get_drone_pdist(rpos)
     separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
     reward_separation = torch.square(separation / safe_distance).clamp(0, 1)
 

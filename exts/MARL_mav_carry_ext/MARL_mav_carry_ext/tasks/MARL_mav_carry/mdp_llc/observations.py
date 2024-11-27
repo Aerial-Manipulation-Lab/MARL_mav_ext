@@ -1,7 +1,7 @@
 import torch
 
 from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.envs import ManagerBasedEnv
+from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils.math import quat_conjugate, quat_inv, quat_mul
 
@@ -21,7 +21,7 @@ payload_idx = [0]
 drone_idx = [17, 18, 19]
 base_rope_idx = [8, 9, 10]
 
-def payload_position(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def payload_position(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload pose xyz, quat in env frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     payload_world_frame = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
@@ -29,14 +29,14 @@ def payload_position(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEnti
     return payload_env_frame.view(env.num_envs, -1)
 
 
-def payload_orientation(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def payload_orientation(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     return robot.data.body_state_w[:, payload_idx, 3:7].view(env.num_envs, -1)
 
 
 def payload_linear_velocities(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload linear velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -44,7 +44,7 @@ def payload_linear_velocities(
 
 
 def payload_angular_velocities(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload angular velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -52,7 +52,7 @@ def payload_angular_velocities(
 
 
 def payload_linear_acceleration(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload linear acceleration in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -60,7 +60,7 @@ def payload_linear_acceleration(
 
 
 def payload_angular_acceleration(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload angular acceleration in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -68,7 +68,7 @@ def payload_angular_acceleration(
 
 
 def payload_positional_error(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload position error."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -80,7 +80,7 @@ def payload_positional_error(
 
 
 def payload_orientation_error(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload orientation error."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -91,7 +91,7 @@ def payload_orientation_error(
 
 
 def payload_linear_velocity_error(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload linear velocity error."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -103,7 +103,7 @@ def payload_linear_velocity_error(
 
 
 def payload_angular_velocity_error(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload angular velocity error."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -114,7 +114,7 @@ def payload_angular_velocity_error(
     return ang_vel_error
 
 
-def cable_angle(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def cable_angle(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Angle of cable between cable and payload."""
     robot: Articulation = env.scene[asset_cfg.name]
     rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
@@ -131,7 +131,7 @@ Observations for the drones
 """
 
 
-def drone_positions(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_positions(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone positions xyz in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
@@ -139,26 +139,26 @@ def drone_positions(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     return drone_pos_env_frame.view(env.num_envs, -1)
 
 
-def drone_orientations(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_orientations(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     return robot.data.body_state_w[:, drone_idx, 3:7].view(env.num_envs, -1)
 
 
-def drone_linear_velocities(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_linear_velocities(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone linear velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     return robot.data.body_state_w[:, drone_idx, 7:10].view(env.num_envs, -1)
 
 
-def drone_angular_velocities(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_angular_velocities(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone angular velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     return robot.data.body_state_w[:, drone_idx, 10:].view(env.num_envs, -1)
 
 
 def drone_linear_acceleration(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Drone linear acceleration in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -166,7 +166,7 @@ def drone_linear_acceleration(
 
 
 def drone_angular_acceleration(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Drone angular acceleration in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -176,7 +176,7 @@ def drone_angular_acceleration(
 # relative drone positions
 
 
-def payload_drone_rpos(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def payload_drone_rpos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Relative position of the payload from the drone."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
@@ -185,7 +185,7 @@ def payload_drone_rpos(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEn
     return rpos.view(env.num_envs, -1)
 
 
-def drone_rpos_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_rpos_obs(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Relative position of the drones from each other."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
@@ -193,7 +193,7 @@ def drone_rpos_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntity
     return rpos.view(env.num_envs, -1)
 
 
-def drone_pdist_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_pdist_obs(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Euclidean distance between drones."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
@@ -204,7 +204,7 @@ def drone_pdist_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
 # Observations for when sampling multiple points on a trajectory
 
 def payload_positional_error_traj(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload position error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -216,7 +216,7 @@ def payload_positional_error_traj(
 
 
 def payload_orientation_error_traj(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload orientation error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -227,7 +227,7 @@ def payload_orientation_error_traj(
 
 
 def payload_linear_velocity_error_traj(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload linear velocity error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -238,7 +238,7 @@ def payload_linear_velocity_error_traj(
 
 
 def payload_angular_velocity_error_traj(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload angular velocity error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -248,7 +248,7 @@ def payload_angular_velocity_error_traj(
     return ang_vel_error
 
 def payload_linear_acc_error_traj(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload linear acceleration error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -258,7 +258,7 @@ def payload_linear_acc_error_traj(
     return lin_acc_error
 
 def payload_angular_acc_error_traj(
-    env: ManagerBasedEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Payload angular acceleration error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]

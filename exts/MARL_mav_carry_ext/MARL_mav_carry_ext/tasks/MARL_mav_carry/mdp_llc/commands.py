@@ -20,7 +20,7 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.math import combine_frame_transforms, compute_pose_error, quat_from_euler_xyz, quat_unique
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedEnv
+    from omni.isaac.lab.envs import ManagerBasedRLEnv
 
 
 class UniformPoseCommandGlobal(CommandTerm):
@@ -45,7 +45,7 @@ class UniformPoseCommandGlobal(CommandTerm):
     cfg: UniformPoseCommandGlobalCfg
     """Configuration for the command generator."""
 
-    def __init__(self, cfg: UniformPoseCommandGlobalCfg, env: ManagerBasedEnv):
+    def __init__(self, cfg: UniformPoseCommandGlobalCfg, env: ManagerBasedRLEnv):
         """Initialize the command generator class.
 
         Args:
@@ -207,7 +207,7 @@ class RefTrajectoryCommand(CommandTerm):
     cfg: RefTrajectoryCommandCfg
     """Configuration for the command generator."""
 
-    def __init__(self, cfg: UniformPoseCommandGlobalCfg, env: ManagerBasedEnv):
+    def __init__(self, cfg: UniformPoseCommandGlobalCfg, env: ManagerBasedRLEnv):
         """Initialize the command generator class.
 
         Args:
@@ -233,6 +233,7 @@ class RefTrajectoryCommand(CommandTerm):
         self.twist_command = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
         self.acc_command = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
         self.sim_time = torch.zeros(self.num_envs, device=self.device)
+        self.reset_states = torch.zeros(self.num_envs, 3, device=self.device)
 
         # -- metrics
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
@@ -291,12 +292,18 @@ class RefTrajectoryCommand(CommandTerm):
         )
 
     def _resample_command(self, env_ids: Sequence[int]):
-        # reset sim time to 0 of the selected envs
-        self.sim_time[env_ids] = 0.0
+        # sample random sim time for resetted envs between 0 and the max time of the reference trajectory
+        self.sim_time[env_ids] = torch.rand_like(self.sim_time[env_ids], device=self.device) * self.reference[0, -1, 0]
+
+        # time-based sampling of where the new initial states should be, used for reset of specific env_ids in eventmanager
+        sampled_states = self.reference[:, :, 0] > self.sim_time.unsqueeze(1)
+        states_idx = torch.argmax(sampled_states.float(), dim=1)
+        self.reset_states = self.reference[:, states_idx.data[0]].unsqueeze(1)[..., 1:4] # only position
 
     def _update_command(self):
         """Update the sim time of each env and do time based sampling of the reference trajectory."""
         # get the time range of the reference trajectory
+        print("The sim time is ", self.sim_time)
         if self.num_points > 1:
             timestamps = self.sim_time.unsqueeze(1) + torch.arange(self.num_points, device=self.device) / ((self.num_points - 1)/ self.time_horizon) 
             timestamps = torch.clamp(timestamps, max=self.reference[:, -2, 0].unsqueeze(1))
