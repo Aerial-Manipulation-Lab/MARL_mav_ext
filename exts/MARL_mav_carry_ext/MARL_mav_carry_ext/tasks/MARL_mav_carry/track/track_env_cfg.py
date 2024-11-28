@@ -60,6 +60,7 @@ class CommandsCfg:
         ),
         num_points=4,
         time_horizon=2.5,
+        random_init=True,
     )
 
 
@@ -130,37 +131,14 @@ class EventCfg:
     Resetting states on resets, disturbances, etc.
     """
 
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (2.7, 2.7),
-    #             "y": (0.0, 0.0),
-    #             "z": (1.0, 1.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (0.0, 0.0),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (-0.0, 0.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #     },
-    # )
-
     reset_base = EventTerm(
         func=mdp.reset_root_state_ref_trajectory,
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.5, 0.5),
-                "y": (-0.5, 0.5),
-                "z": (-0.5, 0.5),
+                "x": (-0.3, 0.3),
+                "y": (-0.3, 0.3),
+                "z": (-0.3, 0.3),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
                 "yaw": (-math.pi, math.pi),

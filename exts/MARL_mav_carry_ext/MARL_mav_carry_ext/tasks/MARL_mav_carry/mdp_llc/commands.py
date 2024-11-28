@@ -293,8 +293,10 @@ class RefTrajectoryCommand(CommandTerm):
 
     def _resample_command(self, env_ids: Sequence[int]):
         # sample random sim time for resetted envs between 0 and the max time of the reference trajectory - 10 seconds
-        self.sim_time[env_ids] = torch.rand_like(self.sim_time[env_ids], device=self.device) * (self.reference[0, -1, 0] - 10.0)
-
+        if self.cfg.random_init:
+            self.sim_time[env_ids] = torch.rand_like(self.sim_time[env_ids], device=self.device) * (self.reference[0, -1, 0] - 10.0)
+        else: 
+            self.sim_time[env_ids] = torch.zeros_like(self.sim_time[env_ids])
         # time-based sampling of where the new initial states should be, used for reset of specific env_ids in eventmanager
         sampled_states = self.reference[:, :, 0] > self.sim_time.unsqueeze(1)
         states_idx = torch.argmax(sampled_states.float(), dim=1)
@@ -401,3 +403,5 @@ class RefTrajectoryCommandCfg(CommandTermCfg):
     """Number of points in the reference trajectory."""
     time_horizon: float = MISSING
     """Time horizon of the number of points sampled from the reference trajectory."""
+    random_init = True
+    """Whether to randomly initialize drones along the reference trajectory or not."""
