@@ -130,17 +130,40 @@ class EventCfg:
     Resetting states on resets, disturbances, etc.
     """
 
+    # reset_base = EventTerm(
+    #     func=mdp.reset_root_state_uniform,
+    #     mode="reset",
+    #     params={
+    #         "pose_range": {
+    #             "x": (2.7, 2.7),
+    #             "y": (0.0, 0.0),
+    #             "z": (1.0, 1.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (0.0, 0.0),
+    #         },
+    #         "velocity_range": {
+    #             "x": (-0.0, 0.0),
+    #             "y": (-0.0, 0.0),
+    #             "z": (-0.0, 0.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (-0.0, 0.0),
+    #         },
+    #     },
+    # )
+
     reset_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
+        func=mdp.reset_root_state_ref_trajectory,
         mode="reset",
         params={
             "pose_range": {
-                "x": (2.7, 2.7),
-                "y": (0.0, 0.0),
-                "z": (1.0, 1.0),
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (-0.5, 0.5),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
-                "yaw": (0.0, 0.0),
+                "yaw": (-math.pi, math.pi),
             },
             "velocity_range": {
                 "x": (-0.0, 0.0),
@@ -150,6 +173,7 @@ class EventCfg:
                 "pitch": (-0.0, 0.0),
                 "yaw": (-0.0, 0.0),
             },
+            "command_term": "pose_twist_command",
         },
     )
 
@@ -201,10 +225,10 @@ class RewardsCfg:
         params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
     )
 
-    policy_action_smoothness = RewTerm(
-        func=mdp.action_smoothness_reward,
-        weight=1.0,
-    )
+    # policy_action_smoothness = RewTerm(
+    #     func=mdp.action_smoothness_reward,
+    #     weight=1.0,
+    # )
 
     force_penalty = RewTerm(
         func=mdp.action_penalty_rel,
@@ -218,7 +242,7 @@ class RewardsCfg:
 
     downwash_reward = RewTerm(
         func=mdp.downwash_reward,
-        weight=0.5,
+        weight=1.0,
     )
 
 
@@ -260,6 +284,8 @@ class TerminationsCfg:
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
     target_too_far = DoneTerm(func=mdp.payload_target_distance, params={"threshold": 1.0, "command_name": "pose_twist_command"})
+
+    exceed_sim_time = DoneTerm(func=mdp.sim_time_exceed, params={"command_name": "pose_twist_command"}, time_out=True)
 
 @configclass
 class CurriculumCfg:

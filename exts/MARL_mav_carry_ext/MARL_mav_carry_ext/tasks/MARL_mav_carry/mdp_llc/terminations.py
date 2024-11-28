@@ -232,3 +232,13 @@ def payload_target_distance(
 
     assert is_target_far.shape == (env.num_envs,)
     return is_target_far
+
+def sim_time_exceed(
+    env: ManagerBasedRLEnv, command_name: str = "pose_twist_command"
+) -> torch.Tensor:
+    """Terminate when the simulation time exceeds the threshold (end of reference trajectory)."""
+    command_term = env.command_manager._terms[command_name]
+    is_sim_time_exceeded = command_term.sim_time > command_term.reference[0, -1, 0]
+
+    assert is_sim_time_exceeded.shape == (env.num_envs,)
+    return is_sim_time_exceeded

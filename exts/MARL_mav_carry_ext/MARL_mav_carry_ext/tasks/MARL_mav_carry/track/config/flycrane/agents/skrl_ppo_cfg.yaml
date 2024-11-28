@@ -44,7 +44,7 @@ memory:
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html
 agent:
   class: PPO
-  rollouts: 24
+  rollouts: 128
   learning_epochs: 5
   mini_batches: 4
   discount_factor: 0.99
@@ -71,9 +71,9 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "flycrane_rod_track_ppo"
-    experiment_name: "only_pose_rew"
+    experiment_name: "delete_me"
     write_interval: 100
-    checkpoint_interval: 5000
+    checkpoint_interval: 2500
 
     # wandb: True
 
