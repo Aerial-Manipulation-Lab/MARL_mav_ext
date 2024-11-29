@@ -71,7 +71,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "flycrane_rod_track_ppo"
-    experiment_name: "delete_me"
+    experiment_name: "random_tracks"
     write_interval: 100
     checkpoint_interval: 2500
 

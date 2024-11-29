@@ -235,7 +235,6 @@ class RefTrajectoryCommand(CommandTerm):
         self.twist_command = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
         self.acc_command = torch.zeros(self.num_envs, self.num_points, 6, device=self.device)
         self.sim_time = torch.zeros(self.num_envs, device=self.device)
-        self.reset_states = torch.zeros(self.num_envs, 3, device=self.device)
 
         # -- metrics
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
@@ -294,18 +293,12 @@ class RefTrajectoryCommand(CommandTerm):
         )
 
     def _resample_command(self, env_ids: Sequence[int]):
-        # assign random trajectory to each env
-        self.reference[env_ids] = self.reference_buffer[torch.randint(0, self.reference_buffer.shape[0], (len(env_ids),), device=self.device)]
-
+        # NOTE: Assigning new random reference trajectory and resetting to the starting point of that reference happens in the EventManager
         # sample random sim time for resetted envs between 0 and the max time of the reference trajectory - 10 seconds
         if self.cfg.random_init:
             self.sim_time[env_ids] = torch.rand_like(self.sim_time[env_ids], device=self.device) * (self.reference[0, -1, 0] - 10.0)
         else: 
             self.sim_time[env_ids] = torch.zeros_like(self.sim_time[env_ids])
-        # time-based sampling of where the new initial states should be, used for reset of specific env_ids in eventmanager
-        sampled_states = self.reference[:, :, 0] > self.sim_time.unsqueeze(1)
-        states_idx = torch.argmax(sampled_states.float(), dim=1)
-        self.reset_states = self.reference[:, states_idx.data[0]][..., 1:4] # only position
 
     def _update_command(self):
         """Update the sim time of each env and do time based sampling of the reference trajectory."""
