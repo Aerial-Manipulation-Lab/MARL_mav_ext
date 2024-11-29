@@ -9,6 +9,7 @@ profile.sh
 *.svg
 *.sqlite3
 *.db
+reference_trajectories/
 
 # remove spline things for now
 scripts/MARL_mav_carry/testing_scripts/spline_test/
