@@ -76,13 +76,13 @@ def main():
         [
             [
                 2.7,
-                -0.9,
+                -0.5,
                 2.5,  # drone 1
                 2.0,
                 0.0,
                 2.5,  # drone 2
                 2.7,
-                0.9,
+                0.5,
                 2.5,
             ]
         ],
@@ -110,12 +110,13 @@ def main():
         with torch.inference_mode():
             # reset
             if count % 500 == 0:
-                env.reset()
+                # env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:] = stretch_position
-                waypoint[1] = straight_up_position
+                waypoint[:, :3] = stretch_position[:, :3]
+                waypoint[:, 12:15] = stretch_position[:, 3:6]
+                waypoint[:, 24:27] = stretch_position[:, 6:9]
                 # waypoint[1] = straight_up_position
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)

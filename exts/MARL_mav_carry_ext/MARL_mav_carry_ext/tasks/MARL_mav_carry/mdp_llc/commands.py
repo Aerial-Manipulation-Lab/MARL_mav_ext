@@ -218,7 +218,9 @@ class RefTrajectoryCommand(CommandTerm):
         super().__init__(cfg, env)
 
         # parameters for the trajectory
-        self.reference = cfg.reference_trajectory.repeat(self.num_envs, 1, 1)
+        self.reference_buffer = cfg.reference_trajectories
+        _, num_setpoints, num_dimensions = self.reference_buffer.shape
+        self.reference = torch.zeros(self.num_envs, num_setpoints, num_dimensions, device=self.device)
         self.num_points = cfg.num_points
         self.time_horizon = cfg.time_horizon
 
@@ -292,6 +294,9 @@ class RefTrajectoryCommand(CommandTerm):
         )
 
     def _resample_command(self, env_ids: Sequence[int]):
+        # assign random trajectory to each env
+        self.reference[env_ids] = self.reference_buffer[torch.randint(0, self.reference_buffer.shape[0], (len(env_ids),), device=self.device)]
+
         # sample random sim time for resetted envs between 0 and the max time of the reference trajectory - 10 seconds
         if self.cfg.random_init:
             self.sim_time[env_ids] = torch.rand_like(self.sim_time[env_ids], device=self.device) * (self.reference[0, -1, 0] - 10.0)
@@ -397,8 +402,8 @@ class RefTrajectoryCommandCfg(CommandTermCfg):
     If True, the quaternion is made unique by ensuring the real part is positive.
     """
 
-    reference_trajectory: torch.Tensor = MISSING
-    """Reference trajectory to sample the commands from."""
+    reference_trajectories: torch.Tensor = MISSING
+    """Reference trajectory buffer to sample the trajectories from."""
     num_points: int = MISSING
     """Number of points in the reference trajectory."""
     time_horizon: float = MISSING

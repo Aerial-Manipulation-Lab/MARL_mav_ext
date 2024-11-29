@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 
 import MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc as mdp
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_from_csv
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_folder_from_csv
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
@@ -55,12 +55,12 @@ class CommandsCfg:
         body_name="load_link",
         resampling_time_range=(40, 40),  # out of range of max episode length for now
         debug_vis=True,
-        reference_trajectory=import_ref_from_csv(
-            "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/testing_scripts/test_trajectories/figure_eight_v1_a05_yaw025.csv"
+        reference_trajectories=import_ref_folder_from_csv(
+            "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/reference_trajectories/level_1"
         ),
         num_points=4,
         time_horizon=2.5,
-        random_init=True,
+        random_init=False,
     )
 
 
@@ -136,9 +136,9 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.3, 0.3),
-                "y": (-0.3, 0.3),
-                "z": (-0.3, 0.3),
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (-0.5, 0.5),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
                 "yaw": (-math.pi, math.pi),
@@ -181,7 +181,7 @@ class RewardsCfg:
 
     position_reward = RewTerm(
         func=mdp.track_payload_pos_command,
-        weight=1.5,
+        weight=3.0,
         params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -248,7 +248,7 @@ class TerminationsCfg:
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
     angle_load_cable = DoneTerm(
-        func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
+        func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.00}
     )
 
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
@@ -261,9 +261,9 @@ class TerminationsCfg:
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
-    target_too_far = DoneTerm(func=mdp.payload_target_distance, params={"threshold": 1.0, "command_name": "pose_twist_command"})
+    target_too_far = DoneTerm(func=mdp.payload_target_distance, params={"threshold": 1.5, "command_name": "pose_twist_command"})
 
-    exceed_sim_time = DoneTerm(func=mdp.sim_time_exceed, params={"command_name": "pose_twist_command"}, time_out=True)
+    # exceed_sim_time = DoneTerm(func=mdp.sim_time_exceed, params={"command_name": "pose_twist_command"}, time_out=True)
 
 @configclass
 class CurriculumCfg:
