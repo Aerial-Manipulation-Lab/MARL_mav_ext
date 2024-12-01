@@ -46,7 +46,7 @@ agent:
   class: PPO
   rollouts: 128
   learning_epochs: 5
-  mini_batches: 4
+  mini_batches: 1
   discount_factor: 0.99
   lambda: 0.95
   learning_rate: 1.0e-03
@@ -71,7 +71,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "flycrane_rod_track_ppo"
-    experiment_name: "random_tracks"
+    experiment_name: "delete_me"
     write_interval: 100
     checkpoint_interval: 2500
 

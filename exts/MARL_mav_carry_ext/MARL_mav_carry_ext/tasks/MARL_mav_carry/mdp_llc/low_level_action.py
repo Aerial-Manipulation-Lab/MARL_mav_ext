@@ -86,13 +86,13 @@ class LowLevelAction(ActionTerm):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
+            drone_positions = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)).view(self.num_envs, -1)
             observations = self._env.observation_manager.compute_group("policy")
-            drone_positions = observations[:, 19:28]
-            drone_orientations = observations[:, 28:40]
-            drone_linear_velocities = observations[:, 40:49]
-            drone_angular_velocities = observations[:, 49:58]
-            drone_linear_accelerations = observations[:, 58:67]
-            drone_angular_accelerations = observations[:, 67:76]
+            drone_orientations = observations[:, 16:28]
+            drone_linear_velocities = observations[:, 28:37]
+            drone_angular_velocities = observations[:, 37:46]
+            drone_linear_accelerations = observations[:, 46:55]
+            drone_angular_accelerations = observations[:, 55:64]
 
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
