@@ -277,3 +277,11 @@ def payload_angular_acc_error_traj(
     desired_ang_acc = env.command_manager.get_command(command_name)[..., 3:6]
     ang_acc_error = (desired_ang_acc - payload_ang_acc).view(env.num_envs, -1)
     return ang_acc_error
+
+def wall_state(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("wall")
+) -> torch.Tensor:
+    """Get the wall state."""
+    wall = env.scene[asset_cfg.name]
+    wall_pos = wall.data.body_state_w[:, 0, :3].view(env.num_envs, -1) - env.scene.env_origins
+    return wall_pos

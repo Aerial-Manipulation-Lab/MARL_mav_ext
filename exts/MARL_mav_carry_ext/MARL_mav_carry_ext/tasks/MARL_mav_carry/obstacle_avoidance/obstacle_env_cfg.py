@@ -6,7 +6,7 @@ import MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc as mdp
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_folder_from_csv
 
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
@@ -19,7 +19,7 @@ from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
-
+import omni.isaac.lab.sim as sim_utils
 # Define the scene configuration
 
 
@@ -43,6 +43,19 @@ class CarryingSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
     )
 
+    # obstacles
+    wall: RigidObjectCfg = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/wall",
+        spawn=sim_utils.CuboidCfg(
+            size=(0.1, 1.5, 3.0),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+            mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
+            collision_props=sim_utils.CollisionPropertiesCfg(),
+            visual_material=sim_utils.PreviewSurfaceCfg(),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 1.5)),
+    )
+
 
 # MDP settings
 
@@ -51,19 +64,20 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Commands for the tracking task"""
 
-    pose_twist_command = mdp.RefTrajectoryCommandCfg(
+    pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(40, 40),  # out of range of max episode length for now
-        debug_vis=True,
-        reference_trajectories=import_ref_folder_from_csv(
-            "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/reference_trajectories/quick_test"
+        resampling_time_range=(20, 20),  # out of range of max episode length for now
+        debug_vis=False,
+        ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
+            pos_x=(-2.0, -1.5),
+            pos_y=(-0.5, 0.5),
+            pos_z=(1.0, 1.5),
+            roll=(-math.pi / 4, math.pi / 4),
+            pitch=(-math.pi / 4, math.pi / 4),
+            yaw=(-math.pi, math.pi),
         ),
-        num_points=4,
-        time_horizon=2.5,
-        random_init=False,
     )
-
 
 @configclass
 class ActionsCfg:
@@ -100,30 +114,17 @@ class ObservationsCfg:
         drone_angular_accelerations = ObsTerm(func=mdp.drone_angular_acceleration)
 
         # goal error terms
-        payload_positional_error = ObsTerm(
-            func=mdp.payload_positional_error_traj, params={"command_name": "pose_twist_command"}
-        )
-        payload_orientation_error = ObsTerm(
-            func=mdp.payload_orientation_error_traj, params={"command_name": "pose_twist_command"}
-        )
-        payload_linear_velocity_error = ObsTerm(
-            func=mdp.payload_linear_velocity_error_traj, params={"command_name": "pose_twist_command"}
-        )
-        payload_angular_velocity_error = ObsTerm(
-            func=mdp.payload_angular_velocity_error_traj, params={"command_name": "pose_twist_command"}
-        )
-        payload_linear_acceleration_error = ObsTerm(
-            func=mdp.payload_linear_acc_error_traj, params={"command_name": "pose_twist_command"}
-        )
-        payload_angular_acceleration_error = ObsTerm(
-            func=mdp.payload_angular_acc_error_traj, params={"command_name": "pose_twist_command"}
-        )
+        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_command"})
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_command"})
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
         drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
         drone_pdist = ObsTerm(func=mdp.drone_pdist_obs)
         cable_angle = ObsTerm(func=mdp.cable_angle)
+
+        # obstacle terms
+        wall_state = ObsTerm(func=mdp.wall_state)
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations
@@ -141,26 +142,25 @@ class EventCfg:
     """
 
     reset_base = EventTerm(
-        func=mdp.reset_root_state_ref_trajectory,
+        func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
             "pose_range": {
-                "x": (0, 0),
-                "y": (0, 0),
-                "z": (0, 0),
-                "roll": (0, 0),
-                "pitch": (0, 0),
-                "yaw": (0, 0),
+                "x": (2.5, 3.0),
+                "y": (-0.5, 0.5),
+                "z": (1.0, 1.5),
+                "roll":(-math.pi / 4, math.pi / 4),
+                "pitch":(-math.pi / 4, math.pi / 4),
+                "yaw":(-math.pi, math.pi),
             },
             "velocity_range": {
-                "x": (0, 0),
-                "y": (0, 0),
-                "z": (0, 0),
-                "roll": (0, 0),
-                "pitch": (0, 0),
-                "yaw": (0, 0),
+                "x": (-0.0, 0.0),
+                "y": (-0.0, 0.0),
+                "z": (-0.0, 0.0),
+                "roll": (-0.0, 0.0),
+                "pitch": (-0.0, 0.0),
+                "yaw": (-0.0, 0.0),
             },
-            "command_term": "pose_twist_command",
         },
     )
 
@@ -191,25 +191,13 @@ class RewardsCfg:
     position_reward = RewTerm(
         func=mdp.track_payload_pos_command,
         weight=3.0,
-        params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
+        params={"command_name": "pose_command", "asset_cfg": SceneEntityCfg("robot")},
     )
 
     orientation_reward = RewTerm(
         func=mdp.track_payload_orientation_command,
         weight=8.0,
-        params={"command_name": "pose_twist_command", "debug_vis": False, "asset_cfg": SceneEntityCfg("robot")},
-    )
-
-    linear_velocity_reward = RewTerm(
-        func=mdp.track_payload_lin_vel_command,
-        weight=1.5,
-        params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
-    )
-
-    angular_velocity_reward = RewTerm(
-        func=mdp.track_payload_ang_vel_command,
-        weight=1.5,
-        params={"command_name": "pose_twist_command", "asset_cfg": SceneEntityCfg("robot")},
+        params={"command_name": "pose_command", "debug_vis": False, "asset_cfg": SceneEntityCfg("robot")},
     )
 
     # policy_action_smoothness = RewTerm(
@@ -270,13 +258,7 @@ class TerminationsCfg:
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.4})
 
-    bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
-
-    target_too_far = DoneTerm(
-        func=mdp.payload_target_distance, params={"threshold": 1.5, "command_name": "pose_twist_command"}
-    )
-
-    # exceed_sim_time = DoneTerm(func=mdp.sim_time_exceed, params={"command_name": "pose_twist_command"}, time_out=True)
+    bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 20.0})
 
 
 @configclass
@@ -287,10 +269,10 @@ class CurriculumCfg:
 
 
 @configclass
-class TrackEnvCfg(ManagerBasedRLEnvCfg):
+class ObstacleEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the hovering task."""
 
-    scene: CarryingSceneCfg = CarryingSceneCfg(num_envs=1, env_spacing=4.0)
+    scene: CarryingSceneCfg = CarryingSceneCfg(num_envs=1, env_spacing=8.0)
     commands: CommandsCfg = CommandsCfg()
     actions: ActionsCfg = ActionsCfg()
     observations: ObservationsCfg = ObservationsCfg()
