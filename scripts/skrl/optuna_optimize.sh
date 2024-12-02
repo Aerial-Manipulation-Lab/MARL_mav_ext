@@ -57,6 +57,10 @@ for ((i=1; i<=NUM_TRIALS; i++)); do
     FINAL_REWARD=$(echo "$TRIAL_OUTPUT" | grep -oP 'Mean rewards are \K\d+(\.\d+)?')
     echo "The final reward is $FINAL_REWARD"
 
+    if [[ -z "$FINAL_REWARD" ]]; then
+        echo "$TRIAL_OUTPUT"
+    fi
+
     # Report the trial results
     optuna tell --storage $STORAGE_URL --study-name $STUDY_NAME --trial-number $TRIAL_ID --values $FINAL_REWARD --state complete
 done
