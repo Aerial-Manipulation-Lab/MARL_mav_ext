@@ -10,6 +10,8 @@
 
 Author - [Jack Zeng](https://github.com/Jackkert)
 
+https://github.com/user-attachments/assets/3d6d4698-90ec-46e8-8f35-58d5e9d59d81
+
 ## Overview
 This repository is an NVIDIA Isaac Lab extension that contains the environment and algorithm to control a multi-drone transport system (flycrane). As of now, 3 task have been implemented:
 
