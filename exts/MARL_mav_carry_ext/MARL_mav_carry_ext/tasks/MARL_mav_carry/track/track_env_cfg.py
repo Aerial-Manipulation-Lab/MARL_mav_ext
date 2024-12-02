@@ -57,7 +57,7 @@ class CommandsCfg:
         resampling_time_range=(40, 40),  # out of range of max episode length for now
         debug_vis=True,
         reference_trajectories=import_ref_folder_from_csv(
-            "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/reference_trajectories/quick_test"
+            "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/reference_trajectories/level_1"
         ),
         num_points=4,
         time_horizon=2.5,
