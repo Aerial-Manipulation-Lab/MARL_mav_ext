@@ -39,7 +39,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     robot.spawn.activate_contact_sensors = True
 
     contact_forces = ContactSensorCfg(
-    prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
+        prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
     )
 
 
@@ -59,8 +59,8 @@ class CommandsCfg:
             pos_x=(-1.0, 1.0),
             pos_y=(-1.0, 1.0),
             pos_z=(0.5, 1.5),
-            roll=(-math.pi/4, math.pi/4),
-            pitch=(-math.pi/4, math.pi/4),
+            roll=(-math.pi / 4, math.pi / 4),
+            pitch=(-math.pi / 4, math.pi / 4),
             yaw=(-math.pi, math.pi),
         ),
     )
@@ -237,7 +237,6 @@ class TerminationsCfg:
     # end when sim times out
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
-
     illegal_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.1},
@@ -260,8 +259,9 @@ class TerminationsCfg:
 
     nan_observations = DoneTerm(func=mdp.nan_obs, params={"group_name": "policy"})
 
-    cables_collide = DoneTerm(func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2, "num_points": 10})
-
+    cables_collide = DoneTerm(
+        func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2, "num_points": 10}
+    )
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
 

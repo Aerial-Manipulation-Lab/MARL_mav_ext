@@ -43,6 +43,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
     )
 
+
 # MDP settings
 
 
@@ -105,10 +106,18 @@ class ObservationsCfg:
         payload_orientation_error = ObsTerm(
             func=mdp.payload_orientation_error_traj, params={"command_name": "pose_twist_command"}
         )
-        payload_linear_velocity_error = ObsTerm(func=mdp.payload_linear_velocity_error_traj, params={"command_name": "pose_twist_command"})
-        payload_angular_velocity_error = ObsTerm(func=mdp.payload_angular_velocity_error_traj, params={"command_name": "pose_twist_command"})
-        payload_linear_acceleration_error = ObsTerm(func=mdp.payload_linear_acc_error_traj, params={"command_name": "pose_twist_command"})
-        payload_angular_acceleration_error = ObsTerm(func=mdp.payload_angular_acc_error_traj, params={"command_name": "pose_twist_command"})
+        payload_linear_velocity_error = ObsTerm(
+            func=mdp.payload_linear_velocity_error_traj, params={"command_name": "pose_twist_command"}
+        )
+        payload_angular_velocity_error = ObsTerm(
+            func=mdp.payload_angular_velocity_error_traj, params={"command_name": "pose_twist_command"}
+        )
+        payload_linear_acceleration_error = ObsTerm(
+            func=mdp.payload_linear_acc_error_traj, params={"command_name": "pose_twist_command"}
+        )
+        payload_angular_acceleration_error = ObsTerm(
+            func=mdp.payload_angular_acc_error_traj, params={"command_name": "pose_twist_command"}
+        )
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
@@ -255,15 +264,20 @@ class TerminationsCfg:
 
     nan_observation = DoneTerm(func=mdp.nan_obs, params={"group_name": "policy"})
 
-    cables_collide = DoneTerm(func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.15, "num_points": 6})
+    cables_collide = DoneTerm(
+        func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.15, "num_points": 6}
+    )
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.4})
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
 
-    target_too_far = DoneTerm(func=mdp.payload_target_distance, params={"threshold": 1.5, "command_name": "pose_twist_command"})
+    target_too_far = DoneTerm(
+        func=mdp.payload_target_distance, params={"threshold": 1.5, "command_name": "pose_twist_command"}
+    )
 
     # exceed_sim_time = DoneTerm(func=mdp.sim_time_exceed, params={"command_name": "pose_twist_command"}, time_out=True)
+
 
 @configclass
 class CurriculumCfg:

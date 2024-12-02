@@ -92,6 +92,7 @@ from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
 
+
 def main():
     """Play with skrl agent."""
     # configure the ML framework into the global skrl variable
@@ -173,7 +174,7 @@ def main():
             # agent stepping
             actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
             # env stepping
-            if env.num_envs ==1:
+            if env.num_envs == 1:
                 plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
 
@@ -185,15 +186,16 @@ def main():
 
     # close the simulator
     env.close()
-    
-    if env.num_envs==1:
+
+    if env.num_envs == 1:
         if args_cli.save_plots:
             # save plots
-            plot_path = os.path.join(log_dir, "plots", "play")  
+            plot_path = os.path.join(log_dir, "plots", "play")
             plotter.plot(save=True, save_dir=plot_path)
         else:
             # show plots
             plotter.plot(save=False)
+
 
 if __name__ == "__main__":
     # run the main function

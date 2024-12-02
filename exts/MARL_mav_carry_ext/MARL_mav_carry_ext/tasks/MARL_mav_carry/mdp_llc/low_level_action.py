@@ -22,7 +22,7 @@ class LowLevelAction(ActionTerm):
 
     def __init__(self, cfg: LowLevelActionCfg, env: ManagerBasedRLEnv):
         super().__init__(cfg, env)
-        
+
         # simulation environment
         self._env = env
         self._robot = env.scene[cfg.asset_name]
@@ -106,7 +106,7 @@ class LowLevelAction(ActionTerm):
                 drone_states["lin_acc"] = drone_linear_accelerations[:, i * 3 : i * 3 + 3]
                 drone_states["ang_acc"] = drone_angular_accelerations[:, i * 3 : i * 3 + 3]
                 # calculate current jerk and snap
-                self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i])/(self._sim_dt)
+                self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
                 drone_states["jerk"] = self._drone_jerk[:, i]
                 self._drone_prev_acc[:, i] = drone_states["lin_acc"]
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import torch
 from typing import TYPE_CHECKING, Literal
-from omni.isaac.lab.managers import EventTermCfg, ManagerTermBase, SceneEntityCfg
-from omni.isaac.lab.assets import Articulation, DeformableObject, RigidObject
-import omni.isaac.lab.utils.math as math_utils
 
+import omni.isaac.lab.utils.math as math_utils
+from omni.isaac.lab.assets import Articulation, DeformableObject, RigidObject
+from omni.isaac.lab.managers import EventTermCfg, ManagerTermBase, SceneEntityCfg
 
 if TYPE_CHECKING:
     from omni.isaac.lab.envs import ManagerBasedRLEnv
@@ -38,18 +39,22 @@ def reset_root_state_ref_trajectory(
 
     # from reference buffer, find where to reset to
     command_manager_term = env.command_manager._terms[command_term]
-    command_manager_term.reference[env_ids] = command_manager_term.reference_buffer[torch.randint(0, command_manager_term.reference_buffer.shape[0], (len(env_ids),), device=env.device)]
-    
+    command_manager_term.reference[env_ids] = command_manager_term.reference_buffer[
+        torch.randint(0, command_manager_term.reference_buffer.shape[0], (len(env_ids),), device=env.device)
+    ]
+
     sampled_states = command_manager_term.reference[:, :, 0] > command_manager_term.sim_time.unsqueeze(1)
     states_idx = torch.argmax(sampled_states.float(), dim=1)
     reset_pose = command_manager_term.reference[:, states_idx.data[0]][..., 1:8]
-    
+
     # poses
     range_list = [pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
     ranges = torch.tensor(range_list, device=asset.device)
     rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=asset.device)
 
-    positions = root_states[:, 0:3] + env.scene.env_origins[env_ids] + rand_samples[:, 0:3] + reset_pose[env_ids][..., :3]
+    positions = (
+        root_states[:, 0:3] + env.scene.env_origins[env_ids] + rand_samples[:, 0:3] + reset_pose[env_ids][..., :3]
+    )
     orientations_delta = math_utils.quat_from_euler_xyz(rand_samples[:, 3], rand_samples[:, 4], rand_samples[:, 5])
     orientations = math_utils.quat_mul(reset_pose[env_ids][..., 3:7], orientations_delta)
     # velocities

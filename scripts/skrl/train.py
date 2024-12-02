@@ -86,7 +86,7 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
-import MARL_mav_carry_ext.tasks # noqa: F401
+import MARL_mav_carry_ext.tasks  # noqa: F401
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab.envs import (

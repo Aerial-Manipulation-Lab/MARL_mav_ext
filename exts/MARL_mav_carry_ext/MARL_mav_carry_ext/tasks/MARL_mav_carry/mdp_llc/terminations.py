@@ -123,6 +123,7 @@ def bounding_box(
     assert is_body_pos_outside.shape == (env.num_envs,)
     return is_body_pos_outside
 
+
 def large_states(
     env: ManagerBasedRLEnv, threshold: float = 1e3, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -134,18 +135,19 @@ def large_states(
     assert is_large_states.shape == (env.num_envs,)
     return is_large_states
 
-def nan_obs(
-    env: ManagerBasedRLEnv, group_name: str) -> torch.Tensor:
+
+def nan_obs(env: ManagerBasedRLEnv, group_name: str) -> torch.Tensor:
     """Terminate when any observation is NaN."""
     obs = env.obs_buf
-    if obs: # prevent error when obs is empty dict
+    if obs:  # prevent error when obs is empty dict
         is_nan_obs = torch.isnan(obs[group_name]).any(dim=-1)
         assert is_nan_obs.shape == (env.num_envs,)
         return is_nan_obs
     else:
-        is_nan_obs = torch.tensor([False]*env.num_envs, device=env.sim.device)
+        is_nan_obs = torch.tensor([False] * env.num_envs, device=env.sim.device)
         assert is_nan_obs.shape == (env.num_envs,)
         return is_nan_obs
+
 
 def drone_collision(
     env: ManagerBasedRLEnv, threshold: float = 0.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -160,8 +162,12 @@ def drone_collision(
     assert is_drone_collision.shape == (env.num_envs,)
     return is_drone_collision
 
+
 def cable_collision(
-    env: ManagerBasedRLEnv, threshold: float = 0.0, num_points: int = 5, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv,
+    threshold: float = 0.0,
+    num_points: int = 5,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
     """Check for collisions between cables.
 
@@ -174,10 +180,14 @@ def cable_collision(
     cable_directions = cable_top_pos_env - cable_bottom_pos_env  # (num_envs, num_cables, 3)
 
     # Create linearly spaced points for interpolation (num_points,)
-    linspace_points = torch.linspace(0, 1, num_points, device=env.device).view(1, 1, num_points, 1)  # (1, 1, num_points, 1)
+    linspace_points = torch.linspace(0, 1, num_points, device=env.device).view(
+        1, 1, num_points, 1
+    )  # (1, 1, num_points, 1)
 
     # Compute cable points (num_envs, num_cables, num_points, 3)
-    cable_points = cable_bottom_pos_env.unsqueeze(2) + linspace_points * cable_directions.unsqueeze(2)  # (num_envs, num_cables, num_points, 3)
+    cable_points = cable_bottom_pos_env.unsqueeze(2) + linspace_points * cable_directions.unsqueeze(
+        2
+    )  # (num_envs, num_cables, num_points, 3)
 
     # Flatten cable points for easier distance calculation (num_envs, num_cables * num_points, 3)
     cable_points_flat = cable_points.view(env.num_envs, -1, 3)
@@ -193,9 +203,13 @@ def cable_collision(
     points_per_cable = num_points
 
     # Create mask to ignore points on the same cable
-    cable_indices = torch.arange(num_cables, device=env.device).repeat_interleave(points_per_cable)  # (num_points_total,)
+    cable_indices = torch.arange(num_cables, device=env.device).repeat_interleave(
+        points_per_cable
+    )  # (num_points_total,)
     same_cable_mask = cable_indices.unsqueeze(0) == cable_indices.unsqueeze(1)  # (num_points_total, num_points_total)
-    same_cable_mask = same_cable_mask.unsqueeze(0).expand(env.num_envs, -1, -1)  # (num_envs, num_points_total, num_points_total)
+    same_cable_mask = same_cable_mask.unsqueeze(0).expand(
+        env.num_envs, -1, -1
+    )  # (num_envs, num_points_total, num_points_total)
 
     # Apply mask: set ignored distances to a large value
     pairwise_distances[same_cable_mask] = 1000.0
@@ -211,20 +225,18 @@ def cable_collision(
 
 
 def payload_target_distance(
-        env: ManagerBasedRLEnv, threshold: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, threshold: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Terminate when the payload is outisde a certain distance of the target."""
     robot = env.scene[asset_cfg.name]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
 
-    desired_pos = env.command_manager.get_command(command_name)[
-        ..., :3
-    ] 
+    desired_pos = env.command_manager.get_command(command_name)[..., :3]
 
     # for the trajectory case
     if len(desired_pos.shape) > 2:
-        desired_pos = desired_pos[:,0]
+        desired_pos = desired_pos[:, 0]
 
     target_rpos = desired_pos - payload_pos_env
     dist = target_rpos.norm(dim=-1)
@@ -233,9 +245,8 @@ def payload_target_distance(
     assert is_target_far.shape == (env.num_envs,)
     return is_target_far
 
-def sim_time_exceed(
-    env: ManagerBasedRLEnv, command_name: str = "pose_twist_command"
-) -> torch.Tensor:
+
+def sim_time_exceed(env: ManagerBasedRLEnv, command_name: str = "pose_twist_command") -> torch.Tensor:
     """Terminate when the simulation time exceeds the threshold (end of reference trajectory)."""
     command_term = env.command_manager._terms[command_name]
     is_sim_time_exceeded = command_term.sim_time > command_term.reference[0, -1, 0]

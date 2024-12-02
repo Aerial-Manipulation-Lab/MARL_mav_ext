@@ -1,9 +1,10 @@
 import csv
 import functools
-import torch
-from torch.func import vmap
 import os
+import torch
 import zipfile
+from torch.func import vmap
+
 
 # @manual_batch
 def off_diag(a: torch.Tensor) -> torch.Tensor:
@@ -71,6 +72,7 @@ def import_ref_from_csv(file_path) -> torch.Tensor:
                 references.append([float(x) for x in row])
             i += 1
     return references
+
 
 def import_ref_folder_from_csv(folder_path) -> torch.Tensor:
     """Import references from a folder containing csv files

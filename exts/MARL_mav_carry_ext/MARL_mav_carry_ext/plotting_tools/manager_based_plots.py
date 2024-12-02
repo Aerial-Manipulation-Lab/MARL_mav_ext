@@ -1,12 +1,15 @@
 """Helper class to plot results of ManagerBasedRLEnv"""
+
+import math
 import matplotlib.pyplot as plt
+import os
+import torch
+
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
-import math 
-import torch
-import os
 
-class ManagerBasedPlotter():
+
+class ManagerBasedPlotter:
     def __init__(self, env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
 
         # environment
@@ -18,9 +21,9 @@ class ManagerBasedPlotter():
         self.sim_dt = env.sim.get_rendering_dt()
 
         # buffers
-        self.metrics : dict = {}
-        self.load_data :dict = {}
-        self.drone_data_by_id : dict = {}
+        self.metrics: dict = {}
+        self.load_data: dict = {}
+        self.drone_data_by_id: dict = {}
 
     def collect_metrics(self):
         """Collect the metrics from the command manager in the environment."""
@@ -68,7 +71,7 @@ class ManagerBasedPlotter():
                 "both_load_vel": both_load_vel.unsqueeze(0).tolist(),
                 "both_load_ang_vel": both_load_ang_vel.unsqueeze(0).tolist(),
                 "load_acc": load_acc.unsqueeze(0).tolist(),
-                "load_ang_acc": load_ang_acc.unsqueeze(0).tolist()
+                "load_ang_acc": load_ang_acc.unsqueeze(0).tolist(),
             }
         else:
             self.load_data["both_load_pos"].append(both_load_pos.tolist())
@@ -87,9 +90,9 @@ class ManagerBasedPlotter():
         drone_acc = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
         drone_ang_acc = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
         drone_jerk = self.env.action_manager._terms["low_level_action"]._drone_jerk[0]
-        rotor_forces = self.env.action_manager._terms["low_level_action"].processed_actions[0][..., 2] # 3 * 4 rotors
+        rotor_forces = self.env.action_manager._terms["low_level_action"].processed_actions[0][..., 2]  # 3 * 4 rotors
         policy_ref = self.env.action_manager._terms["low_level_action"].raw_actions[0]
-        action_space = policy_ref.shape[-1]/3 # 3 drones and every output has 3 dimensions        
+        action_space = policy_ref.shape[-1] / 3  # 3 drones and every output has 3 dimensions
         # Initialize a dictionary to store data for each drone
         if not hasattr(self, "drone_data_by_id"):
             self.drone_data_by_id = {}
@@ -116,7 +119,7 @@ class ManagerBasedPlotter():
                     "both_drone_acc": both_drone_acc.unsqueeze(0).tolist(),
                     "drone_ang_acc": drone_ang_acc[drone_num].unsqueeze(0).tolist(),
                     "both_drone_jerk": both_drone_jerk.unsqueeze(0).tolist(),
-                    "rotor_forces": rotor_forces[(drone_num * 4): (drone_num * 4) + 4].unsqueeze(0).tolist()
+                    "rotor_forces": rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].unsqueeze(0).tolist(),
                 }
             else:
                 # Append the data for this drone
@@ -127,7 +130,9 @@ class ManagerBasedPlotter():
                 self.drone_data_by_id[drone_num]["both_drone_acc"].append(both_drone_acc.tolist())
                 self.drone_data_by_id[drone_num]["drone_ang_acc"].append(drone_ang_acc[drone_num].tolist())
                 self.drone_data_by_id[drone_num]["both_drone_jerk"].append(both_drone_jerk.tolist())
-                self.drone_data_by_id[drone_num]["rotor_forces"].append(rotor_forces[(drone_num * 4): (drone_num * 4) + 4].tolist())
+                self.drone_data_by_id[drone_num]["rotor_forces"].append(
+                    rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].tolist()
+                )
 
     def collect_data(self):
         """Collect all the data in the environment."""
@@ -135,16 +140,17 @@ class ManagerBasedPlotter():
         self.collect_load_data()
         self.collect_drone_data()
 
-
     def plot(self, save=False, save_dir="plots", file_format="png"):
         """Plot the data and optionally save the plots to files."""
         # Consolidate all data into one dictionary
         all_data = {
             **self.metrics,
             **self.load_data,
-            **{f"{key} Drone {drone_num}": self.drone_data_by_id[drone_num][key]
-            for drone_num in self.drone_data_by_id
-            for key in self.drone_data_by_id[drone_num]}
+            **{
+                f"{key} Drone {drone_num}": self.drone_data_by_id[drone_num][key]
+                for drone_num in self.drone_data_by_id
+                for key in self.drone_data_by_id[drone_num]
+            },
         }
 
         # Determine the number of subplots needed
@@ -186,34 +192,33 @@ class ManagerBasedPlotter():
                     if "orientation" in key:
                         ref_data = [entry[:4] for entry in data]
                         actual_data = [entry[4:] for entry in data]
-                        colors = ['red', 'green', 'blue', 'purple']
+                        colors = ["red", "green", "blue", "purple"]
                         plot_entries(ax, time_data, ref_data, colors, linestyle="--")
                         plot_entries(ax, time_data, actual_data, colors, linestyle="-")
-                        ax.legend(['W_ref', 'X_ref', 'Y_ref', 'Z_ref', 'W', 'X', 'Y', 'Z'])
+                        ax.legend(["W_ref", "X_ref", "Y_ref", "Z_ref", "W", "X", "Y", "Z"])
                     else:
                         ref_data = [entry[:3] for entry in data]
                         actual_data = [entry[3:] for entry in data]
-                        colors = ['red', 'green', 'blue']
+                        colors = ["red", "green", "blue"]
                         plot_entries(ax, time_data, ref_data, colors, linestyle="--")
                         plot_entries(ax, time_data, actual_data, colors, linestyle="-")
-                        ax.legend(['X_ref', 'Y_ref', 'Z_ref', 'X', 'Y', 'Z'])
+                        ax.legend(["X_ref", "Y_ref", "Z_ref", "X", "Y", "Z"])
                 else:
                     if "error" in key:
-                        ax.plot(time_data, data, color='red')
-                        ax.legend(['Norm error'])
+                        ax.plot(time_data, data, color="red")
+                        ax.legend(["Norm error"])
                     else:
                         ax.plot(time_data, data)
                         if "orientation" in key:
-                            ax.legend(['W', 'X', 'Y', 'Z'])
+                            ax.legend(["W", "X", "Y", "Z"])
                         elif "rotor_forces" in key:
-                            ax.legend(['Rotor 1', 'Rotor 2', 'Rotor 3', 'Rotor 4'])
+                            ax.legend(["Rotor 1", "Rotor 2", "Rotor 3", "Rotor 4"])
                         else:
-                            ax.legend(['X', 'Y', 'Z'])
+                            ax.legend(["X", "Y", "Z"])
 
                 ax.set_title(key)
                 ax.set_xlabel("Time")
                 ax.set_ylabel(key.split(" ")[0])
-
 
             # Save the figure if requested
             if save:
@@ -223,5 +228,3 @@ class ManagerBasedPlotter():
 
         plt.tight_layout()
         plt.show()
-
-        

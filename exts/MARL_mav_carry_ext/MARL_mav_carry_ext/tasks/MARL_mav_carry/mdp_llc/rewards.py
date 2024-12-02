@@ -94,7 +94,7 @@ def track_payload_pos_command(
 
     # for the trajectory case
     if len(desired_pos.shape) > 2:
-        desired_pos = desired_pos[:,0]
+        desired_pos = desired_pos[:, 0]
 
     positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
     reward_distance_scale = 1.5
@@ -116,8 +116,8 @@ def track_payload_orientation_command(
     # compute the error
     # for the trajectory case
     if len(desired_quat.shape) > 2:
-        desired_quat = desired_quat[:,0]
-        
+        desired_quat = desired_quat[:, 0]
+
     orientation_error = quat_error_magnitude(desired_quat, payload_quat)
     reward_distance_scale = 1.5
     reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
@@ -129,11 +129,11 @@ def track_payload_orientation_command(
         desired_pos = env.command_manager.get_command(command_name)[
             ..., :3
         ]  # relative goal generated in robot root frame, use a goal in env frame
-        
+
         # for the trajectory case
         if len(desired_pos.shape) > 2:
-            desired_pos = desired_pos[:,0]
-        
+            desired_pos = desired_pos[:, 0]
+
         desired_pos_world = desired_pos + env.scene.env_origins
         positions = torch.cat((desired_pos_world, payload_pos_world), dim=0)
         payload_orientation_marker.visualize(positions, orientations, marker_indices=marker_indices)
@@ -166,8 +166,8 @@ def track_payload_lin_vel_command(
 
     # for the trajectory case
     if len(desired_vel.shape) > 2:
-        desired_vel = desired_vel[:,0]
-        
+        desired_vel = desired_vel[:, 0]
+
     lin_vel_error = torch.norm(desired_vel - payload_lin_vel, dim=-1)
     reward_distance_scale = 15.0
     reward_lin_vel = torch.exp(-lin_vel_error * reward_distance_scale)
@@ -185,11 +185,11 @@ def track_payload_ang_vel_command(
     payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1)
 
     desired_vel = env.command_manager.get_command(command_name)[..., 10:13]
-    
+
     # for the trajectory case
     if len(desired_vel.shape) > 2:
-        desired_vel = desired_vel[:,0]
-        
+        desired_vel = desired_vel[:, 0]
+
     ang_vel_error = torch.norm(desired_vel - payload_ang_vel, dim=-1)
     reward_distance_scale = 15.0
     reward_ang_vel = torch.exp(-ang_vel_error * reward_distance_scale)

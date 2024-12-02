@@ -21,6 +21,7 @@ payload_idx = [0]
 drone_idx = [17, 18, 19]
 base_rope_idx = [8, 9, 10]
 
+
 def payload_position(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload pose xyz, quat in env frame."""
     robot: Articulation = env.scene[asset_cfg.name]
@@ -145,13 +146,17 @@ def drone_orientations(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
     return robot.data.body_state_w[:, drone_idx, 3:7].view(env.num_envs, -1)
 
 
-def drone_linear_velocities(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_linear_velocities(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
     """Drone linear velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     return robot.data.body_state_w[:, drone_idx, 7:10].view(env.num_envs, -1)
 
 
-def drone_angular_velocities(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def drone_angular_velocities(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
     """Drone angular velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     return robot.data.body_state_w[:, drone_idx, 10:].view(env.num_envs, -1)
@@ -201,7 +206,9 @@ def drone_pdist_obs(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnt
     pdist = torch.norm(rpos, dim=-1, keepdim=True)
     return pdist.view(env.num_envs, -1)
 
+
 # Observations for when sampling multiple points on a trajectory
+
 
 def payload_positional_error_traj(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -222,7 +229,9 @@ def payload_orientation_error_traj(
     robot: Articulation = env.scene[asset_cfg.name]
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, desired_quat.shape[1], 1)
-    orientation_error = quat_mul(desired_quat.view(-1, 4), quat_conjugate(payload_quat.view(-1, 4))).view(env.num_envs, -1)
+    orientation_error = quat_mul(desired_quat.view(-1, 4), quat_conjugate(payload_quat.view(-1, 4))).view(
+        env.num_envs, -1
+    )
     return orientation_error
 
 
@@ -247,6 +256,7 @@ def payload_angular_velocity_error_traj(
     ang_vel_error = (desired_ang_vel - payload_ang_vel).view(env.num_envs, -1)
     return ang_vel_error
 
+
 def payload_linear_acc_error_traj(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -256,6 +266,7 @@ def payload_linear_acc_error_traj(
     desired_lin_acc = env.command_manager.get_command(command_name)[..., 13:16]
     lin_acc_error = (desired_lin_acc - payload_lin_acc).view(env.num_envs, -1)
     return lin_acc_error
+
 
 def payload_angular_acc_error_traj(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

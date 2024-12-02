@@ -21,7 +21,6 @@ from omni.isaac.lab.utils.math import euler_xyz_from_quat, normalize, quat_from_
 from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
 
 
-
 @configclass
 class FalconEnvCfg(DirectRLEnvCfg):
     """Configuration for the Falcon environment."""
@@ -112,9 +111,12 @@ class FalconEnv(DirectRLEnv):
             self.drone_positions_debug = torch.zeros(self.num_envs, 3, device=self.device)
             self.des_ori_debug = torch.zeros(self.num_envs, 4, device=self.device)
 
-        self._references = torch.tensor(import_ref_from_csv(
-            "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/reference_trajectories/test_trajectories/circle_2m_5N.csv"
-        ), device=self.device).repeat(self.num_envs, 1, 1)
+        self._references = torch.tensor(
+            import_ref_from_csv(
+                "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/reference_trajectories/test_trajectories/circle_2m_5N.csv"
+            ),
+            device=self.device,
+        ).repeat(self.num_envs, 1, 1)
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
