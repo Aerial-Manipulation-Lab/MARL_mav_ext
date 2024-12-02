@@ -99,7 +99,7 @@ class GeometricController:
         inputs:
         state: current observed state of the drone given by Isaac sim: [pos, quat, lin_vel, ang_vel, lin_acc, ang_acc]
         actions: actions given by the policy, 4 rotor thrusts for each propeller
-        setpoint: setpoint given by the spline [pos, lin_vel, lin_acc, quat, ang_vel, ang_acc]
+        setpoint: setpoint given by the policy [pos, lin_vel, lin_acc, quat, ang_vel, ang_acc]
         """
 
         # update low pass filters: not here for now

@@ -86,9 +86,7 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.config.flycrane import agents
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg_spline import HoverEnvCfg_llc_spline
+import MARL_mav_carry_ext.tasks # noqa: F401
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab.envs import (
