@@ -14,7 +14,7 @@ from omni.isaac.lab.actuators import ImplicitActuatorCfg
 from omni.isaac.lab.assets import ArticulationCfg
 
 script_dir = Path(__file__).parent
-usd_path = script_dir / "data/AMR/flycrane/flycrane.usd"
+usd_path = script_dir / "data/AMR/flycrane_rod/flycrane_rod.usd"
 
 ##
 # Configuration
