@@ -20,9 +20,11 @@ from omni.isaac.lab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Play a checkpoint of an RL agent from skrl.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--save_plots", action="store_true", default=False, help="Save plots during training.")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
+parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint.")
@@ -55,29 +57,17 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
-import os
-import torch
 import numpy as np
+import os
+import random
+import torch
 
 import skrl
 from packaging import version
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.config.flycrane import agents
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
+from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
 
 # register the gym environment
-
-gym.register(
-    id="Isaac-flycrane-payload-hovering-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
 
 # check for minimum supported skrl version
 SKRL_VERSION = "1.3.0"
@@ -117,6 +107,15 @@ def main():
         experiment_cfg = load_cfg_from_registry(args_cli.task, f"skrl_{algorithm}_cfg_entry_point")
     except ValueError:
         experiment_cfg = load_cfg_from_registry(args_cli.task, "skrl_cfg_entry_point")
+
+    # randomly sample a seed if seed = -1
+    if args_cli.seed == -1:
+        args_cli.seed = random.randint(0, 10000)
+
+    # set the agent and environment seed from command line
+    # note: certain randomization occur in the environment initialization so we set the seed here
+    experiment_cfg["seed"] = args_cli.seed if args_cli.seed is not None else experiment_cfg["seed"]
+    env_cfg.seed = experiment_cfg["seed"]
 
     # specify directory for logging experiments (load checkpoint)
     log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
@@ -163,6 +162,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
+    plotter = ManagerBasedPlotter(env, command_name="pose_twist_command")
 
     # reset environment
     obs, _ = env.reset()
@@ -174,15 +174,27 @@ def main():
             # agent stepping
             actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
             # env stepping
+            if env.num_envs == 1:
+                plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
+
+        timestep += 1
         if args_cli.video:
-            timestep += 1
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
 
     # close the simulator
     env.close()
+
+    if env.num_envs == 1:
+        if args_cli.save_plots:
+            # save plots
+            plot_path = os.path.join(log_dir, "plots", "play")
+            plotter.plot(save=True, save_dir=plot_path)
+        else:
+            # show plots
+            plotter.plot(save=False)
 
 
 if __name__ == "__main__":

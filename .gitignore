@@ -9,3 +9,4 @@ profile.sh
 *.svg
 *.sqlite3
 *.db
+reference_trajectories/

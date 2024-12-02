@@ -14,6 +14,7 @@ a more user-friendly way.
 
 import argparse
 import sys
+
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
@@ -68,14 +69,14 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
+import numpy as np
 import os
-from datetime import datetime
 import random
-import optuna
+from datetime import datetime
 
+import optuna
 import skrl
 from packaging import version
-import numpy as np
 
 # check for minimum supported skrl version
 SKRL_VERSION = "1.3.0"
@@ -93,7 +94,6 @@ elif args_cli.ml_framework.startswith("jax"):
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.config.flycrane import agents
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg_spline import HoverEnvCfg_llc_spline
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab.envs import (
@@ -115,18 +115,6 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HoverEnvCfg_llc,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
-
-gym.register(
-    id="Isaac-flycrane-payload-hovering-llc-spline-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc_spline,
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
@@ -188,7 +176,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = Runner(env, agent_cfg)
     if args_cli.resume:
         runner.agent.load(args_cli.checkpoint)
-
 
     # run training
     runner.run()

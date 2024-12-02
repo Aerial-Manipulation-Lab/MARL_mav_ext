@@ -14,6 +14,7 @@ a more user-friendly way.
 
 import argparse
 import sys
+
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
@@ -65,8 +66,8 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import os
-from datetime import datetime
 import random
+from datetime import datetime
 
 import skrl
 from packaging import version
@@ -85,9 +86,7 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.config.flycrane import agents
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg_spline import HoverEnvCfg_llc_spline
+import MARL_mav_carry_ext.tasks  # noqa: F401
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab.envs import (
@@ -99,34 +98,9 @@ from omni.isaac.lab.envs import (
 )
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
+from omni.isaac.lab_tasks.utils import get_checkpoint_path
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
-
-# register the gym environment
-
-gym.register(
-    id="Isaac-flycrane-payload-hovering-llc-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
-
-gym.register(
-    id="Isaac-flycrane-payload-hovering-llc-spline-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc_spline,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
@@ -174,6 +148,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # update log_dir
     log_dir = os.path.join(log_root_path, log_dir)
 
+    # load checkpoint
+    if args_cli.resume:
+        if args_cli.checkpoint:
+            resume_path = args_cli.checkpoint
+        else:
+            resume_path = get_checkpoint_path(
+                log_root_path, run_dir=f".*_{algorithm}_{args_cli.ml_framework}", other_dirs=["checkpoints"]
+            )
+
+        print(f"[INFO] Loading model checkpoint from: {resume_path}")
+
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
@@ -204,8 +189,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
     runner = Runner(env, agent_cfg)
+
     if args_cli.resume:
-        runner.agent.load(args_cli.checkpoint)
+        runner.agent.load(resume_path)
 
     # run training
     runner.run()

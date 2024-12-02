@@ -1,2 +1,1 @@
-from .falcon_fly_cfg import FalconEnvCfg, FalconEnv
-
+from .falcon_fly_cfg import FalconEnv, FalconEnvCfg

@@ -1,6 +1,7 @@
 import torch
 
 from omni.isaac.lab.utils.math import (
+    euler_xyz_from_quat,
     matrix_from_quat,
     normalize,
     quat_from_matrix,
@@ -8,7 +9,6 @@ from omni.isaac.lab.utils.math import (
     quat_mul,
     quat_rotate,
     quat_rotate_inverse,
-    euler_xyz_from_quat,
 )
 
 
@@ -28,7 +28,9 @@ class GeometricController:
                 self.num_envs,
                 3,
             ),
-            torch.finfo(torch.float32).max, device=self.device)
+            torch.finfo(torch.float32).max,
+            device=self.device,
+        )
 
         self.p_offset = torch.tensor([[0.0, 0.0, -0.03]] * self.num_envs, device=self.device)
         self.integration_max = torch.tensor([0.0, 0.0, 0.0], device=self.device)
@@ -41,7 +43,7 @@ class GeometricController:
         self.t_last = 0.0
         self.falcon_mass = 0.617  # kg
         self.l = 0.075
-        self._epsilon = torch.tensor(1e-6, device=self.device) # avoid division by zero
+        self._epsilon = torch.tensor(1e-6, device=self.device)  # avoid division by zero
         self.kappa = 0.022
         self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
         self.G_1 = torch.tensor(
@@ -97,7 +99,7 @@ class GeometricController:
         inputs:
         state: current observed state of the drone given by Isaac sim: [pos, quat, lin_vel, ang_vel, lin_acc, ang_acc]
         actions: actions given by the policy, 4 rotor thrusts for each propeller
-        setpoint: setpoint given by the spline [pos, lin_vel, lin_acc, quat, ang_vel, ang_acc]
+        setpoint: setpoint given by the policy [pos, lin_vel, lin_acc, quat, ang_vel, ang_acc]
         """
 
         # update low pass filters: not here for now
@@ -124,7 +126,7 @@ class GeometricController:
         x_intermediate_des = torch.cat(
             (torch.cos(setpoint_yaw), torch.sin(setpoint_yaw), torch.zeros_like(setpoint_yaw)), dim=1
         )
-        y_b_des = normalize(torch.linalg.cross(z_b_des, x_intermediate_des))# / (
+        y_b_des = normalize(torch.linalg.cross(z_b_des, x_intermediate_des))  # / (
         x_b_des = torch.linalg.cross(y_b_des, z_b_des)
 
         # calculate the desired quaternion
@@ -143,9 +145,7 @@ class GeometricController:
         h_omega[mask] /= current_collective_thrust_magnitude[mask]
         omega_b_x = (-h_omega * y_b).sum(-1, keepdim=True)
         omega_b_y = (h_omega * x_b).sum(-1, keepdim=True)
-        omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(
-           -1, keepdim=True
-        )
+        omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(-1, keepdim=True)
         omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
 
         # tilt prioritized attitude control
@@ -167,8 +167,8 @@ class GeometricController:
 
         # calculate the thrust per propellor
         # inertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
-        product = self.inertia_mat.matmul(alpha_b_des.transpose(0,1)).transpose(0,1) + torch.linalg.cross(
-            ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0,1)).transpose(0,1)
+        product = self.inertia_mat.matmul(alpha_b_des.transpose(0, 1)).transpose(0, 1) + torch.linalg.cross(
+            ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0, 1)).transpose(0, 1)
         )
         rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
         thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)

@@ -3,9 +3,9 @@
 # Default values
 STUDY_NAME="example"
 TASK="Isaac-flycrane-payload-hovering-llc-v0"
-NUM_ENVS=20480
-TIMESTEPS=10000
-NUM_TRIALS=50
+NUM_ENVS=8192
+TIMESTEPS=25000
+NUM_TRIALS=100
 
 # Parse command-line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -56,6 +56,10 @@ for ((i=1; i<=NUM_TRIALS; i++)); do
 
     FINAL_REWARD=$(echo "$TRIAL_OUTPUT" | grep -oP 'Mean rewards are \K\d+(\.\d+)?')
     echo "The final reward is $FINAL_REWARD"
+
+    if [[ -z "$FINAL_REWARD" ]]; then
+        echo "$TRIAL_OUTPUT"
+    fi
 
     # Report the trial results
     optuna tell --storage $STORAGE_URL --study-name $STUDY_NAME --trial-number $TRIAL_ID --values $FINAL_REWARD --state complete

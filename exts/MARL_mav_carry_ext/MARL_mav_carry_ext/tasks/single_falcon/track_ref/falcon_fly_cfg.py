@@ -1,32 +1,36 @@
 from __future__ import annotations
 
+import csv
 import gymnasium as gym
 import torch
+
+from MARL_mav_carry_ext.assets import FALCON_CFG
+from MARL_mav_carry_ext.controllers import GeometricController
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_from_csv
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation, ArticulationCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
-from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.terrains import TerrainImporterCfg
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from MARL_mav_carry_ext.controllers import GeometricController
-from MARL_mav_carry_ext.assets import FALCON_CFG
-from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
-from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis, euler_xyz_from_quat, matrix_from_euler, quat_from_matrix, quat_inv
+from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.utils.math import euler_xyz_from_quat, normalize, quat_from_angle_axis
 
-import csv
+from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
+
 
 @configclass
 class FalconEnvCfg(DirectRLEnvCfg):
     """Configuration for the Falcon environment."""
+
     episode_length_s = 100.0
     decimation = 10
     low_level_decimation = 2
-    action_space = 30 # waypoint end goal
+    action_space = 30  # waypoint end goal
     observation_space = 19
-    state_space = 0 # arbitrary for now
+    state_space = 0  # arbitrary for now
     debug_vis = True
 
     # simulation
@@ -66,8 +70,10 @@ class FalconEnvCfg(DirectRLEnvCfg):
     # rewards
     # empty for now
 
+
 class FalconEnv(DirectRLEnv):
     """Environment for the single falcon."""
+
     cfg: FalconEnvCfg
 
     def __init__(self, cfg: FalconEnvCfg, render_mode: str | None = None, **kwargs):
@@ -84,7 +90,7 @@ class FalconEnv(DirectRLEnv):
         self._low_level_decimation = self.cfg.low_level_decimation
         self._high_level_decimation = self.cfg.decimation
         self._ll_counter = 0
-        self._planner_dt = 1/self._high_level_decimation
+        self._planner_dt = 1 / self._high_level_decimation
 
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -105,29 +111,14 @@ class FalconEnv(DirectRLEnv):
             self.drone_positions_debug = torch.zeros(self.num_envs, 3, device=self.device)
             self.des_ori_debug = torch.zeros(self.num_envs, 4, device=self.device)
 
-        # load test trajectory
-        # with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/loop_10.csv", "r") as f:
-        #     reader = csv.reader(f, delimiter=",")
-        #     i = 0
-        #     references = []
-        #     for row in reader:
-        #         if i > 0:
-        #             references.append([float(x) for x in row])
-        #         i += 1
-        #     self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
-
-        with open("/home/isaac-sim/Jack_Zeng/MARL_mav_ext/scripts/MARL_mav_carry/Jack_testing_scripts/test_trajectories/circle_2m_5N.csv", "r") as f:
-            reader = csv.reader(f, delimiter=",")
-            i = 0
-            references = []
-            for row in reader:
-                if i > 1:
-                    references.append([float(x) for x in row])
-                i += 1
-            self._references = torch.tensor(references, device=self.sim.device).repeat(self.num_envs, 1, 1)
+        self._references = torch.tensor(
+            import_ref_from_csv(
+                "/home/isaac-sim/Jack_Zeng/MARL_mav_ext/reference_trajectories/test_trajectories/circle_2m_5N.csv"
+            ),
+            device=self.device,
+        ).repeat(self.num_envs, 1, 1)
 
     def _setup_scene(self):
-
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
@@ -140,7 +131,6 @@ class FalconEnv(DirectRLEnv):
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
-
 
     def _pre_physics_step(self, actions: torch.Tensor):
         pass
@@ -170,14 +160,14 @@ class FalconEnv(DirectRLEnv):
             drone_setpoint["lin_acc"] = self._actions[:, 14:17]
             drone_setpoint["jerk"] = self._actions[:, 24:27]
             drone_setpoint["snap"] = self._actions[:, 27:]
-            roll, pitch, yaw = euler_xyz_from_quat((self._actions[:, 4:8]))
+            roll, pitch, yaw = euler_xyz_from_quat(self._actions[:, 4:8])
             drone_setpoint["yaw"] = yaw.view(self.num_envs, 1)
             drone_setpoint["yaw_rate"] = self._actions[:, 13].view(self.num_envs, 1)
             drone_setpoint["yaw_acc"] = self._actions[:, 19].view(self.num_envs, 1)
-            
+
             drone_thrusts, acc_cmd, q_cmd = self._geometric_controller.getCommand(
-                        drone_states, self._forces, drone_setpoint
-                    )
+                drone_states, self._forces, drone_setpoint
+            )
             if self.cfg.debug_vis:
                 self.des_acc_debug = acc_cmd
                 self.drone_positions_debug = drone_states["pos"]
@@ -187,7 +177,9 @@ class FalconEnv(DirectRLEnv):
             self._ll_counter = 0
 
         self._ll_counter += 1
-        self._robot.set_external_force_and_torque(self._forces, torch.zeros_like(self._forces), body_ids=self._rotor_idx)
+        self._robot.set_external_force_and_torque(
+            self._forces, torch.zeros_like(self._forces), body_ids=self._rotor_idx
+        )
 
     def _get_observations(self) -> dict:
         # observations from the example, not real ones
@@ -210,12 +202,12 @@ class FalconEnv(DirectRLEnv):
         # rewards from the example, not real ones
         rewards = torch.zeros(self.num_envs, device=self.device)
         return rewards
-    
+
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 5.0)
         return died, time_out
-    
+
     def _reset_idx(self, env_ids: torch.Tensor | None):
         if env_ids is None or len(env_ids) == self.num_envs:
             env_ids = self._robot._ALL_INDICES
@@ -254,10 +246,12 @@ class FalconEnv(DirectRLEnv):
         self._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self._robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
 
-        self._robot.set_external_force_and_torque(torch.zeros(self.num_envs, 3, 3, device=self.device), torch.zeros_like(self._forces))
+        self._robot.set_external_force_and_torque(
+            torch.zeros(self.num_envs, 3, 3, device=self.device), torch.zeros_like(self._forces)
+        )
 
     def _set_debug_vis_impl(self, debug_vis: bool):
-    # create markers if necessary for the first tome
+        # create markers if necessary for the first tome
         if debug_vis:
             if not hasattr(self, "goal_pos_visualizer"):
                 marker_cfg = CUBOID_MARKER_CFG.copy()

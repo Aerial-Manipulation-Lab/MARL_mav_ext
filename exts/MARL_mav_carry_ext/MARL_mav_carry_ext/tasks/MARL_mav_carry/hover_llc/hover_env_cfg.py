@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-import MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.mdp as mdp
+import MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc as mdp
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
@@ -36,6 +36,12 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 
     # Drones
     robot: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="{ENV_REGEX_NS}/flycrane")
+    robot.spawn.activate_contact_sensors = True
+
+    contact_forces = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
+    )
+
 
 # MDP settings
 
@@ -47,14 +53,14 @@ class CommandsCfg:
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(30, 30),  # out of range of max episode length for now
+        resampling_time_range=(5, 5),  # out of range of max episode length for now
         debug_vis=False,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
             pos_x=(-1.0, 1.0),
             pos_y=(-1.0, 1.0),
             pos_z=(0.5, 1.5),
-            roll=(-0.0, 0.0),
-            pitch=(-0.0, 0.0),
+            roll=(-math.pi / 4, math.pi / 4),
+            pitch=(-math.pi / 4, math.pi / 4),
             yaw=(-math.pi, math.pi),
         ),
     )
@@ -81,7 +87,7 @@ class ObservationsCfg:
         """Observation terms for the policy."""
 
         # payload and drone states
-        payload_pose = ObsTerm(func=mdp.payload_position)  # can add noise later
+        payload_pos = ObsTerm(func=mdp.payload_position)  # can add noise later
         payload_orientation = ObsTerm(func=mdp.payload_orientation)
         payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)
         payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)
@@ -95,8 +101,8 @@ class ObservationsCfg:
         drone_angular_accelerations = ObsTerm(func=mdp.drone_angular_acceleration)
 
         # goal error terms
-        payload_positional_error = ObsTerm(func=mdp.payload_positional_error)
-        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error)
+        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_command"})
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_command"})
 
         # relative positions terms
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
@@ -189,41 +195,17 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the hovering task."""
 
-    pose_reward = RewTerm(
-        func=mdp.track_payload_pose,
+    pos_reward = RewTerm(
+        func=mdp.track_payload_pos_command,
         weight=1.5,
-        params={"asset_cfg": SceneEntityCfg("robot")},
+        params={"command_name": "pose_command"},
     )
 
-    # drone_ref_reward = RewTerm(
-    #     func=mdp.track_drone_reference,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # up_reward = RewTerm(
-    #     func=mdp.upright_reward,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # spin_payload = RewTerm(
-    #     func=mdp.spinnage_reward_payload,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # swing_payload = RewTerm(
-    #     func=mdp.swing_reward,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    # spin_falcon = RewTerm(
-    #     func=mdp.spinnage_reward_drones,
-    #     weight=1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
+    ori_reward = RewTerm(
+        func=mdp.track_payload_orientation_command,
+        weight=8.0,
+        params={"command_name": "pose_command", "debug_vis": False},
+    )
 
     policy_action_smoothness = RewTerm(
         func=mdp.action_smoothness_reward,
@@ -245,6 +227,7 @@ class RewardsCfg:
         weight=0.5,
     )
 
+
 @configclass
 class TerminationsCfg:
     """Terminal conditions for the hovering task.
@@ -253,27 +236,31 @@ class TerminationsCfg:
 
     # end when sim times out
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
+
+    illegal_contact = DoneTerm(
+        func=mdp.illegal_contact,
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*"), "threshold": 0.1},
+    )
+
     # end when falcons crash
     falcon_fly_low = DoneTerm(func=mdp.falcon_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1})
     payload_fly_low = DoneTerm(
         func=mdp.payload_fly_low, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
     )
 
-    # end when angular velocity of payload is too high
-    payload_spin = DoneTerm(func=mdp.payload_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
-
-    payload_angle = DoneTerm(
-        func=mdp.payload_angle_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.1}
-    )
-
-    # end when angular velocity of falcon is too high
-    falcon_spin = DoneTerm(func=mdp.falcon_spin, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 10.0})
-
     angle_drones_cable = DoneTerm(
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
     angle_load_cable = DoneTerm(
         func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
+    )
+
+    large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
+
+    nan_observations = DoneTerm(func=mdp.nan_obs, params={"group_name": "policy"})
+
+    cables_collide = DoneTerm(
+        func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2, "num_points": 10}
     )
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
@@ -307,7 +294,7 @@ class HoverEnvCfg_llc(ManagerBasedRLEnvCfg):
         self.decimation = 10
         self.episode_length_s = 20.0
         # simulation settings
-        self.sim.dt = 0.004
+        self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
         self.sim.disable_contact_processing = True
         self.sim.gravity = (0.0, 0.0, -9.8066)
