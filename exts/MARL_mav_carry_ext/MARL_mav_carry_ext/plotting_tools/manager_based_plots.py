@@ -5,7 +5,6 @@ from omni.isaac.lab.managers import SceneEntityCfg
 import math 
 import torch
 import os
-from omni.isaac.lab.utils.math import euler_xyz_from_quat
 
 class ManagerBasedPlotter():
     def __init__(self, env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
@@ -58,9 +57,7 @@ class ManagerBasedPlotter():
 
         # to plot ref and actual pos side by side
         both_load_pos = torch.cat((load_pos_ref, load_pos), dim=-1)
-        rpy_load_orientation = torch.cat(euler_xyz_from_quat(load_orientation.unsqueeze(0)), dim=-1)
-        rpy_load_orientation_ref = torch.cat(euler_xyz_from_quat(load_orientation_ref.unsqueeze(0)), dim=-1)
-        both_load_orientation = torch.cat((rpy_load_orientation_ref, rpy_load_orientation), dim=-1)
+        both_load_orientation = torch.cat((load_orientation_ref, load_orientation), dim=-1)
         both_load_vel = torch.cat((load_vel_ref, load_vel), dim=-1)
         both_load_ang_vel = torch.cat((load_ang_vel_ref, load_ang_vel), dim=-1)
 
@@ -85,7 +82,6 @@ class ManagerBasedPlotter():
         """Collect the drone data from the environment."""
         drone_pos = self.robot.data.body_state_w[:, self.drone_idx, :3][0]
         drone_orientation = self.robot.data.body_state_w[:, self.drone_idx, 3:7][0]
-        rpy_drone_orientation = torch.cat(euler_xyz_from_quat(drone_orientation.view(-1, 4)), dim=-1).view(-1, 3)
         drone_vel = self.robot.data.body_state_w[:, self.drone_idx, 7:10][0]
         drone_ang_vel = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
         drone_acc = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
@@ -114,7 +110,7 @@ class ManagerBasedPlotter():
             if drone_num not in self.drone_data_by_id:
                 self.drone_data_by_id[drone_num] = {
                     "both_drone_pos": both_drone_pos.unsqueeze(0).tolist(),
-                    "drone_orientation": rpy_drone_orientation[drone_num].unsqueeze(0).tolist(),
+                    "drone_orientation": drone_orientation[drone_num].unsqueeze(0).tolist(),
                     "both_drone_vel": both_drone_vel.unsqueeze(0).tolist(),
                     "drone_ang_vel": drone_ang_vel[drone_num].unsqueeze(0).tolist(),
                     "both_drone_acc": both_drone_acc.unsqueeze(0).tolist(),
@@ -125,7 +121,7 @@ class ManagerBasedPlotter():
             else:
                 # Append the data for this drone
                 self.drone_data_by_id[drone_num]["both_drone_pos"].append(both_drone_pos.tolist())
-                self.drone_data_by_id[drone_num]["drone_orientation"].append(rpy_drone_orientation[drone_num].tolist())
+                self.drone_data_by_id[drone_num]["drone_orientation"].append(drone_orientation[drone_num].tolist())
                 self.drone_data_by_id[drone_num]["both_drone_vel"].append(both_drone_vel.tolist())
                 self.drone_data_by_id[drone_num]["drone_ang_vel"].append(drone_ang_vel[drone_num].tolist())
                 self.drone_data_by_id[drone_num]["both_drone_acc"].append(both_drone_acc.tolist())
@@ -187,19 +183,29 @@ class ManagerBasedPlotter():
                 data = all_data[key]
 
                 if "both" in key:
-                    ref_data = [entry[:3] for entry in data]
-                    actual_data = [entry[3:] for entry in data]
-                    colors = ['red', 'green', 'blue']
-                    plot_entries(ax, time_data, ref_data, colors, linestyle="--")
-                    plot_entries(ax, time_data, actual_data, colors, linestyle="-")
-                    ax.legend(['X_ref', 'Y_ref', 'Z_ref', 'X', 'Y', 'Z'])
+                    if "orientation" in key:
+                        ref_data = [entry[:4] for entry in data]
+                        actual_data = [entry[4:] for entry in data]
+                        colors = ['red', 'green', 'blue', 'purple']
+                        plot_entries(ax, time_data, ref_data, colors, linestyle="--")
+                        plot_entries(ax, time_data, actual_data, colors, linestyle="-")
+                        ax.legend(['W_ref', 'X_ref', 'Y_ref', 'Z_ref', 'W', 'X', 'Y', 'Z'])
+                    else:
+                        ref_data = [entry[:3] for entry in data]
+                        actual_data = [entry[3:] for entry in data]
+                        colors = ['red', 'green', 'blue']
+                        plot_entries(ax, time_data, ref_data, colors, linestyle="--")
+                        plot_entries(ax, time_data, actual_data, colors, linestyle="-")
+                        ax.legend(['X_ref', 'Y_ref', 'Z_ref', 'X', 'Y', 'Z'])
                 else:
                     if "error" in key:
                         ax.plot(time_data, data, color='red')
                         ax.legend(['Norm error'])
                     else:
                         ax.plot(time_data, data)
-                        if "rotor_forces" in key:
+                        if "orientation" in key:
+                            ax.legend(['W', 'X', 'Y', 'Z'])
+                        elif "rotor_forces" in key:
                             ax.legend(['Rotor 1', 'Rotor 2', 'Rotor 3', 'Rotor 4'])
                         else:
                             ax.legend(['X', 'Y', 'Z'])
