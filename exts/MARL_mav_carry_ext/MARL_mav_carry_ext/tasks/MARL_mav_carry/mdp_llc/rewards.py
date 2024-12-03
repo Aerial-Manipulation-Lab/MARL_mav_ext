@@ -29,26 +29,6 @@ payload_idx = [0]
 drone_idx = [17, 18, 19]
 base_rope_idx = [8, 9, 10]
 
-debug_vis_reward = True
-if debug_vis_reward:
-    GOAL_ORIENTATION_MARKER_CFG = VisualizationMarkersCfg(
-        markers={
-            "goal_frame": sim_utils.UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-                scale=(0.1, 0.1, 0.1),
-            ),
-            "current_frame": sim_utils.UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-                scale=(0.1, 0.1, 0.1),
-            ),
-        }
-    )
-
-    orientation_marker_cfg = GOAL_ORIENTATION_MARKER_CFG.copy()
-    orientation_marker_cfg.prim_path = "/Visuals/payload_orientation"
-    payload_orientation_marker = VisualizationMarkers(orientation_marker_cfg)
-
-
 def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Separation reward function."""
     safe_distance = 0.44  # smallest distance where drones are just upright
@@ -121,22 +101,6 @@ def track_payload_orientation_command(
     orientation_error = quat_error_magnitude(desired_quat, payload_quat)
     reward_distance_scale = 1.5
     reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
-
-    if debug_vis:
-        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
-        payload_orientation_marker.set_visibility(True)
-        orientations = torch.cat((desired_quat, payload_quat), dim=0)
-        desired_pos = env.command_manager.get_command(command_name)[
-            ..., :3
-        ]  # relative goal generated in robot root frame, use a goal in env frame
-
-        # for the trajectory case
-        if len(desired_pos.shape) > 2:
-            desired_pos = desired_pos[:, 0]
-
-        desired_pos_world = desired_pos + env.scene.env_origins
-        positions = torch.cat((desired_pos_world, payload_pos_world), dim=0)
-        payload_orientation_marker.visualize(positions, orientations, marker_indices=marker_indices)
 
     assert reward_orientation.shape == (env.scene.num_envs,)
 
@@ -423,3 +387,24 @@ def obstacle_penalty(
 
     assert reward_obstacle.shape == (env.scene.num_envs,)
     return reward_obstacle
+
+def goal_reached_reward(
+    env: ManagerBasedRLEnv, command_name: str, threshold: float = 0.2, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), 
+) -> torch.Tensor:
+    """Reward for reaching the goal."""
+    robot = env.scene[asset_cfg.name]
+    goal_pos = env.command_manager.get_command(command_name)[..., :3]
+    payload_pos_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
+    dist_to_goal = torch.norm(payload_pos_env - goal_pos, dim=-1)
+
+    # Store the previous goal-achievement state
+    prev_achieved_goal = env.command_manager._terms[command_name].achieved_goal.clone()
+
+    # Update the achieved_goal flag
+    env.command_manager._terms[command_name].achieved_goal |= (dist_to_goal < threshold)
+    
+    # Calculate reward: 1 for first time reaching the goal, 0 otherwise
+    reward_goal = (~prev_achieved_goal & env.command_manager._terms[command_name].achieved_goal).float()
+
+    assert reward_goal.shape == (env.scene.num_envs,)
+    return reward_goal

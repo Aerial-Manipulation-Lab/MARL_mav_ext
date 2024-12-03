@@ -22,17 +22,12 @@ from omni.isaac.lab.utils.math import combine_frame_transforms, compute_pose_err
 if TYPE_CHECKING:
     from omni.isaac.lab.envs import ManagerBasedRLEnv
 
-
 class UniformPoseCommandGlobal(CommandTerm):
     """Command generator for generating pose commands uniformly.
 
     The command generator generates poses by sampling positions uniformly within specified
     regions in cartesian space. For orientation, it samples uniformly the euler angles
     (roll-pitch-yaw) and converts them into quaternion representation (w, x, y, z).
-
-    The position and orientation commands are generated in the base frame of the robot, and not the
-    simulation world frame. This means that users need to handle the transformation from the
-    base frame to the simulation world frame themselves.
 
     .. caution::
 
@@ -61,12 +56,13 @@ class UniformPoseCommandGlobal(CommandTerm):
 
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
-        self.pose_command_b = torch.zeros(self.num_envs, 7, device=self.device)
-        self.pose_command_b[:, 3] = 1.0
-        self.pose_command_w = torch.zeros_like(self.pose_command_b)
+        self.pose_command_w = torch.zeros(self.num_envs, 7, device=self.device)
+        self.pose_command_w[:, 3] = 1.0
         # -- metrics
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
+        # -- goal reached for the first time
+        self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device) # used in reward function
 
     def __str__(self) -> str:
         msg = "UniformPoseCommandGlobal:\n"
@@ -84,25 +80,18 @@ class UniformPoseCommandGlobal(CommandTerm):
 
         The first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
         """
-        return self.pose_command_b
+        return self.pose_command_w
 
     """
     Implementation specific functions.
     """
 
     def _update_metrics(self):
-        # transform command from base frame to simulation world frame
-        self.pose_command_w[:, :3], self.pose_command_w[:, 3:] = combine_frame_transforms(
-            self.robot.data.root_pos_w,
-            self.robot.data.root_quat_w,
-            self.pose_command_b[:, :3],
-            self.pose_command_b[:, 3:],
-        )
         # compute the error
         pos_error, rot_error = compute_pose_error(
             self.pose_command_w[:, :3],
             self.pose_command_w[:, 3:],
-            self.robot.data.body_state_w[:, self.body_idx, :3],
+            self.robot.data.body_state_w[:, self.body_idx, :3] - self._env.scene.env_origins,
             self.robot.data.body_state_w[:, self.body_idx, 3:7],
         )
         self.metrics["position_error"] = torch.norm(pos_error, dim=-1)
@@ -112,20 +101,25 @@ class UniformPoseCommandGlobal(CommandTerm):
         # sample new pose targets
         # -- position
         r = torch.empty(len(env_ids), device=self.device)
-        self.pose_command_b[env_ids, 0] = r.uniform_(*self.cfg.ranges.pos_x)
-        self.pose_command_b[env_ids, 1] = r.uniform_(*self.cfg.ranges.pos_y)
-        self.pose_command_b[env_ids, 2] = r.uniform_(*self.cfg.ranges.pos_z)
+        self.pose_command_w[env_ids, 0] = r.uniform_(*self.cfg.ranges.pos_x)
+        self.pose_command_w[env_ids, 1] = r.uniform_(*self.cfg.ranges.pos_y)
+        self.pose_command_w[env_ids, 2] = r.uniform_(*self.cfg.ranges.pos_z)
         # -- orientation
-        euler_angles = torch.zeros_like(self.pose_command_b[env_ids, :3])
+        euler_angles = torch.zeros_like(self.pose_command_w[env_ids, :3])
         euler_angles[:, 0].uniform_(*self.cfg.ranges.roll)
         euler_angles[:, 1].uniform_(*self.cfg.ranges.pitch)
         euler_angles[:, 2].uniform_(*self.cfg.ranges.yaw)
         quat = quat_from_euler_xyz(euler_angles[:, 0], euler_angles[:, 1], euler_angles[:, 2])
         # make sure the quaternion has real part as positive
-        self.pose_command_b[env_ids, 3:] = quat_unique(quat) if self.cfg.make_quat_unique else quat
+        self.pose_command_w[env_ids, 3:] = quat_unique(quat) if self.cfg.make_quat_unique else quat
+        self.achieved_goal[env_ids] = False
 
     def _update_command(self):
-        pass
+        # used in reward function
+        dist_to_goal = torch.norm(self.robot.data.body_state_w[:, self.body_idx, :3] - self.pose_command_w[:, :3], dim=-1)
+        self.achieved_goal |= (dist_to_goal < 0.2) # logical OR, remains True if already True
+        
+
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         # create markers if necessary for the first tome
