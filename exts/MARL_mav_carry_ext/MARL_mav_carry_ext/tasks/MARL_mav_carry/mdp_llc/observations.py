@@ -278,10 +278,20 @@ def payload_angular_acc_error_traj(
     ang_acc_error = (desired_ang_acc - payload_ang_acc).view(env.num_envs, -1)
     return ang_acc_error
 
-def wall_state(
+def obstacle_rpos(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("wall")
 ) -> torch.Tensor:
-    """Get the wall state."""
-    wall = env.scene[asset_cfg.name]
-    wall_pos = wall.data.body_state_w[:, 0, :3].view(env.num_envs, -1) - env.scene.env_origins
-    return wall_pos
+    """Get the relative distance to the obstacle"""
+    obstacle = env.scene[asset_cfg.name]
+    robot: Articulation = env.scene["robot"]
+    payload_pos_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
+    obstacle_pos = obstacle.data.body_state_w[:, 0, :3] - env.scene.env_origins
+    rpos = obstacle_pos - payload_pos_env
+    return rpos.view(env.num_envs, -1)
+
+def obstacle_geometry(
+        env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("wall")
+) -> torch.Tensor:
+    """Get the obstacle size parameters"""
+    wall_dimensions = torch.tensor([0.1, 1.5, 3.0], device=env.device).repeat(env.num_envs,1)
+    return wall_dimensions

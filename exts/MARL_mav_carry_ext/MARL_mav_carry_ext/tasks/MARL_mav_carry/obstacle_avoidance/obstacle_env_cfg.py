@@ -124,7 +124,8 @@ class ObservationsCfg:
         cable_angle = ObsTerm(func=mdp.cable_angle)
 
         # obstacle terms
-        wall_state = ObsTerm(func=mdp.wall_state)
+        wall_state = ObsTerm(func=mdp.obstacle_rpos)
+        wall_geometry = ObsTerm(func=mdp.obstacle_geometry)
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations
