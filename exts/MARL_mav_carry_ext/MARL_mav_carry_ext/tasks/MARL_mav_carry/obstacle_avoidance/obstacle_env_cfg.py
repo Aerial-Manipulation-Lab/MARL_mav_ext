@@ -198,7 +198,7 @@ class RewardsCfg:
     orientation_reward = RewTerm(
         func=mdp.track_payload_orientation_command,
         weight=8.0,
-        params={"command_name": "pose_command", "debug_vis": False, "asset_cfg": SceneEntityCfg("robot")},
+        params={"command_name": "pose_command", "debug_vis": True, "asset_cfg": SceneEntityCfg("robot")},
     )
 
     # policy_action_smoothness = RewTerm(
@@ -218,6 +218,11 @@ class RewardsCfg:
 
     downwash_reward = RewTerm(
         func=mdp.downwash_reward,
+        weight=1.0,
+    )
+
+    obstacle_penalty = RewTerm(
+        func=mdp.obstacle_penalty,
         weight=1.0,
     )
 

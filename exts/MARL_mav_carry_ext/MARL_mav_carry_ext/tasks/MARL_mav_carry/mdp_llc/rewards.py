@@ -29,7 +29,7 @@ payload_idx = [0]
 drone_idx = [17, 18, 19]
 base_rope_idx = [8, 9, 10]
 
-debug_vis_reward = False
+debug_vis_reward = True
 if debug_vis_reward:
     GOAL_ORIENTATION_MARKER_CFG = VisualizationMarkersCfg(
         markers={
@@ -404,3 +404,22 @@ def downwash_reward(
 
     assert reward_downwash.shape == (env.num_envs,)
     return reward_downwash
+
+def obstacle_penalty(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
+) -> torch.Tensor:
+    """Penalty for getting close to the obstacle."""
+    robot = env.scene[asset_cfg.name]
+    obstacle = env.scene[obstacle_cfg.name]
+    payload_pos_env = robot.data.body_state_w[:, payload_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    drones_pos_env = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    obstacle_pos = obstacle.data.body_state_w[:, 0, :3].unsqueeze(1) - env.scene.env_origins.unsqueeze(1)
+    all_bodies_env = torch.cat((payload_pos_env, drones_pos_env), dim=1)
+    rpos = all_bodies_env - obstacle_pos
+    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1) # half lenghts
+    # check if any of the bodies is inside the cuboid
+    is_inside_cuboid = torch.all(rpos <= cuboid_dims, dim=-1) # Shape (num_envs, num_bodies) true or false for each body
+    reward_obstacle = -torch.any(is_inside_cuboid, dim=-1).float() # Shape (num_envs,) -1 if any body is inside the cuboid, 0 otherwise
+
+    assert reward_obstacle.shape == (env.scene.num_envs,)
+    return reward_obstacle
