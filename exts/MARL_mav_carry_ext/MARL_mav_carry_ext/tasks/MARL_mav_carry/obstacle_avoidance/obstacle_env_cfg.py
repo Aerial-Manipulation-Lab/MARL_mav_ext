@@ -187,7 +187,9 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Rewards for the tracking task."""
+    """Rewards for the tracking task."""    
+    
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400.0)
 
     position_reward = RewTerm(
         func=mdp.track_payload_pos_command,
@@ -291,7 +293,7 @@ class ObstacleEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 10
-        self.episode_length_s = 40.0
+        self.episode_length_s = 20.0
         # simulation settings
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation  # rendering interval has to be planner decimation
