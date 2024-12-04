@@ -59,17 +59,22 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     return reward_position
 
 def track_payload_pos_command_linear(
-    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, bbox: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
-    """Reward tracking of payload position commands with linear kernel."""
+    """Reward tracking of payload position commands with linear kernel.
+    Args:
+        bbox: The bounding box half size for the linear kernel.
+    """
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
     desired_pos = env.command_manager.get_command(command_name)[..., :3]
     # compute the error
     positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
-    reward_distance_scale = 1.0
-    reward_position = 1 - positional_error * reward_distance_scale
+    max_error = torch.norm(torch.tensor([bbox, bbox, bbox/2], device=env.sim.device))
+    relative_error = positional_error / max_error
+    reward_distance_scale = 1.0 
+    reward_position = 1 - relative_error * reward_distance_scale
 
     assert reward_position.shape == (env.scene.num_envs,)
     return reward_position
