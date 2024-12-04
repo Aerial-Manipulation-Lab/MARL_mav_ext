@@ -401,7 +401,7 @@ def obstacle_penalty(
     all_bodies_env = torch.cat((payload_pos_env, drones_pos_env), dim=1)
     rpos = all_bodies_env - obstacle_pos
     cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1) # half lenghts
-    # check if any of the bodies is inside the cuboid
+    # check if any of the bodies are inside the cuboid
     is_inside_cuboid = torch.all(rpos <= cuboid_dims, dim=-1) # Shape (num_envs, num_bodies) true or false for each body
     reward_obstacle = -torch.any(is_inside_cuboid, dim=-1).float() # Shape (num_envs,) -1 if any body is inside the cuboid, 0 otherwise
 
