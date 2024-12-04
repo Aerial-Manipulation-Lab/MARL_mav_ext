@@ -162,7 +162,7 @@ class UniformPoseCommandGlobal(CommandTerm):
             return
         # update the markers
         # -- goal pose
-        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3], self.pose_command_w[:, 3:])
+        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:])
         # print("The tracking error of the position is ", self.metrics["position_error"])
         # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
 
