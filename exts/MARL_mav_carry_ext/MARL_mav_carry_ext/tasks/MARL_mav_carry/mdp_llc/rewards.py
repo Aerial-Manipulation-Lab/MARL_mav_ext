@@ -58,11 +58,26 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     assert reward_position.shape == (env.scene.num_envs,)
     return reward_position
 
+def track_payload_pos_command_linear(
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Reward tracking of payload position commands with linear kernel."""
+    robot: RigidObject = env.scene[asset_cfg.name]
+    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_env = payload_pos_world - env.scene.env_origins
+    desired_pos = env.command_manager.get_command(command_name)[..., :3]
+    # compute the error
+    positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
+    reward_distance_scale = 1.0
+    reward_position = 1 - positional_error * reward_distance_scale
+
+    assert reward_position.shape == (env.scene.num_envs,)
+    return reward_position
 
 def track_payload_pos_command(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
-    """Reward tracking of payload position commands."""
+    """Reward tracking of payload position commands with exponentional kernel."""
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
@@ -389,22 +404,10 @@ def obstacle_penalty(
     return reward_obstacle
 
 def goal_reached_reward(
-    env: ManagerBasedRLEnv, command_name: str, threshold: float = 0.2, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), 
+    env: ManagerBasedRLEnv, command_name: str, 
 ) -> torch.Tensor:
-    """Reward for reaching the goal."""
-    robot = env.scene[asset_cfg.name]
-    goal_pos = env.command_manager.get_command(command_name)[..., :3]
-    payload_pos_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
-    dist_to_goal = torch.norm(payload_pos_env - goal_pos, dim=-1)
-
-    # Store the previous goal-achievement state
-    prev_achieved_goal = env.command_manager._terms[command_name].achieved_goal.clone()
-
-    # Update the achieved_goal flag
-    env.command_manager._terms[command_name].achieved_goal |= (dist_to_goal < threshold)
-    
-    # Calculate reward: 1 for first time reaching the goal, 0 otherwise
-    reward_goal = (~prev_achieved_goal & env.command_manager._terms[command_name].achieved_goal).float()
+    """Reward for reaching the goal and staying there, then terminate the episde."""
+    reward_goal = env.command_manager._terms[command_name].achieved_goal
 
     assert reward_goal.shape == (env.scene.num_envs,)
     return reward_goal

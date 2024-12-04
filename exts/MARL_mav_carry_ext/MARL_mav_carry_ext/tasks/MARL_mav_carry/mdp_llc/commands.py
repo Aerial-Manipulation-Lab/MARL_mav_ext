@@ -61,7 +61,9 @@ class UniformPoseCommandGlobal(CommandTerm):
         # -- metrics
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
-        # -- goal reached for the first time
+        # -- goal reached flag
+        self.time_threshold_steps = int(2/env.sim.get_physics_dt()) # 2 seconds
+        self.goal_dist_counter = torch.zeros(self.num_envs, device=self.device)
         self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device) # used in reward function
 
     def __str__(self) -> str:
@@ -116,10 +118,22 @@ class UniformPoseCommandGlobal(CommandTerm):
 
     def _update_command(self):
         # used in reward function
-        dist_to_goal = torch.norm(self.robot.data.body_state_w[:, self.body_idx, :3] - self.pose_command_w[:, :3], dim=-1)
-        self.achieved_goal |= (dist_to_goal < 0.2) # logical OR, remains True if already True
-        
+        payload_env_pos = self.robot.data.body_state_w[:, self.body_idx, :3] - self._env.scene.env_origins
+        dist_to_goal = torch.norm(payload_env_pos - self.pose_command_w[:, :3], dim=-1)
 
+        # Check if within goal distance
+        within_goal_dist = dist_to_goal < 0.3
+
+        # Increment counter for environments within goal distance, reset to 0 for others
+        self.goal_dist_counter = torch.where(
+            within_goal_dist,
+            self.goal_dist_counter + 1,
+            torch.zeros_like(self.goal_dist_counter)
+        )
+
+        # Set achieved goal if counter meets or exceeds the threshold
+        self.achieved_goal |= self.goal_dist_counter >= self.time_threshold_steps
+        
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         # create markers if necessary for the first tome
