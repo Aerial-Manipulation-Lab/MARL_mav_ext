@@ -402,7 +402,8 @@ def obstacle_penalty(
     rpos = all_bodies_env - obstacle_pos
     cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1) # half lenghts
     # check if any of the bodies are inside the cuboid
-    is_inside_cuboid = torch.all(rpos <= cuboid_dims, dim=-1) # Shape (num_envs, num_bodies) true or false for each body
+    cuboid_dims_world = quat_rotate(obstacle.data.body_state_w[:, 0, 3:7].unsqueeze(1), cuboid_dims)
+    is_inside_cuboid = torch.all(rpos <= cuboid_dims_world, dim=-1) # Shape (num_envs, num_bodies) true or false for each body
     reward_obstacle = -torch.any(is_inside_cuboid, dim=-1).float() # Shape (num_envs,) -1 if any body is inside the cuboid, 0 otherwise
 
     assert reward_obstacle.shape == (env.scene.num_envs,)
