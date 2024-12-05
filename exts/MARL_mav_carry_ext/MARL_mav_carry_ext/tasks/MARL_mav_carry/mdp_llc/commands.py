@@ -118,7 +118,7 @@ class UniformPoseCommandGlobal(CommandTerm):
 
     def _update_command(self):
         # Check if stable within goal
-        within_goal_range = (self.metrics["position_error"] < 0.2) & (self.metrics["orientation_error"] < 0.2)
+        within_goal_range = (self.metrics["position_error"] < 0.35) & (self.metrics["orientation_error"] < 0.2)
         # Increment counter for environments within goal distance, reset to 0 for others
         self.goal_dist_counter = torch.where(
             within_goal_range,
