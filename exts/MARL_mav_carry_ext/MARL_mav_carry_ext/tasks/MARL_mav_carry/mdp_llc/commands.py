@@ -117,16 +117,12 @@ class UniformPoseCommandGlobal(CommandTerm):
         self.achieved_goal[env_ids] = False
 
     def _update_command(self):
-        # used in reward function
-        payload_env_pos = self.robot.data.body_state_w[:, self.body_idx, :3] - self._env.scene.env_origins
-        dist_to_goal = torch.norm(payload_env_pos - self.pose_command_w[:, :3], dim=-1)
-
-        # Check if within goal distance
-        within_goal_dist = dist_to_goal < 0.3
+        # Check if stable within goal
+        within_goal_range = self.metrics["position_error"] < 0.2 and self.metrics["orientation_error"] < 0.2
 
         # Increment counter for environments within goal distance, reset to 0 for others
         self.goal_dist_counter = torch.where(
-            within_goal_dist,
+            within_goal_range,
             self.goal_dist_counter + 1,
             torch.zeros_like(self.goal_dist_counter)
         )
