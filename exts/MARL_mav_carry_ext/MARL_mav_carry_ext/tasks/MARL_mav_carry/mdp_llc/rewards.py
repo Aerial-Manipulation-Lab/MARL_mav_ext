@@ -347,12 +347,14 @@ def downwash_reward(
     # Plane equation for the payload
     payload_pose_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
     payload_orientation = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
-    payload_length = torch.tensor([[0.275, 0.225, 0]] * env.num_envs, device=env.sim.device)
-    len_payload_env = quat_rotate(payload_orientation, payload_length)
-    edge_payload_min = payload_pose_env - len_payload_env
-    edge_payload_max = payload_pose_env + len_payload_env
-    plane_vec1 = edge_payload_max - payload_pose_env
-    plane_vec2 = edge_payload_min - payload_pose_env
+    payload_length_x = torch.tensor([[0.275, 0, 0]] * env.num_envs, device=env.sim.device)
+    payload_length_y = torch.tensor([[0, 0.275, 0]] * env.num_envs, device=env.sim.device)
+    x_len_payload_env = quat_rotate(payload_orientation, payload_length_x)
+    y_len_payload_env = quat_rotate(payload_orientation, payload_length_y)
+    edge_payload_x = payload_pose_env + x_len_payload_env
+    edge_payload_y = payload_pose_env + y_len_payload_env
+    plane_vec1 = edge_payload_x - payload_pose_env
+    plane_vec2 = edge_payload_y - payload_pose_env
     normal = torch.linalg.cross(plane_vec1, plane_vec2)
     d = torch.sum(normal * payload_pose_env, dim=-1).unsqueeze(-1).unsqueeze(-1)  # Shape (num_envs, 1, 1)
 
