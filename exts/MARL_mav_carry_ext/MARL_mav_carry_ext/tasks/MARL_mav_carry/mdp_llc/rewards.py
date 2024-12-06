@@ -340,33 +340,21 @@ def angle_cable_load(
 def downwash_reward(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), debug_vis: bool = True
 ) -> torch.Tensor:
-    """Reward for keeping the downwash wake away from the payload."""
+    """Reward for keeping the downwash wake away from the payload"""
     robot = env.scene[asset_cfg.name]
     reward_weight = 0.5
 
-    # Retrieve payload position and orientation
+    # Plane equation for the payload
     payload_pose_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
     payload_orientation = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
-
-    # Define two half-length vectors along perpendicular axes to form a non-degenerate plane
-    payload_length_x = torch.tensor([[0.275, 0.0,   0.0]] * env.num_envs, device=env.sim.device)
-    payload_length_y = torch.tensor([[0.0,   0.225, 0.0]] * env.num_envs, device=env.sim.device)
-
-    # Rotate these vectors into the environment frame
-    len_payload_x_env = quat_rotate(payload_orientation, payload_length_x)
-    len_payload_y_env = quat_rotate(payload_orientation, payload_length_y)
-
-    # Compute two distinct corners to define the plane
-    corner1 = payload_pose_env + len_payload_x_env + len_payload_y_env
-    corner2 = payload_pose_env + len_payload_x_env - len_payload_y_env
-
-    # Form the plane vectors
-    plane_vec1 = corner1 - payload_pose_env
-    plane_vec2 = corner2 - payload_pose_env
-
-    # Compute the normal using the cross product of plane_vec1 and plane_vec2
+    payload_length = torch.tensor([[0.275, 0.225, 0]] * env.num_envs, device=env.sim.device)
+    len_payload_env = quat_rotate(payload_orientation, payload_length)
+    edge_payload_min = payload_pose_env - len_payload_env
+    edge_payload_max = payload_pose_env + len_payload_env
+    plane_vec1 = edge_payload_max - payload_pose_env
+    plane_vec2 = edge_payload_min - payload_pose_env
     normal = torch.linalg.cross(plane_vec1, plane_vec2)
-    d = torch.sum(normal * payload_pose_env, dim=-1).unsqueeze(-1).unsqueeze(-1)  # (num_envs, 1, 1)
+    d = torch.sum(normal * payload_pose_env, dim=-1).unsqueeze(-1).unsqueeze(-1)  # Shape (num_envs, 1, 1)
 
     # Line equations for each drone's thrust direction
     drone_pos_env = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
@@ -376,6 +364,7 @@ def downwash_reward(
     ).view(env.num_envs, num_drones, 3)
 
     # Calculate intersection points with the plane
+    # t = (d - normal * drone_pos) / (normal * thrust_direction)
     numerator = d - torch.sum(normal.unsqueeze(1) * drone_pos_env, dim=-1, keepdim=True)
     denominator = (
         torch.sum(normal.unsqueeze(1) * thrust_directions, dim=-1, keepdim=True) + 1e-6
@@ -383,55 +372,39 @@ def downwash_reward(
     t = numerator / denominator
 
     # Intersection points on the plane for each drone
-    line_point_proj = drone_pos_env + t * thrust_directions  # (num_envs, num_drones, 3)
+    line_point_proj = drone_pos_env + t * thrust_directions  # Shape (num_envs, num_drones, 3)
 
     # Calculate distance between intersection points and payload position
-    line_dist = torch.norm(line_point_proj - payload_pose_env.unsqueeze(1), dim=-1)  # (num_envs, num_drones)
+    line_dist = torch.norm(line_point_proj - payload_pose_env.unsqueeze(1), dim=-1)  # Shape (num_envs, num_drones)
     straight_line_dist = torch.tensor(
-        [[1.1941, 1.1941, 1.1735]] * env.num_envs, device=env.sim.device
+        [[1.1941, 1.1941, 1.1735]] * env.num_envs, device="cuda:0"
     )  # line dist when drones are straight under the load
     diff_line_dist = line_dist - straight_line_dist
-
+    # Reward: penalize based on distance from the intersection point to the payload position
     reward_downwash = (
         reward_weight
         * torch.max(1 - torch.exp(-diff_line_dist * 15), torch.tensor(0.0, device=env.sim.device)).min(dim=-1)[0]
-    )
+    )  # Min distance from the payload
 
     assert reward_downwash.shape == (env.num_envs,)
     return reward_downwash
 
 def obstacle_penalty(
-    env: ManagerBasedRLEnv, 
-    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), 
-    obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
 ) -> torch.Tensor:
     """Penalty for getting close to the obstacle."""
     robot = env.scene[asset_cfg.name]
     obstacle = env.scene[obstacle_cfg.name]
-
-    # Positions of payload and drones in environment coordinates
     payload_pos_env = robot.data.body_state_w[:, payload_idx, :3] - env.scene.env_origins.unsqueeze(1)
     drones_pos_env = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
-    all_bodies_env = torch.cat((payload_pos_env, drones_pos_env), dim=1)  # (num_envs, num_bodies, 3)
-
-    # Obstacle position and orientation in world frame
-    obstacle_pos_w = obstacle.data.body_state_w[:, 0, :3]  # (num_envs, 3)
-    obstacle_quat_w = obstacle.data.body_state_w[:, 0, 3:7] # (num_envs, 4) quaternion (w, x, y, z)
-
-    # Translate all bodies relative to the obstacle center
-    relative_pos = all_bodies_env - obstacle_pos_w.unsqueeze(1)  # (num_envs, num_bodies, 3)
-
-    # Rotate positions into the obstacle's local frame
-    local_pos = quat_rotate_inverse(obstacle_quat_w.unsqueeze(1), relative_pos)  # (num_envs, num_bodies, 3)
-
-    # Cuboid half-lengths in obstacle's local frame
-    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1)  # (num_envs, 1, 3)
-
-    # Check which bodies are inside the cuboid in local coordinates
-    is_inside_cuboid = torch.all(torch.abs(local_pos) <= cuboid_dims, dim=-1)  # (num_envs, num_bodies) boolean
-
-    # If any body is inside, apply a penalty of -1, otherwise 0
-    reward_obstacle = -torch.any(is_inside_cuboid, dim=-1).float()  # (num_envs,)
+    obstacle_pos = obstacle.data.body_state_w[:, 0, :3].unsqueeze(1) - env.scene.env_origins.unsqueeze(1)
+    all_bodies_env = torch.cat((payload_pos_env, drones_pos_env), dim=1)
+    rpos = torch.abs(all_bodies_env - obstacle_pos)
+    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1) # half lenghts
+    # check if any of the bodies are inside the cuboid
+    cuboid_dims_world = quat_rotate(obstacle.data.body_state_w[:, 0, 3:7].unsqueeze(1), cuboid_dims)
+    is_inside_cuboid = torch.all(rpos <= cuboid_dims_world, dim=-1) # Shape (num_envs, num_bodies) true or false for each body
+    reward_obstacle = -torch.any(is_inside_cuboid, dim=-1).float() # Shape (num_envs,) -1 if any body is inside the cuboid, 0 otherwise
 
     assert reward_obstacle.shape == (env.scene.num_envs,)
     return reward_obstacle
