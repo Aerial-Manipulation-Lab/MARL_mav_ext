@@ -14,6 +14,7 @@ from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
 from omni.isaac.lab.managers import RewardTermCfg as RewTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
+from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
@@ -53,7 +54,7 @@ class CarryingSceneCfg(InteractiveSceneCfg):
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -2.0, 1.5)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -1.0, 1.5)),
     )
 
 
@@ -165,30 +166,30 @@ class EventCfg:
         },
     )
 
-    # reset_obstacle = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (0.0, 0.0),
-    #             "y": (-0.5, 0.5),
-    #             "z": (0.0, 0.0),
-    #             "roll":(0.0, 0.0),
-    #             "pitch":(0.0, 0.0),
-    #             "yaw":(-0.0, 0.0),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (-0.0, 0.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #         "asset_cfg":SceneEntityCfg("wall"),
-    #     },
+    reset_obstacle = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {
+                "x": (0.0, 0.0),
+                "y": (-0.0, 4.0),
+                "z": (0.0, 0.0),
+                "roll":(0.0, 0.0),
+                "pitch":(0.0, 0.0),
+                "yaw":(-0.0, 0.0),
+            },
+            "velocity_range": {
+                "x": (-0.0, 0.0),
+                "y": (-0.0, 0.0),
+                "z": (-0.0, 0.0),
+                "roll": (-0.0, 0.0),
+                "pitch": (-0.0, 0.0),
+                "yaw": (-0.0, 0.0),
+            },
+            "asset_cfg":SceneEntityCfg("wall"),
+        },
         
-    # )
+    )
 
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
@@ -214,15 +215,13 @@ class EventCfg:
 class RewardsCfg:
     """Rewards for the tracking task."""    
 
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-400.0)
+    position_reward_exp = RewTerm(
+        func=mdp.track_payload_pos_command,
+        weight=3.0,
+        params={"command_name": "pose_command", "asset_cfg": SceneEntityCfg("robot")},
+    )
 
-    # position_reward = RewTerm(
-    #     func=mdp.track_payload_pos_command,
-    #     weight=3.0,
-    #     params={"command_name": "pose_command", "asset_cfg": SceneEntityCfg("robot")},
-    # )
-
-    position_reward = RewTerm(
+    position_reward_linear = RewTerm(
         func=mdp.track_payload_pos_command_linear,
         weight=3.0,
         params={"bbox": 5.0, "command_name": "pose_command", "asset_cfg": SceneEntityCfg("robot")},
@@ -261,7 +260,7 @@ class RewardsCfg:
 
     goal_reached = RewTerm(
         func=mdp.goal_reached_reward,
-        weight=400.0,
+        weight=100.0,
         params={"command_name": "pose_command"},
     )
 
@@ -289,9 +288,9 @@ class TerminationsCfg:
     angle_drones_cable = DoneTerm(
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
-    # angle_load_cable = DoneTerm(
-    #     func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.00}
-    # )
+    angle_load_cable = DoneTerm(
+        func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.00}
+    )
 
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
 
@@ -303,7 +302,7 @@ class TerminationsCfg:
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.4})
 
-    bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
+    bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 8.0})
 
     goal_reached = DoneTerm(func=mdp.goal_reached_termination, params={"command_name": "pose_command"})
 
@@ -312,8 +311,12 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum for the hovering task."""
 
+    # wall_displacement = CurrTerm(func=mdp.modify_obstacle_position, params={"displacement": 0.5, 
+    #                                                                   "command_name": "pose_command", 
+    #                                                                   "event_name": "reset_obstacle", 
+    #                                                                   "pos_error_threshold": 1.0, 
+    #                                                                   "ori_error_threshold": 0.2})
     pass
-
 
 @configclass
 class ObstacleEnvCfg(ManagerBasedRLEnvCfg):
