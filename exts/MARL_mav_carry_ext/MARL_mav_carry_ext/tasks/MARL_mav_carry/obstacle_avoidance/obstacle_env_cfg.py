@@ -48,13 +48,25 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     wall: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/wall",
         spawn=sim_utils.CuboidCfg(
-            size=(0.1, 1.5, 3.0),
+            size=(0.1, 5.0, 3.0),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -1.0, 1.5)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -2.0, 1.5)),
+    )
+
+    wall_2: RigidObjectCfg = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/wall_2",
+        spawn=sim_utils.CuboidCfg(
+            size=(0.1, 5.0, 3.0),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+            mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
+            collision_props=sim_utils.CollisionPropertiesCfg(),
+            visual_material=sim_utils.PreviewSurfaceCfg(),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 4.0, 1.5)),
     )
 
 
@@ -126,6 +138,7 @@ class ObservationsCfg:
 
         # obstacle terms
         wall_state = ObsTerm(func=mdp.obstacle_rpos)
+        wall_state_2 = ObsTerm(func=mdp.obstacle_rpos_2)
         wall_geometry = ObsTerm(func=mdp.obstacle_geometry)
 
         def __post_init__(self):
@@ -172,7 +185,7 @@ class EventCfg:
         params={
             "pose_range": {
                 "x": (0.0, 0.0),
-                "y": (-0.0, 4.0),
+                "y": (-0.0, 0.0),
                 "z": (0.0, 0.0),
                 "roll":(0.0, 0.0),
                 "pitch":(0.0, 0.0),
