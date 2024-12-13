@@ -117,7 +117,7 @@ def main():
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
                 waypoint[:, :3] = stretch_position[:, :3]
-                waypoint[:, 12:15] = straight_up_position[:, 3:6]
+                waypoint[:, 12:15] = stretch_position[:, 3:6]
                 waypoint[:, 24:27] = stretch_position[:, 6:9]
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)

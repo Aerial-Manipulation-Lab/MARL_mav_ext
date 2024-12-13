@@ -342,7 +342,6 @@ def downwash_reward(
 ) -> torch.Tensor:
     """Reward for keeping the downwash wake away from the payload"""
     robot = env.scene[asset_cfg.name]
-    reward_weight = 0.5
 
     # Plane equation for the payload
     payload_pose_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
@@ -378,15 +377,9 @@ def downwash_reward(
 
     # Calculate distance between intersection points and payload position
     line_dist = torch.norm(line_point_proj - payload_pose_env.unsqueeze(1), dim=-1)  # Shape (num_envs, num_drones)
-    straight_line_dist = torch.tensor(
-        [[1.1941, 1.1941, 1.1735]] * env.num_envs, device="cuda:0"
-    )  # line dist when drones are straight under the load
-    diff_line_dist = line_dist - straight_line_dist
     # Reward: penalize based on distance from the intersection point to the payload position
-    reward_downwash = (
-        reward_weight
-        * torch.max(1 - torch.exp(-diff_line_dist * 15), torch.tensor(0.0, device=env.sim.device)).min(dim=-1)[0]
-    )  # Min distance from the payload
+    scaling_factor = 3
+    reward_downwash = (1 - torch.exp(-torch.min(line_dist, dim=-1).values * scaling_factor))  # Min distance from the payload
 
     assert reward_downwash.shape == (env.num_envs,)
     return reward_downwash
