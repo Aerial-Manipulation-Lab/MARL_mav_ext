@@ -66,15 +66,15 @@ def main():
     stretch_position = torch.tensor(
         [
             [
-                -2.7,
-                -0.5,
-                2.5,  # drone 1
-                -2.0,
+                -2.5,
+                1.0,
+                1.5,  # drone 1
+                -2.5,
                 0.0,
-                2.5,  # drone 2
-                -2.7,
+                1.5,  # drone 2
+                -3.2,
                 0.5,
-                2.5,
+                1.5,
             ]
         ],
         dtype=torch.float32,
@@ -100,7 +100,7 @@ def main():
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
-            if count % 500 == 0:
+            if count % 50 == 0:
                 # env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")

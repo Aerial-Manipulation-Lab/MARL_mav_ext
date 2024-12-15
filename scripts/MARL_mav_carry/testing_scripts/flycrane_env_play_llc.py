@@ -64,8 +64,8 @@ def main():
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
-    # print("Rope idx are: ", env.scene["robot"].find_bodies("rope.*_link"))
-    # print("Load link id:", env.scene["robot"].find_bodies("load_link")[0])
+    # print("Rope idx are: ", env.scene["robot"].find_bodies("rope_.*_link_.*"))
+    # print("Load link id:", env.scene["robot"].find_bodies("load_link"))
     # print("drone_idx: ", env.scene["robot"].find_bodies("Falcon.*_base_link"))
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
