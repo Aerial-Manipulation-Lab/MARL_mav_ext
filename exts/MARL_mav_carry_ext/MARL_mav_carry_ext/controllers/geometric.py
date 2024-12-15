@@ -32,7 +32,7 @@ class GeometricController:
             device=self.device,
         )
 
-        self.p_offset = torch.tensor([[0.0, 0.0, -0.03]] * self.num_envs, device=self.device)
+        self.p_offset = torch.tensor([[0.0, 0.0, -0.0]] * self.num_envs, device=self.device)
         self.integration_max = torch.tensor([0.0, 0.0, 0.0], device=self.device)
 
         # sim and drone parameters

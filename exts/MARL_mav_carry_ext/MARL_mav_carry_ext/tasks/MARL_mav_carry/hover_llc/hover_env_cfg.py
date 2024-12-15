@@ -17,7 +17,7 @@ from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 
-from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
+from MARL_mav_carry_ext.assets.flycrane import FLYCRANE_CFG  # isort:skip
 
 # Define the scene configuration
 
@@ -91,8 +91,6 @@ class ObservationsCfg:
         payload_orientation = ObsTerm(func=mdp.payload_orientation)
         payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)
         payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)
-        payload_linear_accelerations = ObsTerm(func=mdp.payload_linear_acceleration)
-        payload_angular_accelerations = ObsTerm(func=mdp.payload_angular_acceleration)
         drone_positions = ObsTerm(func=mdp.drone_positions)
         drone_orientations = ObsTerm(func=mdp.drone_orientations)
         drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)
@@ -108,7 +106,6 @@ class ObservationsCfg:
         payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
         drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
         drone_pdist = ObsTerm(func=mdp.drone_pdist_obs)
-        cable_angle = ObsTerm(func=mdp.cable_angle)
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations

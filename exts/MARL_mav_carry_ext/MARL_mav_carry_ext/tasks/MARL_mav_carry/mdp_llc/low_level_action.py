@@ -87,12 +87,19 @@ class LowLevelAction(ActionTerm):
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
-            drone_positions = observations[:, 19:28]
-            drone_orientations = observations[:, 28:40]
-            drone_linear_velocities = observations[:, 40:49]
-            drone_angular_velocities = observations[:, 49:58]
-            drone_linear_accelerations = observations[:, 58:67]
-            drone_angular_accelerations = observations[:, 67:76]
+            # drone_positions = observations[:, 19:28]
+            # drone_orientations = observations[:, 28:40]
+            # drone_linear_velocities = observations[:, 40:49]
+            # drone_angular_velocities = observations[:, 49:58]
+            # drone_linear_accelerations = observations[:, 58:67]
+            # drone_angular_accelerations = observations[:, 67:76]
+
+            drone_positions = observations[:, 13:22]
+            drone_orientations = observations[:, 22:34]
+            drone_linear_velocities = observations[:, 34:43]
+            drone_angular_velocities = observations[:, 43:52]
+            drone_linear_accelerations = observations[:, 52:61]
+            drone_angular_accelerations = observations[:, 61:70]
 
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
