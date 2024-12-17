@@ -306,7 +306,7 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
     action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
-    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones / 4  # num propellors
+    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones
     reward_action_smoothness_force = torch.exp(-action_smoothness_force)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
