@@ -87,19 +87,16 @@ class LowLevelAction(ActionTerm):
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             thrusts = []
             observations = self._env.observation_manager.compute_group("policy")
-            # drone_positions = observations[:, 19:28]
+            drone_positions = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)).view(self.num_envs, -1)
             # drone_orientations = observations[:, 28:40]
             # drone_linear_velocities = observations[:, 40:49]
             # drone_angular_velocities = observations[:, 49:58]
             # drone_linear_accelerations = observations[:, 58:67]
-            # drone_angular_accelerations = observations[:, 67:76]
 
-            drone_positions = observations[:, 13:22]
-            drone_orientations = observations[:, 22:34]
-            drone_linear_velocities = observations[:, 34:43]
-            drone_angular_velocities = observations[:, 43:52]
-            drone_linear_accelerations = observations[:, 52:61]
-            drone_angular_accelerations = observations[:, 61:70]
+            drone_orientations = observations[:, 10:22]
+            drone_linear_velocities = observations[:, 22:31]
+            drone_angular_velocities = observations[:, 31:40]
+            drone_linear_accelerations = observations[:, 40:49]
 
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
@@ -111,7 +108,6 @@ class LowLevelAction(ActionTerm):
                 drone_states["lin_vel"] = drone_linear_velocities[:, i * 3 : i * 3 + 3]
                 drone_states["ang_vel"] = drone_angular_velocities[:, i * 3 : i * 3 + 3]
                 drone_states["lin_acc"] = drone_linear_accelerations[:, i * 3 : i * 3 + 3]
-                drone_states["ang_acc"] = drone_angular_accelerations[:, i * 3 : i * 3 + 3]
                 # calculate current jerk and snap
                 self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
                 drone_states["jerk"] = self._drone_jerk[:, i]

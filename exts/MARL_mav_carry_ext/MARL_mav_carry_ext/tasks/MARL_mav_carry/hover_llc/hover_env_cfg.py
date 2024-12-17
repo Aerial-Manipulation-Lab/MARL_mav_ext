@@ -53,14 +53,14 @@ class CommandsCfg:
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
-        resampling_time_range=(5, 5),  # out of range of max episode length for now
-        debug_vis=False,
+        resampling_time_range=(20, 20),  # out of range of max episode length for now
+        debug_vis=True,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
-            pos_x=(-1.0, 1.0),
-            pos_y=(-1.0, 1.0),
-            pos_z=(0.5, 1.5),
-            roll=(-math.pi / 4, math.pi / 4),
-            pitch=(-math.pi / 4, math.pi / 4),
+            pos_x=(-2.0, 2.0),
+            pos_y=(-2.0, 2.0),
+            pos_z=(0.5, 2.5),
+            roll=(-0.0, 0.0),
+            pitch=(-0.0, 0.0),
             yaw=(-math.pi, math.pi),
         ),
     )
@@ -87,16 +87,13 @@ class ObservationsCfg:
         """Observation terms for the policy."""
 
         # payload and drone states
-        payload_pos = ObsTerm(func=mdp.payload_position)  # can add noise later
         payload_orientation = ObsTerm(func=mdp.payload_orientation)
         payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)
         payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)
-        drone_positions = ObsTerm(func=mdp.drone_positions)
         drone_orientations = ObsTerm(func=mdp.drone_orientations)
         drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)
         drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)
         drone_linear_accelerations = ObsTerm(func=mdp.drone_linear_acceleration)
-        drone_angular_accelerations = ObsTerm(func=mdp.drone_angular_acceleration)
 
         # goal error terms
         payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_command"})
@@ -200,14 +197,14 @@ class RewardsCfg:
 
     ori_reward = RewTerm(
         func=mdp.track_payload_orientation_command,
-        weight=8.0,
+        weight=1.5,
         params={"command_name": "pose_command", "debug_vis": False},
     )
 
-    policy_action_smoothness = RewTerm(
-        func=mdp.action_smoothness_reward,
-        weight=1.0,
-    )
+    # policy_action_smoothness = RewTerm(
+    #     func=mdp.action_smoothness_reward,
+    #     weight=1.0,
+    # )
 
     force_penalty = RewTerm(
         func=mdp.action_penalty_rel,
@@ -216,7 +213,7 @@ class RewardsCfg:
 
     force_smoothness = RewTerm(
         func=mdp.action_smoothness_force_reward,
-        weight=0.5,
+        weight=1.0,
     )
 
     downwash_reward = RewTerm(
