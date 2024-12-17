@@ -9,7 +9,7 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
 
 
-class ManagerBasedPlotter:
+class ManagerBasedPlotterTraj:
     def __init__(self, env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
 
         # environment
@@ -48,25 +48,36 @@ class ManagerBasedPlotter:
         # references
         load_pos_ref = self.env.command_manager._terms[self.command_name].pose_command_w[..., :3][0]
         load_orientation_ref = self.env.command_manager._terms[self.command_name].pose_command_w[..., 3:7][0]
+        load_vel_ref = self.env.command_manager._terms[self.command_name].twist_command[..., 0:3][0]
+        load_ang_vel_ref = self.env.command_manager._terms[self.command_name].twist_command[..., 3:][0]
+
+        # get the first point from the commanded trajectory
+        if load_pos_ref.shape[0] > 1:
+            load_pos_ref = load_pos_ref[0]
+            load_orientation_ref = load_orientation_ref[0]
+            load_vel_ref = load_vel_ref[0]
+            load_ang_vel_ref = load_ang_vel_ref[0]
 
         # to plot ref and actual pos side by side
         both_load_pos = torch.cat((load_pos_ref, load_pos), dim=-1)
         both_load_orientation = torch.cat((load_orientation_ref, load_orientation), dim=-1)
+        both_load_vel = torch.cat((load_vel_ref, load_vel), dim=-1)
+        both_load_ang_vel = torch.cat((load_ang_vel_ref, load_ang_vel), dim=-1)
 
         if not self.load_data:
             self.load_data = {
                 "both_load_pos": both_load_pos.unsqueeze(0).tolist(),
                 "both_load_orientation": both_load_orientation.unsqueeze(0).tolist(),
-                "load_vel": load_vel.unsqueeze(0).tolist(),
-                "load_ang_vel": load_ang_vel.unsqueeze(0).tolist(),
+                "both_load_vel": both_load_vel.unsqueeze(0).tolist(),
+                "both_load_ang_vel": both_load_ang_vel.unsqueeze(0).tolist(),
                 "load_acc": load_acc.unsqueeze(0).tolist(),
                 "load_ang_acc": load_ang_acc.unsqueeze(0).tolist(),
             }
         else:
             self.load_data["both_load_pos"].append(both_load_pos.tolist())
             self.load_data["both_load_orientation"].append(both_load_orientation.tolist())
-            self.load_data["load_vel"].append(load_vel.tolist())
-            self.load_data["load_ang_vel"].append(load_ang_vel.tolist())
+            self.load_data["both_load_vel"].append(both_load_vel.tolist())
+            self.load_data["both_load_ang_vel"].append(both_load_ang_vel.tolist())
             self.load_data["load_acc"].append(load_acc.tolist())
             self.load_data["load_ang_acc"].append(load_ang_acc.tolist())
 
