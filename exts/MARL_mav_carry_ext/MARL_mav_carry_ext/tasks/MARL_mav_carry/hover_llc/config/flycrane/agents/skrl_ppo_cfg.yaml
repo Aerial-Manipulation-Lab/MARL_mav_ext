@@ -21,7 +21,7 @@ models:
         - elu
         - elu
 
-    output: tanh(ACTIONS)
+    output: ACTIONS
   value:  # see deterministic_model parameters
     class: DeterministicMixin
     clip_actions: False

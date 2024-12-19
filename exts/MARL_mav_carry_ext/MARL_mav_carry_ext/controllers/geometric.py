@@ -39,7 +39,7 @@ class GeometricController:
         self.gravity = torch.tensor([[0.0, 0.0, -9.8066]] * self.num_envs, device=self.device)
         self.z_i = torch.tensor([[0.0, 0.0, 1.0]] * self.num_envs, device=self.device)
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
-        self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0], device=self.device)
+        self.torque_map = torch.tensor([3.4375484e-08, 0.0, 0.0], device=self.device)
         self.t_last = 0.0
         self.falcon_mass = 0.617  # kg
         self.l = 0.075
@@ -174,4 +174,6 @@ class GeometricController:
         thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)
         thrusts = torch.clamp(thrusts, self.min_thrust, self.max_thrust)
 
-        return thrusts, acc_cmd, q_cmd
+        rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0])
+
+        return rotor_speeds, acc_cmd, q_cmd

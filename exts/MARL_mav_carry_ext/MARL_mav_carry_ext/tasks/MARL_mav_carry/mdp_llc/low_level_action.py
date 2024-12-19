@@ -4,6 +4,7 @@ import torch
 from dataclasses import MISSING
 
 from MARL_mav_carry_ext.controllers import GeometricController
+from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
 
 import omni.isaac.lab.utils.math as math_utils
 from omni.isaac.lab.envs import ManagerBasedRLEnv
@@ -50,6 +51,7 @@ class LowLevelAction(ActionTerm):
         # buffers
         self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
         self._prev_forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
         self._waypoints = torch.zeros(
             env.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device
         )
@@ -62,6 +64,10 @@ class LowLevelAction(ActionTerm):
         self._ll_counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+
+        # motor model
+        self._motor_model = RotorMotor(self.num_envs, torch.zeros(self.num_envs, self._num_drones * 4, device=self.device)) # TODO: change to actual init RPM
+        self.sampling_time = self._env.sim.get_physics_dt() * self.cfg.low_level_decimation
 
         # debug
         if cfg.debug_vis:
@@ -147,7 +153,7 @@ class LowLevelAction(ActionTerm):
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
-            thrusts = []
+            target_rates = []
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)).view(self.num_envs, -1)
             # drone_orientations = observations[:, 28:40]
@@ -175,21 +181,29 @@ class LowLevelAction(ActionTerm):
                 drone_states["jerk"] = self._drone_jerk[:, i]
                 self._drone_prev_acc[:, i] = drone_states["lin_acc"]
 
-                drone_thrusts, acc_cmd, q_cmd = self._geometric_controller.getCommand(
+                target_rpm, acc_cmd, q_cmd = self._geometric_controller.getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], self.drone_setpoint[i]
                 )
-                thrusts.append(drone_thrusts)
+                target_rates.append(target_rpm)
                 if self.cfg.debug_vis:
                     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
                     self.drone_goals_debug[:, i] = self.drone_setpoint[i]["pos"] + self._env.scene.env_origins
                     self.des_acc_debug[:, i] = acc_cmd
                     self.des_ori_debug[:, i] = q_cmd
-
-            self._forces[..., 2] = torch.cat(thrusts, dim=-1)
+            
+            target_rates = torch.cat(target_rates, dim=-1)
+            thrusts, moments = self._motor_model.get_motor_thrusts_moments(target_rates, self.sampling_time)
+            self._forces[..., 2] = thrusts
+            self._moments[..., 2] = moments.view(self.num_envs, self._num_drones, 4).sum(-1)
             self._ll_counter = 0
         self._ll_counter += 1
+        # apply forces to each rotor
         self._env.scene["robot"].set_external_force_and_torque(
             self._forces, torch.zeros_like(self._forces), self._body_ids
+        )
+        # apply torques induced by rotors to each body
+        self._env.scene["robot"].set_external_force_and_torque(
+            torch.zeros_like(self._moments), self._moments, self._falcon_idx
         )
 
     """
@@ -342,5 +356,5 @@ class LowLevelActionCfg(ActionTermCfg):
     """Decimation factor for the low level action term."""
     debug_vis: bool = False
     """Whether to visualize debug information. Defaults to False."""
-    delta_output: bool = True
+    delta_output: bool = False
     """Whether the output is delta or absolute values."""
