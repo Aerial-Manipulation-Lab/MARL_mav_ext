@@ -253,7 +253,7 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     return reward_swing
 
 
-def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+def action_pos_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in action values."""
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
@@ -269,8 +269,72 @@ def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     pref_ref_pos = torch.cat((pref_ref_pos_0, pref_ref_pos_1, pref_ref_pos_2), dim=1)
 
     action_smoothness = torch.norm((ref_pos - pref_ref_pos) / num_drones, dim=-1)
+    reward_action_smoothness = torch.exp(-action_smoothness)
+
+    assert reward_action_smoothness.shape == (env.scene.num_envs,)
+    return reward_action_smoothness
+
+def action_vel_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high variation in action values."""
+    action = env.action_manager.action
+    action_prev = env.action_manager.prev_action
+    # in the case of 4 input terms
+    ref_vel_0 = action[..., 3:6]
+    ref_vel_1 = action[..., 15:18]
+    ref_vel_2 = action[..., 27:30]
+    pref_ref_vel_0 = action_prev[..., 3:6]
+    pref_ref_vel_1 = action_prev[..., 15:18]
+    pref_ref_vel_2 = action_prev[..., 27:30]
+
+    ref_vel = torch.cat((ref_vel_0, ref_vel_1, ref_vel_2), dim=1)
+    pref_ref_vel = torch.cat((pref_ref_vel_0, pref_ref_vel_1, pref_ref_vel_2), dim=1)
+
+    action_smoothness = torch.norm((ref_vel - pref_ref_vel) / num_drones, dim=-1)
+    reward_action_smoothness = torch.exp(-action_smoothness)
+
+    assert reward_action_smoothness.shape == (env.scene.num_envs,)
+    return reward_action_smoothness
+
+def action_acc_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high variation in action values."""
+    action = env.action_manager.action
+    action_prev = env.action_manager.prev_action
+    # in the case of 4 input terms
+    ref_acc_0 = action[..., 6:9]
+    ref_acc_1 = action[..., 18:21]
+    ref_acc_2 = action[..., 30:33]
+    pref_ref_acc_0 = action_prev[..., 6:9]
+    pref_ref_acc_1 = action_prev[..., 18:21]
+    pref_ref_acc_2 = action_prev[..., 30:33]
+
+    ref_acc = torch.cat((ref_acc_0, ref_acc_1, ref_acc_2), dim=1)
+    pref_ref_acc = torch.cat((pref_ref_acc_0, pref_ref_acc_1, pref_ref_acc_2), dim=1)
+
+    action_smoothness = torch.norm((ref_acc - pref_ref_acc) / num_drones, dim=-1)
+    scaling_factor = 2
+    reward_action_smoothness = torch.exp(-action_smoothness / scaling_factor)
+
+    assert reward_action_smoothness.shape == (env.scene.num_envs,)
+    return reward_action_smoothness
+
+def action_jerk_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high variation in action values."""
+    action = env.action_manager.action
+    action_prev = env.action_manager.prev_action
+    # in the case of 4 input terms
+    ref_jerk_0 = action[..., 9:12]
+    ref_jerk_1 = action[..., 21:24]
+    ref_jerk_2 = action[..., 33:36]
+    pref_ref_jerk_0 = action_prev[..., 9:12]
+    pref_ref_jerk_1 = action_prev[..., 21:24]
+    pref_ref_jerk_2 = action_prev[..., 33:36]
+
+    ref_jerk = torch.cat((ref_jerk_0, ref_jerk_1, ref_jerk_2), dim=1)
+    pref_ref_jerk = torch.cat((pref_ref_jerk_0, pref_ref_jerk_1, pref_ref_jerk_2), dim=1)
+
+    action_smoothness = torch.norm((ref_jerk - pref_ref_jerk) / num_drones, dim=-1)
     scaling_factor = 5
-    reward_action_smoothness = torch.exp(-action_smoothness * scaling_factor)
+    reward_action_smoothness = torch.exp(-action_smoothness / scaling_factor)
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
@@ -306,7 +370,7 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
     action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
-    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones
+    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones / 4  # num propellers
     reward_action_smoothness_force = torch.exp(-action_smoothness_force)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)

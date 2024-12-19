@@ -21,7 +21,7 @@ models:
         - elu
         - elu
 
-    output: ACTIONS
+    output: tanh(ACTIONS)
   value:  # see deterministic_model parameters
     class: DeterministicMixin
     clip_actions: False
@@ -70,8 +70,8 @@ agent:
   time_limit_bootstrap: False
   # logging and checkpoint
   experiment:
-    directory: "flycrane_hover_ppo"
-    experiment_name: "delete_me"
+    directory: "realistic_flycrane_hover"
+    experiment_name: "rod_delta"
     write_interval: 100
     checkpoint_interval: 2500
 

@@ -201,11 +201,6 @@ class RewardsCfg:
         params={"command_name": "pose_command", "debug_vis": False},
     )
 
-    # policy_action_smoothness = RewTerm(
-    #     func=mdp.action_smoothness_reward,
-    #     weight=1.0,
-    # )
-
     force_penalty = RewTerm(
         func=mdp.action_penalty_rel,
         weight=0.2,
