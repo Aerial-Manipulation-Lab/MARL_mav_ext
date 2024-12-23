@@ -48,25 +48,25 @@ class CarryingSceneCfg(InteractiveSceneCfg):
     wall: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/wall",
         spawn=sim_utils.CuboidCfg(
-            size=(0.1, 5.0, 3.0),
+            size=(0.1, 10.0, 1.5),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
             collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0), emissive_color=(0.0, 1.0, 0.0), opacity=0.99),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -2.0, 1.5)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 2.5)),
     )
 
     wall_2: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/wall_2",
         spawn=sim_utils.CuboidCfg(
-            size=(0.1, 5.0, 3.0),
+            size=(0.1, 10.0, 1.5),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
             collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0), emissive_color=(0.0, 1.0, 0.0), opacity=0.95),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 4.0, 1.5)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
     )
 
 
@@ -86,8 +86,8 @@ class CommandsCfg:
             pos_x=(-3.0, -2.5),
             pos_y=(-0.5, 0.5),
             pos_z=(1.0, 1.5),
-            roll=(-math.pi / 4, math.pi / 4),
-            pitch=(-math.pi / 4, math.pi / 4),
+            roll=(-0.0, 0.0),
+            pitch=(-0.0, 0.0),
             yaw=(-math.pi, math.pi),
         ),
     )
@@ -263,12 +263,7 @@ class RewardsCfg:
 
     downwash_reward = RewTerm(
         func=mdp.downwash_reward,
-        weight=1.0,
-    )
-
-    obstacle_penalty = RewTerm(
-        func=mdp.obstacle_penalty,
-        weight=1.0,
+        weight=0.5,
     )
 
     goal_reached = RewTerm(
