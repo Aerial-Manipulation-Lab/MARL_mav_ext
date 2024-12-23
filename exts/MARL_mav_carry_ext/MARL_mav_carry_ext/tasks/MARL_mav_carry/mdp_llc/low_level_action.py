@@ -139,10 +139,10 @@ class LowLevelAction(ActionTerm):
                 self.previous_setpoint[:, i, 9:12] = self.drone_setpoint[i]["jerk"]
 
             else:
-                self.drone_setpoint[i]["pos"] = drone_waypoints[:, :3]
-                self.drone_setpoint[i]["lin_vel"] = drone_waypoints[:, 3:6]
-                self.drone_setpoint[i]["lin_acc"] = drone_waypoints[:, 6:9]
-                self.drone_setpoint[i]["jerk"] = drone_waypoints[:, 9:12]
+                self.drone_setpoint[i]["pos"] = torch.zeros(self.num_envs, 3, device=self.device) # drone_waypoints[:, :3]
+                self.drone_setpoint[i]["lin_vel"] = drone_waypoints # drone_waypoints[:, 3:6]
+                self.drone_setpoint[i]["lin_acc"] = torch.zeros(self.num_envs, 3, device=self.device) # drone_waypoints[:, 6:9]
+                self.drone_setpoint[i]["jerk"] = torch.zeros(self.num_envs, 3, device=self.device) # drone_waypoints[:, 9:12]
 
             # drone_setpoint["snap"] = torch.zeros(self.num_envs, 3, device=self.device)
             self._desired_position[:, i] = self.drone_setpoint[i]["pos"]
@@ -156,15 +156,10 @@ class LowLevelAction(ActionTerm):
             target_rates = []
             observations = self._env.observation_manager.compute_group("policy")
             drone_positions = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)).view(self.num_envs, -1)
-            # drone_orientations = observations[:, 28:40]
-            # drone_linear_velocities = observations[:, 40:49]
-            # drone_angular_velocities = observations[:, 49:58]
-            # drone_linear_accelerations = observations[:, 58:67]
-
-            drone_orientations = observations[:, 10:22]
-            drone_linear_velocities = observations[:, 22:31]
-            drone_angular_velocities = observations[:, 31:40]
-            drone_linear_accelerations = observations[:, 40:49]
+            drone_orientations = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7]).view(self.num_envs, -1)
+            drone_linear_velocities = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 7:10]).view(self.num_envs, -1)
+            drone_angular_velocities = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 10:13]).view(self.num_envs, -1)
+            drone_linear_accelerations = (self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]).view(self.num_envs, -1)
 
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
@@ -346,13 +341,13 @@ class LowLevelActionCfg(ActionTermCfg):
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
     num_drones: int = 3
     """Number of drones."""
-    waypoint_dim: int = 12
+    waypoint_dim: int = 3
     """Dimension of the waypoints: [pos, vel, acc, jerk]."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
     time_horizon: int = 2
     """Time horizon of the trajectory in seconds."""
-    low_level_decimation: int = 2
+    low_level_decimation: int = 1
     """Decimation factor for the low level action term."""
     debug_vis: bool = False
     """Whether to visualize debug information. Defaults to False."""

@@ -3,7 +3,7 @@ import torch
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import quat_conjugate, quat_inv, quat_mul
+from omni.isaac.lab.utils.math import quat_conjugate, quat_inv, quat_mul, matrix_from_quat
 
 from .utils import get_drone_pdist, get_drone_rpos
 
@@ -33,7 +33,9 @@ def payload_position(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEn
 def payload_orientation(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    return robot.data.body_state_w[:, payload_idx, 3:7].view(env.num_envs, -1)
+    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_rot_matrix = matrix_from_quat(payload_quat)
+    return payload_rot_matrix.view(env.num_envs, -1)
 
 
 def payload_linear_velocities(
@@ -87,8 +89,27 @@ def payload_orientation_error(
     robot: Articulation = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
-    orientation_error = quat_mul(desired_quat, quat_conjugate(payload_quat))
+    
+    # Compute relative quaternion
+    relative_quat = quat_mul(desired_quat, quat_conjugate(payload_quat))
+    
+    # Convert relative quaternion to angle-axis representation
+    # Ensure quaternion is normalized to avoid numerical drift
+    relative_quat = torch.nn.functional.normalize(relative_quat, dim=-1)
+    angle = 2 * torch.acos(torch.clamp(relative_quat[..., 0], -1.0, 1.0))  # Angle in radians
+    sin_half_angle = torch.sqrt(1 - relative_quat[..., 0]**2)  # sin(theta / 2)
+    
+    # Avoid division by zero for very small angles
+    axis = torch.where(
+        sin_half_angle.unsqueeze(-1) > 1e-6,
+        relative_quat[..., 1:] / sin_half_angle.unsqueeze(-1),
+        torch.zeros_like(relative_quat[..., 1:])
+    )
+    
+    # Angle-axis representation
+    orientation_error = angle.unsqueeze(-1) * axis
     return orientation_error
+
 
 
 def payload_linear_velocity_error(
@@ -143,7 +164,9 @@ def drone_positions(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnt
 def drone_orientations(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    return robot.data.body_state_w[:, drone_idx, 3:7].view(env.num_envs, -1)
+    drone_quat = robot.data.body_state_w[:, drone_idx, 3:7]
+    drone_rot_matrix = matrix_from_quat(drone_quat)
+    return drone_rot_matrix.view(env.num_envs, -1)
 
 
 def drone_linear_velocities(
@@ -304,5 +327,5 @@ def obstacle_geometry(
         env: ManagerBasedRLEnv, obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
 ) -> torch.Tensor:
     """Get the obstacle size parameters"""
-    wall_dimensions = torch.tensor([0.1, 5.0, 3.0], device=env.device).repeat(env.num_envs,1)
+    wall_dimensions = torch.tensor([0.1, 10.0, 1.5], device=env.device).repeat(env.num_envs,1)
     return wall_dimensions
