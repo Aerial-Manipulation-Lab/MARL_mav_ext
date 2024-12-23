@@ -154,7 +154,6 @@ class LowLevelAction(ActionTerm):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             target_rates = []
-            observations = self._env.observation_manager.compute_group("policy")
             drone_positions = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)).view(self.num_envs, -1)
             drone_orientations = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7]).view(self.num_envs, -1)
             drone_linear_velocities = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 7:10]).view(self.num_envs, -1)
