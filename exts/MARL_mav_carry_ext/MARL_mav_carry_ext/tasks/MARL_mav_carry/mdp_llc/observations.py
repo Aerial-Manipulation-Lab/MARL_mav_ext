@@ -89,27 +89,12 @@ def payload_orientation_error(
     robot: Articulation = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
-    
-    # Compute relative quaternion
-    relative_quat = quat_mul(desired_quat, quat_conjugate(payload_quat))
-    
-    # Convert relative quaternion to angle-axis representation
-    # Ensure quaternion is normalized to avoid numerical drift
-    relative_quat = torch.nn.functional.normalize(relative_quat, dim=-1)
-    angle = 2 * torch.acos(torch.clamp(relative_quat[..., 0], -1.0, 1.0))  # Angle in radians
-    sin_half_angle = torch.sqrt(1 - relative_quat[..., 0]**2)  # sin(theta / 2)
-    
-    # Avoid division by zero for very small angles
-    axis = torch.where(
-        sin_half_angle.unsqueeze(-1) > 1e-6,
-        relative_quat[..., 1:] / sin_half_angle.unsqueeze(-1),
-        torch.zeros_like(relative_quat[..., 1:])
-    )
-    
-    # Angle-axis representation
-    orientation_error = angle.unsqueeze(-1) * axis
-    return orientation_error
+    # orientation_error = quat_mul(desired_quat, quat_conjugate(payload_quat))
+    payload_rot_matrix = matrix_from_quat(payload_quat)
+    desired_rot_matrix = matrix_from_quat(desired_quat)
+    orientation_error = torch.matmul(desired_rot_matrix, payload_rot_matrix.transpose(1, 2)).view(env.num_envs, -1)
 
+    return orientation_error
 
 
 def payload_linear_velocity_error(

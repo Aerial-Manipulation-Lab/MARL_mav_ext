@@ -180,8 +180,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # run training
     runner.run()
 
-    mean_final_reward = np.mean(np.array(runner.agent._track_rewards))
-    print("Mean rewards are", np.mean(np.array(runner.agent._track_rewards)))
+    print("Mean rewards are", runner.agent._track_mean_reward)
     # close the simulator
     env.close()
 
