@@ -150,8 +150,8 @@ def drone_orientations(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
     """Drone orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_quat = robot.data.body_state_w[:, drone_idx, 3:7]
-    drone_rot_matrix = matrix_from_quat(drone_quat)
-    return drone_rot_matrix.view(env.num_envs, -1)
+    # drone_rot_matrix = matrix_from_quat(drone_quat)
+    return drone_quat.view(env.num_envs, -1)
 
 
 def drone_linear_velocities(
