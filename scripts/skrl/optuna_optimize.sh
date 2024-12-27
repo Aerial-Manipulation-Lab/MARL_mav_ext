@@ -4,7 +4,7 @@
 STUDY_NAME="example"
 TASK="Isaac-flycrane-payload-hovering-llc-v0"
 NUM_ENVS=32768
-TIMESTEPS=200000
+TIMESTEPS=150000
 NUM_TRIALS=100
 
 # Parse command-line arguments
@@ -31,7 +31,7 @@ for ((i=1; i<=NUM_TRIALS; i++)); do
         --search-space '{
             "learning_rate": {"name": "FloatDistribution", "attributes": {"step": null, "low": 0.00001, "high": 0.1, "log": true}},
             "mini_batches": {"name": "IntDistribution", "attributes": {"step": 1, "low": 1, "high": 8}},
-            "lambda": {"name": "FloatDistribution", "attributes": {"step": null, "low": 0.5, "high": 1.0}}
+            "lambda": {"name": "FloatDistribution", "attributes": {"step": null, "low": 0.2, "high": 1.0}}
         }')
 
     # Extract the trial parameters
