@@ -138,15 +138,18 @@ def large_states(
 
 def nan_obs(env: ManagerBasedRLEnv, group_name: str) -> torch.Tensor:
     """Terminate when any observation is NaN."""
-    obs = env.obs_buf
-    if obs:  # prevent error when obs is empty dict
-        is_nan_obs = torch.isnan(obs[group_name]).any(dim=-1)
-        assert is_nan_obs.shape == (env.num_envs,)
-        return is_nan_obs
+    if hasattr(env, "obs_buf"):
+        obs = env.obs_buf
+        if obs:  # prevent error when obs is empty dict
+            is_nan_obs = torch.isnan(obs[group_name]).any(dim=-1)
+            assert is_nan_obs.shape == (env.num_envs,)
+            return is_nan_obs
+        else:
+            is_nan_obs = torch.tensor([False] * env.num_envs, device=env.sim.device)
+            assert is_nan_obs.shape == (env.num_envs,)
+            return is_nan_obs
     else:
-        is_nan_obs = torch.tensor([False] * env.num_envs, device=env.sim.device)
-        assert is_nan_obs.shape == (env.num_envs,)
-        return is_nan_obs
+        return torch.tensor([False] * env.num_envs, device=env.sim.device)
 
 
 def drone_collision(
