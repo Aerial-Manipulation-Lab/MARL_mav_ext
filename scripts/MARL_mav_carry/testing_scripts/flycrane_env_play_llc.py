@@ -116,9 +116,12 @@ def main():
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:, :3] = stretch_position[:, :3]
-                waypoint[:, 12:15] = stretch_position[:, 3:6]
-                waypoint[:, 24:27] = stretch_position[:, 6:9]
+                waypoint[:, 0] = 2.0
+                waypoint[:, 1] = 0.05
+                waypoint[:, 2] = 0.05
+                # waypoint[:, :3] = stretch_position[:, :3]
+                # waypoint[:, 12:15] = stretch_position[:, 3:6]
+                # waypoint[:, 24:27] = stretch_position[:, 6:9]
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # print current orientation of pole
