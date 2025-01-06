@@ -162,7 +162,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
-    plotter = ManagerBasedPlotter(env, command_name="pose_twist_command")
+    plotter = ManagerBasedPlotter(env, command_name="pose_command")
 
     # reset environment
     obs, _ = env.reset()

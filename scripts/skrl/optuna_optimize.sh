@@ -3,8 +3,8 @@
 # Default values
 STUDY_NAME="example"
 TASK="Isaac-flycrane-payload-hovering-llc-v0"
-NUM_ENVS=8192
-TIMESTEPS=25000
+NUM_ENVS=32768
+TIMESTEPS=150000
 NUM_TRIALS=100
 
 # Parse command-line arguments
@@ -29,10 +29,9 @@ for ((i=1; i<=NUM_TRIALS; i++)); do
     # Ask for a trial with the specified search space and sampler
     SUGGESTED_VALUES=$(optuna ask --storage $STORAGE_URL --study-name $STUDY_NAME --sampler TPESampler \
         --search-space '{
-            "learning_rate": {"name": "FloatDistribution", "attributes": {"step": null, "low": 0.00001, "high": 0.01, "log": true}},
-            "mini_batches": {"name": "IntDistribution", "attributes": {"step": 1, "low": 2, "high": 8}},
-            "lambda": {"name": "FloatDistribution", "attributes": {"step": null, "low": 0.85, "high": 1.0}},
-            "rollouts": {"name": "IntDistribution", "attributes": {"step": 1, "low": 12, "high": 32}}
+            "learning_rate": {"name": "FloatDistribution", "attributes": {"step": null, "low": 0.00001, "high": 0.1, "log": true}},
+            "mini_batches": {"name": "IntDistribution", "attributes": {"step": 1, "low": 1, "high": 8}},
+            "lambda": {"name": "FloatDistribution", "attributes": {"step": null, "low": 0.2, "high": 1.0}}
         }')
 
     # Extract the trial parameters
@@ -48,7 +47,6 @@ for ((i=1; i<=NUM_TRIALS; i++)); do
         --suggested_lr $LEARNING_RATE \
         --suggested_mini_batches $MINI_BATCHES \
         --suggested_lambda $LAMBDA \
-        --suggested_rollouts $ROLLOUTS \
         --headless \
         --num_envs=$NUM_ENVS \
         --seed=-1 \

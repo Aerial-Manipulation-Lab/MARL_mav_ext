@@ -44,7 +44,7 @@ memory:
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html
 agent:
   class: PPO
-  rollouts: 24
+  rollouts: 32
   learning_epochs: 5
   mini_batches: 4
   discount_factor: 0.99
@@ -70,8 +70,8 @@ agent:
   time_limit_bootstrap: False
   # logging and checkpoint
   experiment:
-    directory: "flycrane_hover_ppo"
-    experiment_name: "delete_me"
+    directory: "realistic_flycrane_hover"
+    experiment_name: "vel_100_hz_rotmatrix_obs_mat_error"
     write_interval: 100
     checkpoint_interval: 2500
 

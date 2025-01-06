@@ -48,7 +48,7 @@ parser.add_argument("--checkpoint", type=str, default=None, help="Path to the ch
 parser.add_argument("--suggested_lr", type=float, default=None, help="Suggested learning rate from optuna.")
 parser.add_argument("--suggested_mini_batches", type=int, default=None, help="Suggested mini-batches from optuna.")
 parser.add_argument("--suggested_lambda", type=float, default=None, help="Suggested lambda from optuna.")
-parser.add_argument("--suggested_rollouts", type=int, default=None, help="Suggested rollouts from optuna.")
+# parser.add_argument("--suggested_rollouts", type=int, default=None, help="Suggested rollouts from optuna.")
 parser.add_argument("--timesteps", type=int, default=None, help="Number of timesteps to train.")
 
 # append AppLauncher cli args
@@ -109,18 +109,6 @@ from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 
 # register the gym environment
 
-gym.register(
-    id="Isaac-flycrane-payload-hovering-llc-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": HoverEnvCfg_llc,
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlycraneHoverPPORunnerCfg",
-        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-    },
-)
-
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
 agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
@@ -159,7 +147,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent_cfg["agent"]["learning_rate"] = args_cli.suggested_lr
     agent_cfg["agent"]["mini_batches"] = args_cli.suggested_mini_batches
     agent_cfg["agent"]["lambda"] = args_cli.suggested_lambda
-    agent_cfg["agent"]["rollouts"] = args_cli.suggested_rollouts
+    # agent_cfg["agent"]["rollouts"] = args_cli.suggested_rollouts
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
@@ -180,8 +168,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # run training
     runner.run()
 
-    mean_final_reward = np.mean(np.array(runner.agent._track_rewards))
-    print("Mean rewards are", np.mean(np.array(runner.agent._track_rewards)))
+    print("Mean rewards are", runner.agent._track_mean_reward)
     # close the simulator
     env.close()
 

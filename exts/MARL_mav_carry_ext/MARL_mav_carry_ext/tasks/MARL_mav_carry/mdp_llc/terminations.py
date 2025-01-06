@@ -138,15 +138,18 @@ def large_states(
 
 def nan_obs(env: ManagerBasedRLEnv, group_name: str) -> torch.Tensor:
     """Terminate when any observation is NaN."""
-    obs = env.obs_buf
-    if obs:  # prevent error when obs is empty dict
-        is_nan_obs = torch.isnan(obs[group_name]).any(dim=-1)
-        assert is_nan_obs.shape == (env.num_envs,)
-        return is_nan_obs
+    if hasattr(env, "obs_buf"):
+        obs = env.obs_buf
+        if obs:  # prevent error when obs is empty dict
+            is_nan_obs = torch.isnan(obs[group_name]).any(dim=-1)
+            assert is_nan_obs.shape == (env.num_envs,)
+            return is_nan_obs
+        else:
+            is_nan_obs = torch.tensor([False] * env.num_envs, device=env.sim.device)
+            assert is_nan_obs.shape == (env.num_envs,)
+            return is_nan_obs
     else:
-        is_nan_obs = torch.tensor([False] * env.num_envs, device=env.sim.device)
-        assert is_nan_obs.shape == (env.num_envs,)
-        return is_nan_obs
+        return torch.tensor([False] * env.num_envs, device=env.sim.device)
 
 
 def drone_collision(
@@ -245,6 +248,13 @@ def payload_target_distance(
     assert is_target_far.shape == (env.num_envs,)
     return is_target_far
 
+def goal_reached_termination(
+        env: ManagerBasedRLEnv, command_name: str,
+) -> torch.Tensor:
+    goal_reached = env.command_manager._terms[command_name].achieved_goal
+
+    assert goal_reached.shape == (env.num_envs,)
+    return goal_reached
 
 def sim_time_exceed(env: ManagerBasedRLEnv, command_name: str = "pose_twist_command") -> torch.Tensor:
     """Terminate when the simulation time exceeds the threshold (end of reference trajectory)."""
@@ -253,3 +263,4 @@ def sim_time_exceed(env: ManagerBasedRLEnv, command_name: str = "pose_twist_comm
 
     assert is_sim_time_exceeded.shape == (env.num_envs,)
     return is_sim_time_exceeded
+

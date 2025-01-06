@@ -8,7 +8,7 @@ from omni.isaac.lab.assets import RigidObject
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
-from omni.isaac.lab.utils.math import euler_xyz_from_quat, quat_error_magnitude, quat_inv, quat_mul
+from omni.isaac.lab.utils.math import euler_xyz_from_quat, quat_error_magnitude, quat_inv, quat_mul, quat_rotate_inverse
 
 from .marker_utils import DRONE_POS_MARKER_CFG
 from .utils import *
@@ -28,26 +28,6 @@ num_drones = 3
 payload_idx = [0]
 drone_idx = [17, 18, 19]
 base_rope_idx = [8, 9, 10]
-
-debug_vis_reward = False
-if debug_vis_reward:
-    GOAL_ORIENTATION_MARKER_CFG = VisualizationMarkersCfg(
-        markers={
-            "goal_frame": sim_utils.UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-                scale=(0.1, 0.1, 0.1),
-            ),
-            "current_frame": sim_utils.UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-                scale=(0.1, 0.1, 0.1),
-            ),
-        }
-    )
-
-    orientation_marker_cfg = GOAL_ORIENTATION_MARKER_CFG.copy()
-    orientation_marker_cfg.prim_path = "/Visuals/payload_orientation"
-    payload_orientation_marker = VisualizationMarkers(orientation_marker_cfg)
-
 
 def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Separation reward function."""
@@ -78,11 +58,31 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     assert reward_position.shape == (env.scene.num_envs,)
     return reward_position
 
+def track_payload_pos_command_linear(
+    env: ManagerBasedRLEnv, bbox: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Reward tracking of payload position commands with linear kernel.
+    Args:
+        bbox: The bounding box half size for the linear kernel.
+    """
+    robot: RigidObject = env.scene[asset_cfg.name]
+    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_env = payload_pos_world - env.scene.env_origins
+    desired_pos = env.command_manager.get_command(command_name)[..., :3]
+    # compute the error
+    positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
+    max_error = torch.norm(torch.tensor([bbox, bbox, bbox/2], device=env.sim.device))
+    relative_error = positional_error / max_error
+    reward_distance_scale = 1.0 
+    reward_position = 1 - relative_error * reward_distance_scale
+
+    assert reward_position.shape == (env.scene.num_envs,)
+    return reward_position
 
 def track_payload_pos_command(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
-    """Reward tracking of payload position commands."""
+    """Reward tracking of payload position commands with exponentional kernel."""
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
@@ -121,22 +121,6 @@ def track_payload_orientation_command(
     orientation_error = quat_error_magnitude(desired_quat, payload_quat)
     reward_distance_scale = 1.5
     reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
-
-    if debug_vis:
-        marker_indices = [0] * env.scene.num_envs + [1] * env.scene.num_envs
-        payload_orientation_marker.set_visibility(True)
-        orientations = torch.cat((desired_quat, payload_quat), dim=0)
-        desired_pos = env.command_manager.get_command(command_name)[
-            ..., :3
-        ]  # relative goal generated in robot root frame, use a goal in env frame
-
-        # for the trajectory case
-        if len(desired_pos.shape) > 2:
-            desired_pos = desired_pos[:, 0]
-
-        desired_pos_world = desired_pos + env.scene.env_origins
-        positions = torch.cat((desired_pos_world, payload_pos_world), dim=0)
-        payload_orientation_marker.visualize(positions, orientations, marker_indices=marker_indices)
 
     assert reward_orientation.shape == (env.scene.num_envs,)
 
@@ -268,29 +252,15 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     assert reward_swing.shape == (env.scene.num_envs,)
     return reward_swing
 
-
-def action_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+def action_policy_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in action values."""
     action = env.action_manager.action
     action_prev = env.action_manager.prev_action
-    # in the case of 4 input terms
-    ref_pos_0 = action[..., :3]
-    ref_pos_1 = action[..., 12:15]
-    ref_pos_2 = action[..., 24:27]
-    pref_ref_pos_0 = action_prev[..., :3]
-    pref_ref_pos_1 = action_prev[..., 12:15]
-    pref_ref_pos_2 = action_prev[..., 24:27]
-
-    ref_pos = torch.cat((ref_pos_0, ref_pos_1, ref_pos_2), dim=1)
-    pref_ref_pos = torch.cat((pref_ref_pos_0, pref_ref_pos_1, pref_ref_pos_2), dim=1)
-
-    action_smoothness = torch.norm((ref_pos - pref_ref_pos) / num_drones, dim=-1)
-    scaling_factor = 5
-    reward_action_smoothness = torch.exp(-action_smoothness * scaling_factor)
+    action_smoothness = torch.norm((action - action_prev) / num_drones, dim=-1)
+    reward_action_smoothness = torch.exp(-action_smoothness)
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
-
 
 def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high force values."""
@@ -322,7 +292,7 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
     action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
-    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones / 4  # num propellors
+    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones / 4  # num propellers
     reward_action_smoothness_force = torch.exp(-action_smoothness_force)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
@@ -358,17 +328,18 @@ def downwash_reward(
 ) -> torch.Tensor:
     """Reward for keeping the downwash wake away from the payload"""
     robot = env.scene[asset_cfg.name]
-    reward_weight = 0.5
 
     # Plane equation for the payload
     payload_pose_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
     payload_orientation = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
-    payload_length = torch.tensor([[0.275, 0.225, 0]] * env.num_envs, device=env.sim.device)
-    len_payload_env = quat_rotate(payload_orientation, payload_length)
-    edge_payload_min = payload_pose_env - len_payload_env
-    edge_payload_max = payload_pose_env + len_payload_env
-    plane_vec1 = edge_payload_max - payload_pose_env
-    plane_vec2 = edge_payload_min - payload_pose_env
+    payload_length_x = torch.tensor([[0.275, 0, 0]] * env.num_envs, device=env.sim.device)
+    payload_length_y = torch.tensor([[0, 0.275, 0]] * env.num_envs, device=env.sim.device)
+    x_len_payload_env = quat_rotate(payload_orientation, payload_length_x)
+    y_len_payload_env = quat_rotate(payload_orientation, payload_length_y)
+    edge_payload_x = payload_pose_env + x_len_payload_env
+    edge_payload_y = payload_pose_env + y_len_payload_env
+    plane_vec1 = edge_payload_x - payload_pose_env
+    plane_vec2 = edge_payload_y - payload_pose_env
     normal = torch.linalg.cross(plane_vec1, plane_vec2)
     d = torch.sum(normal * payload_pose_env, dim=-1).unsqueeze(-1).unsqueeze(-1)  # Shape (num_envs, 1, 1)
 
@@ -392,15 +363,38 @@ def downwash_reward(
 
     # Calculate distance between intersection points and payload position
     line_dist = torch.norm(line_point_proj - payload_pose_env.unsqueeze(1), dim=-1)  # Shape (num_envs, num_drones)
-    straight_line_dist = torch.tensor(
-        [[1.1941, 1.1941, 1.1735]] * env.num_envs, device="cuda:0"
-    )  # line dist when drones are straight under the load
-    diff_line_dist = line_dist - straight_line_dist
     # Reward: penalize based on distance from the intersection point to the payload position
-    reward_downwash = (
-        reward_weight
-        * torch.max(1 - torch.exp(-diff_line_dist * 15), torch.tensor(0.0, device=env.sim.device)).min(dim=-1)[0]
-    )  # Min distance from the payload
+    scaling_factor = 3
+    reward_downwash = (1 - torch.exp(-torch.min(line_dist, dim=-1).values * scaling_factor))  # Min distance from the payload
 
     assert reward_downwash.shape == (env.num_envs,)
     return reward_downwash
+
+def obstacle_penalty(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
+) -> torch.Tensor:
+    """Penalty for getting close to the obstacle."""
+    robot = env.scene[asset_cfg.name]
+    obstacle = env.scene[obstacle_cfg.name]
+    payload_pos_env = robot.data.body_state_w[:, payload_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    drones_pos_env = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    obstacle_pos = obstacle.data.body_state_w[:, 0, :3].unsqueeze(1) - env.scene.env_origins.unsqueeze(1)
+    all_bodies_env = torch.cat((payload_pos_env, drones_pos_env), dim=1)
+    rpos = torch.abs(all_bodies_env - obstacle_pos)
+    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1) # half lenghts
+    # check if any of the bodies are inside the cuboid
+    cuboid_dims_world = quat_rotate(obstacle.data.body_state_w[:, 0, 3:7].unsqueeze(1), cuboid_dims)
+    is_inside_cuboid = torch.all(rpos <= cuboid_dims_world, dim=-1) # Shape (num_envs, num_bodies) true or false for each body
+    reward_obstacle = -torch.any(is_inside_cuboid, dim=-1).float() # Shape (num_envs,) -1 if any body is inside the cuboid, 0 otherwise
+
+    assert reward_obstacle.shape == (env.scene.num_envs,)
+    return reward_obstacle
+
+def goal_reached_reward(
+    env: ManagerBasedRLEnv, command_name: str, 
+) -> torch.Tensor:
+    """Reward for reaching the goal and staying there, then terminate the episde."""
+    reward_goal = env.command_manager._terms[command_name].achieved_goal
+
+    assert reward_goal.shape == (env.scene.num_envs,)
+    return reward_goal

@@ -32,14 +32,14 @@ class GeometricController:
             device=self.device,
         )
 
-        self.p_offset = torch.tensor([[0.0, 0.0, -0.03]] * self.num_envs, device=self.device)
+        self.p_offset = torch.tensor([[0.0, 0.0, -0.0]] * self.num_envs, device=self.device)
         self.integration_max = torch.tensor([0.0, 0.0, 0.0], device=self.device)
 
         # sim and drone parameters
         self.gravity = torch.tensor([[0.0, 0.0, -9.8066]] * self.num_envs, device=self.device)
         self.z_i = torch.tensor([[0.0, 0.0, 1.0]] * self.num_envs, device=self.device)
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
-        self.torque_map = torch.tensor([1.908873e-08, 0.0, 0.0], device=self.device)
+        self.torque_map = torch.tensor([3.4375484e-08, 0.0, 0.0], device=self.device)
         self.t_last = 0.0
         self.falcon_mass = 0.617  # kg
         self.l = 0.075
@@ -97,18 +97,19 @@ class GeometricController:
         """
         Get the command for the drone
         inputs:
-        state: current observed state of the drone given by Isaac sim: [pos, quat, lin_vel, ang_vel, lin_acc, ang_acc]
+        state: current observed state of the drone given by Isaac sim: [pos, quat, lin_vel, ang_vel, lin_acc]
         actions: actions given by the policy, 4 rotor thrusts for each propeller
-        setpoint: setpoint given by the policy [pos, lin_vel, lin_acc, quat, ang_vel, ang_acc]
+        setpoint: setpoint given by the policy [pos, lin_vel, lin_acc, quat, ang_vel]
         """
 
         # update low pass filters: not here for now
 
         # acceleration command TODO: implement aceleration low pass filter
-        p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
-        pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
+        # p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
+        # pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
         vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
-        des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
+        # des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
+        des_acc = self.kd_acc * vel_error
         # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(1)  # sum over all propellors
         acc_load = (
@@ -174,4 +175,6 @@ class GeometricController:
         thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)
         thrusts = torch.clamp(thrusts, self.min_thrust, self.max_thrust)
 
-        return thrusts, acc_cmd, q_cmd
+        rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0])
+
+        return rotor_speeds, acc_cmd, q_cmd

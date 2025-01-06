@@ -1,0 +1,132 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""
+This script demonstrates how to simulate a quadcopter.
+
+"""
+
+"""Launch Isaac Sim Simulator first."""
+
+import argparse
+import os
+import torch
+
+from omni.isaac.lab.app import AppLauncher
+
+# add argparse arguments
+parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
+parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
+parser.add_argument("--video", action="store_true", default=False, help="Record videos during execution.")
+parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+
+# append AppLauncher cli args
+AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
+args_cli = parser.parse_args()
+if args_cli.video:
+    args_cli.enable_cameras = True
+
+# launch omniverse app
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
+
+"""Rest everything follows."""
+
+import gymnasium as gym
+import math
+import matplotlib.pyplot as plt
+
+from MARL_mav_carry_ext.tasks.MARL_mav_carry.obstacle_avoidance import ObstacleEnvCfg
+
+from omni.isaac.lab.envs import ManagerBasedRLEnv
+from omni.isaac.lab.utils.dict import print_dict
+
+
+def main():
+    """Main function."""
+    # create environment config
+    env_cfg = ObstacleEnvCfg()
+    env_cfg.scene.num_envs = args_cli.num_envs
+    # setup RL environment
+    env = ManagerBasedRLEnv(cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    if args_cli.video:
+        video_kwargs = {
+            "video_folder": "./videos",
+            "step_trigger": lambda step: step == 0,
+            "video_length": args_cli.video_length,
+            "disable_logger": True,
+        }
+        print("[INFO] Recording videos during training.")
+        print_dict(video_kwargs, nesting=4)
+        env = gym.wrappers.RecordVideo(env, **video_kwargs)
+
+    stretch_position = torch.tensor(
+        [
+            [
+                -2.5,
+                1.0,
+                1.5,  # drone 1
+                -2.5,
+                0.0,
+                1.5,  # drone 2
+                -3.2,
+                0.5,
+                1.5,
+            ]
+        ],
+        dtype=torch.float32,
+    )
+
+    straight_up_position = torch.tensor(
+        [
+            [
+                0.27,
+                0.22,
+                2.141,  # drone 1
+                0.27,
+                -0.22,
+                2.141,  # drone 2
+                -0.27,
+                0.0,
+                2.141,
+            ]
+        ],
+        dtype=torch.float32,
+    )
+    count = 0
+    while simulation_app.is_running():
+        with torch.inference_mode():
+            # reset
+            if count % 50 == 0:
+                # env.reset()
+                print("-" * 80)
+                print("[INFO]: Resetting environment...")
+                waypoint = torch.zeros_like(env.action_manager.action)
+                waypoint[:, :3] = stretch_position[:, :3]
+                waypoint[:, 12:15] = stretch_position[:, 3:6]
+                waypoint[:, 24:27] = stretch_position[:, 6:9]
+                # waypoint[1] = straight_up_position
+            # step the environment
+            obs, rew, terminated, truncated, info = env.step(waypoint)
+            # print("sim timestep: ", env.scene["robot"].data._sim_timestamp)
+            # print current orientation of pole
+            # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
+            # update counter
+            count += 1
+
+            if args_cli.video:
+                if count == args_cli.video_length:
+                    break
+
+    # close the simulator
+    env.close()
+
+
+if __name__ == "__main__":
+    # run the main function
+    main()
+    # close sim app
+    simulation_app.close()

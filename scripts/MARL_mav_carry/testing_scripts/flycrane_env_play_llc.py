@@ -64,8 +64,8 @@ def main():
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
-    # print("Rope idx are: ", env.scene["robot"].find_bodies("rope.*_link"))
-    # print("Load link id:", env.scene["robot"].find_bodies("load_link")[0])
+    # print("Rope idx are: ", env.scene["robot"].find_bodies("rope_.*_link_.*"))
+    # print("Load link id:", env.scene["robot"].find_bodies("load_link"))
     # print("drone_idx: ", env.scene["robot"].find_bodies("Falcon.*_base_link"))
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
@@ -116,9 +116,12 @@ def main():
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:, :3] = stretch_position[:, :3]
-                waypoint[:, 12:15] = straight_up_position[:, 3:6]
-                waypoint[:, 24:27] = stretch_position[:, 6:9]
+                waypoint[:, 0] = 2.0
+                waypoint[:, 1] = 0.05
+                waypoint[:, 2] = 0.05
+                # waypoint[:, :3] = stretch_position[:, :3]
+                # waypoint[:, 12:15] = stretch_position[:, 3:6]
+                # waypoint[:, 24:27] = stretch_position[:, 6:9]
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # print current orientation of pole
