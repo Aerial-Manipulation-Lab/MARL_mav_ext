@@ -109,7 +109,7 @@ def reset_root_state_uniform_collision_check(
 
     while in_collision.any():
         for rigid_body in env.scene.rigid_objects.values():
-            rigid_body_pos = rigid_body.data.body_state_w[:, 0, :3][env_ids]
+            rigid_body_pos = rigid_body.data.body_com_state_w[:, 0, :3][env_ids]
             robot_pos = positions
 
             # Compute distances between robot and rigid body positions
