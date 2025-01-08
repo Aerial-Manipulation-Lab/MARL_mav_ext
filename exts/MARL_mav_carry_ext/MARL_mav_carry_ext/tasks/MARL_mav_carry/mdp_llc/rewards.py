@@ -264,11 +264,10 @@ def action_policy_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
 
 def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high force values."""
-    reward_effort_weight = 0.5
     action_forces = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
     normalized_forces = action_forces / 6.25
     effort_sum = torch.sum(normalized_forces, dim=-1) / num_drones / 4  # num propellers
-    reward_effort = reward_effort_weight * torch.exp(-effort_sum)
+    reward_effort = torch.exp(-effort_sum)
     reward_effort = reward_effort
 
     assert reward_effort.shape == (env.scene.num_envs,)
