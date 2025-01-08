@@ -113,7 +113,7 @@ class LowLevelAction(ActionTerm):
         if self._delta_output:
             active_envs = self.first_time.nonzero(as_tuple=True)[0]
             if active_envs.numel() > 0:  # Check if there are any active environments
-                falcon_pos = self._robot.data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
+                falcon_pos = self._robot.data.body_com_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
                 
                 # Only initialize `previous_setpoint` for the active environments
                 for i in range(self._num_drones):
@@ -154,10 +154,10 @@ class LowLevelAction(ActionTerm):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             target_rates = []
-            drone_positions = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)).view(self.num_envs, -1)
-            drone_orientations = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7]).view(self.num_envs, -1)
-            drone_linear_velocities = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 7:10]).view(self.num_envs, -1)
-            drone_angular_velocities = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 10:13]).view(self.num_envs, -1)
+            drone_positions = (self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)).view(self.num_envs, -1)
+            drone_orientations = (self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 3:7]).view(self.num_envs, -1)
+            drone_linear_velocities = (self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 7:10]).view(self.num_envs, -1)
+            drone_angular_velocities = (self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 10:13]).view(self.num_envs, -1)
             drone_linear_accelerations = (self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]).view(self.num_envs, -1)
 
             for i in range(self._num_drones):
@@ -250,8 +250,8 @@ class LowLevelAction(ActionTerm):
 
         # Get drone positions and orientations
         rotor_idx = self._body_ids
-        rotor_pos_world_frame = self._robot.data.body_state_w[:, rotor_idx, :3].view(-1, 3)
-        rotor_orientation = self._robot.data.body_state_w[:, rotor_idx, 3:7].view(-1, 4)
+        rotor_pos_world_frame = self._robot.data.body_com_state_w[:, rotor_idx, :3].view(-1, 3)
+        rotor_orientation = self._robot.data.body_com_state_w[:, rotor_idx, 3:7].view(-1, 4)
 
         # marker indices for multiple envs
         marker_indices = [0] * self.num_envs * len(rotor_idx)
