@@ -73,18 +73,19 @@ def main():
     payload_mass = 1.4 + 0.00001 + 0.006
     mass_left_side = 2 * falcon_mass + 2 * rope_mass + 0.5 * payload_mass
     mass_right_side = falcon_mass + rope_mass + 0.5 * payload_mass
+    print("joint idx", env.scene["robot"].find_joints("Falcon.*_rotor_.*_joint"))
 
     stretch_position = torch.tensor(
         [
             [
-                0.9,
-                -0.9,
+                0.7,
+                -0.7,
                 2.5,  # drone 1
-                -0.9,
+                -0.7,
                 0.0,
                 2.5,  # drone 2
-                0.9,
-                0.9,
+                0.7,
+                0.7,
                 2.5,
             ]
         ],
@@ -111,17 +112,14 @@ def main():
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
-            if count % 500 == 0:
+            if count % 2000 == 0:
                 env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
                 waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:, 0] = 2.0
-                waypoint[:, 1] = 0.05
-                waypoint[:, 2] = 0.05
-                # waypoint[:, :3] = stretch_position[:, :3]
-                # waypoint[:, 12:15] = stretch_position[:, 3:6]
-                # waypoint[:, 24:27] = stretch_position[:, 6:9]
+                waypoint[:, :3] = stretch_position[:, :3]
+                waypoint[:, 12:15] = stretch_position[:, 3:6]
+                waypoint[:, 24:27] = stretch_position[:, 6:9]
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # print current orientation of pole
