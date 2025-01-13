@@ -6,6 +6,7 @@ import torch
 
 from MARL_mav_carry_ext.assets import FALCON_CFG
 from MARL_mav_carry_ext.controllers import GeometricController
+from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_from_csv
 
@@ -91,6 +92,9 @@ class FalconEnv(DirectRLEnv):
         self._high_level_decimation = self.cfg.decimation
         self._ll_counter = 0
         self._planner_dt = 1 / self._high_level_decimation
+        self._motor_model = RotorMotor(self.num_envs, 1200*torch.ones(self.num_envs, 4, device=self.device)) # hover mode ~ 1200 RPM
+        self.sampling_time = self.sim.get_physics_dt() * self.cfg.low_level_decimation
+        self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
 
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -165,7 +169,7 @@ class FalconEnv(DirectRLEnv):
             drone_setpoint["yaw_rate"] = self._actions[:, 13].view(self.num_envs, 1)
             drone_setpoint["yaw_acc"] = self._actions[:, 19].view(self.num_envs, 1)
 
-            drone_thrusts, acc_cmd, q_cmd = self._geometric_controller.getCommand(
+            target_rates, acc_cmd, q_cmd = self._geometric_controller.getCommand(
                 drone_states, self._forces, drone_setpoint
             )
             if self.cfg.debug_vis:
@@ -173,12 +177,19 @@ class FalconEnv(DirectRLEnv):
                 self.drone_positions_debug = drone_states["pos"]
                 self.des_ori_debug = q_cmd
 
+            drone_thrusts, moments = self._motor_model.get_motor_thrusts_moments(target_rates, self.sampling_time)
             self._forces[..., 2] = drone_thrusts
+            self._moments[..., 2] = moments.view(self.num_envs, 1, 4).sum(-1)
             self._ll_counter = 0
 
         self._ll_counter += 1
         self._robot.set_external_force_and_torque(
             self._forces, torch.zeros_like(self._forces), body_ids=self._rotor_idx
+        )
+
+        # apply torques induced by rotors to each body
+        self._robot.set_external_force_and_torque(
+            torch.zeros_like(self._moments), self._moments, self._falcon_idx
         )
 
     def _get_observations(self) -> dict:
