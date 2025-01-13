@@ -18,7 +18,7 @@ from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from MARL_mav_carry_ext.assets.flycrane import FLYCRANE_CFG  # isort:skip
+from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
 
 # Define the scene configuration
 
