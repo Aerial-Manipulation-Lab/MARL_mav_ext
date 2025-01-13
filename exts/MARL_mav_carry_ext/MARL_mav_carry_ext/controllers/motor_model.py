@@ -39,6 +39,6 @@ class RotorMotor:
         thrusts = self.thrust_map[0] * self.current_omega**2
 
         # Compute moments based on current omega
-        moments = self.torque_map[0] * self.current_omega**2 * -self.direction
+        moments = self.torque_map[0] * self.current_omega**2 * self.direction
 
         return thrusts, moments
