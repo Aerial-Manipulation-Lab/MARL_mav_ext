@@ -34,8 +34,9 @@ def payload_orientation(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scen
     """Payload orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
-    payload_rot_matrix = matrix_from_quat(payload_quat)
-    return payload_rot_matrix.view(env.num_envs, -1)
+    # payload_rot_matrix = matrix_from_quat(payload_quat)
+    # return payload_rot_matrix.view(env.num_envs, -1)
+    return payload_quat.view(env.num_envs, -1)
 
 
 def payload_linear_velocities(
@@ -89,10 +90,10 @@ def payload_orientation_error(
     robot: Articulation = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
-    # orientation_error = quat_mul(desired_quat, quat_conjugate(payload_quat))
-    payload_rot_matrix = matrix_from_quat(payload_quat)
-    desired_rot_matrix = matrix_from_quat(desired_quat)
-    orientation_error = torch.matmul(desired_rot_matrix, payload_rot_matrix.transpose(1, 2)).view(env.num_envs, -1)
+    orientation_error = quat_mul(desired_quat, quat_conjugate(payload_quat))
+    # payload_rot_matrix = matrix_from_quat(payload_quat)
+    # desired_rot_matrix = matrix_from_quat(desired_quat)
+    # orientation_error = torch.matmul(desired_rot_matrix, payload_rot_matrix.transpose(1, 2)).view(env.num_envs, -1)
 
     return orientation_error
 
