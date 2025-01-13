@@ -32,7 +32,8 @@ class GeometricController:
             device=self.device,
         )
 
-        self.p_offset = torch.tensor([[0.0, 0.0, -0.0]] * self.num_envs, device=self.device)
+        self.rope_offset = -0.03
+        self.p_offset = torch.tensor([[0.0, 0.0, self.rope_offset]] * self.num_envs, device=self.device)
         self.integration_max = torch.tensor([0.0, 0.0, 0.0], device=self.device)
 
         # sim and drone parameters
@@ -105,11 +106,11 @@ class GeometricController:
         # update low pass filters: not here for now
 
         # acceleration command TODO: implement aceleration low pass filter
-        # p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
-        # pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
+        p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
+        pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
         vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
-        # des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
-        des_acc = self.kd_acc * vel_error
+        des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
+        # des_acc = self.kd_acc * vel_error
         # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(1)  # sum over all propellors
         acc_load = (
@@ -167,10 +168,10 @@ class GeometricController:
         )
 
         # calculate the thrust per propellor
-        # inertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
+        # inertia * alpha_cmd + omega x inertia * omega + M_load = torque = G * thrusts
         product = self.inertia_mat.matmul(alpha_b_des.transpose(0, 1)).transpose(0, 1) + torch.linalg.cross(
-            ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0, 1)).transpose(0, 1)
-        )
+            ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0, 1)).transpose(0, 1)) - torch.linalg.cross(
+                self.p_offset, quat_rotate(quat_inv(state["quat"]), acc_load * self.falcon_mass)) # M_load in body frame
         rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
         thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)
         thrusts = torch.clamp(thrusts, self.min_thrust, self.max_thrust)
