@@ -28,7 +28,7 @@ class LowLevelAction(ActionTerm):
         self._env = env
         self._robot = env.scene[cfg.asset_name]
         self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
-        self._falcon_idx = self._robot.find_bodies("Falcon.*_base_link")[0]
+        self._falcon_idx = self._robot.find_bodies("Falcon.*_base_link_inertia")[0]
         self._sim_dt = self._env.sim.get_rendering_dt()  # TODO: rendering dt has to be the same as planner dt
 
         # configuration

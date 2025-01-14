@@ -42,7 +42,7 @@ class GeometricController:
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
         self.torque_map = torch.tensor([3.4375484e-08, 0.0, 0.0], device=self.device)
         self.t_last = 0.0
-        self.falcon_mass = 0.617  # kg
+        self.falcon_mass = 0.6017  # kg
         self.l = 0.075
         self._epsilon = torch.tensor(1e-6, device=self.device)  # avoid division by zero
         self.kappa = 0.022

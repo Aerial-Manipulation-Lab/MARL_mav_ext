@@ -18,7 +18,7 @@ Observations for the payload
 
 # for the case when the rod is used
 payload_idx = [0]
-drone_idx = [17, 18, 19]
+drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 
 
