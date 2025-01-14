@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 from dataclasses import MISSING
 
-from MARL_mav_carry_ext.controllers import GeometricController
+from MARL_mav_carry_ext.controllers import GeometricController, IndiController
 from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
 
 import omni.isaac.lab.utils.math as math_utils
@@ -48,11 +48,14 @@ class LowLevelAction(ActionTerm):
         self._drone_jerk = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_setpoint = [{}, {}, {}]
 
-        # controller
+        # outer loop controller
         self._geometric_controller = GeometricController(self.num_envs)
         self._ll_counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+
+        # inner loop controller
+        self._indi_controller = IndiController(self.num_envs)
 
         # motor model
         self._motor_model = RotorMotor(self.num_envs, 1200*torch.ones(self.num_envs, self._num_drones * 4, device=self.device)) # hover mode ~ 1200 RPM
@@ -113,6 +116,7 @@ class LowLevelAction(ActionTerm):
             drone_linear_velocities = (self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 7:10]).view(self.num_envs, -1)
             drone_angular_velocities = (self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 10:13]).view(self.num_envs, -1)
             drone_linear_accelerations = (self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]).view(self.num_envs, -1)
+            drone_angular_accelerations = (self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6]).view(self.num_envs, -1)
 
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
@@ -124,14 +128,17 @@ class LowLevelAction(ActionTerm):
                 drone_states["lin_vel"] = drone_linear_velocities[:, i * 3 : i * 3 + 3]
                 drone_states["ang_vel"] = drone_angular_velocities[:, i * 3 : i * 3 + 3]
                 drone_states["lin_acc"] = drone_linear_accelerations[:, i * 3 : i * 3 + 3]
+                drone_states["ang_acc"] = drone_angular_accelerations[:, i * 3 : i * 3 + 3]
                 # calculate current jerk and snap
                 self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
                 drone_states["jerk"] = self._drone_jerk[:, i]
                 self._drone_prev_acc[:, i] = drone_states["lin_acc"]
 
-                target_rpm, acc_cmd, q_cmd = self._geometric_controller.getCommand(
+                alpha_cmd, acc_load, acc_cmd, q_cmd = self._geometric_controller.getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], self.drone_setpoint[i]
                 )
+                target_rpm = self._indi_controller.getCommand(drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load)
+
                 target_rates.append(target_rpm)
                 if self.cfg.debug_vis:
                     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins

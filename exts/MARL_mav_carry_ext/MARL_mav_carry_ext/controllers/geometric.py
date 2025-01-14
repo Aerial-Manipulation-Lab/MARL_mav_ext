@@ -167,15 +167,4 @@ class GeometricController:
             + self.kp_rate * (omega_b_ref - ang_vel_body)
         )
 
-        # calculate the thrust per propellor
-        # inertia * alpha_cmd + omega x inertia * omega + M_load = torque = G * thrusts
-        product = self.inertia_mat.matmul(alpha_b_des.transpose(0, 1)).transpose(0, 1) + torch.linalg.cross(
-            ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0, 1)).transpose(0, 1)) - torch.linalg.cross(
-                self.p_offset, quat_rotate(quat_inv(state["quat"]), acc_load * self.falcon_mass)) # M_load in body frame
-        rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
-        thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)
-        thrusts = torch.clamp(thrusts, self.min_thrust, self.max_thrust)
-
-        rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0])
-
-        return rotor_speeds, acc_cmd, q_cmd
+        return alpha_b_des, acc_load, acc_cmd, q_cmd
