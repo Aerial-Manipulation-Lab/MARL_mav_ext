@@ -69,7 +69,7 @@ class IndiController:
         omega_dot = quat_rotate(quat_inv(state["quat"]), state["ang_acc"]) # body accelerations # normally from derivative filtered body rate
         tau = torch.matmul(self.G_1, actions.sum(-1).transpose(0, 1)).transpose(0, 1)[:, 1:] # torque commands
         mu = torch.zeros((self.num_envs, 4), device=self.device)
-        collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1, keepdim=True) * self.falcon_mass
+        collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1) * self.falcon_mass
         mu[:, 0] = torch.clamp(collective_thrust_des_magntiude, self.thrust_min_collective, self.thrust_max_collective)
         mu_ndi = mu
 
