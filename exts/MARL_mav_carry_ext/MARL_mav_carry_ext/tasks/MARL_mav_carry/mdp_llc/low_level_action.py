@@ -121,7 +121,6 @@ class LowLevelAction(ActionTerm):
             for i in range(self._num_drones):
                 start_drone_idx = i * self._waypoint_dim * self._num_waypoints
                 end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
-                drone_waypoints = self._waypoints[:, start_drone_idx:end_drone_idx]
                 drone_states: dict = {}  # dict of tensors
                 drone_states["pos"] = drone_positions[:, i * 3 : i * 3 + 3]
                 drone_states["quat"] = drone_orientations[:, i * 4 : i * 4 + 4]
