@@ -208,7 +208,7 @@ class RewardsCfg:
 
     force_penalty = RewTerm(
         func=mdp.action_penalty_force,
-        weight=0.2,
+        weight=0.5,
     )
 
     force_smoothness = RewTerm(
