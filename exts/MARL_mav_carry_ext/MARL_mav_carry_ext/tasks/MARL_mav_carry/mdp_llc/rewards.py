@@ -140,7 +140,7 @@ def track_payload_pose_command(
 
 
 def track_payload_lin_vel_command(
-    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), scale: float = 15.0
 ) -> torch.Tensor:
     """Reward tracking of payload linear velocity commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
@@ -153,8 +153,7 @@ def track_payload_lin_vel_command(
         desired_vel = desired_vel[:, 0]
 
     lin_vel_error = torch.norm(desired_vel - payload_lin_vel, dim=-1)
-    reward_distance_scale = 15.0
-    reward_lin_vel = torch.exp(-lin_vel_error * reward_distance_scale)
+    reward_lin_vel = torch.exp(-lin_vel_error * scale)
 
     assert reward_lin_vel.shape == (env.scene.num_envs,)
 
@@ -162,7 +161,7 @@ def track_payload_lin_vel_command(
 
 
 def track_payload_ang_vel_command(
-    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), scale: float = 15.0
 ) -> torch.Tensor:
     """Reward tracking of payload angular velocity commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
@@ -175,8 +174,7 @@ def track_payload_ang_vel_command(
         desired_vel = desired_vel[:, 0]
 
     ang_vel_error = torch.norm(desired_vel - payload_ang_vel, dim=-1)
-    reward_distance_scale = 15.0
-    reward_ang_vel = torch.exp(-ang_vel_error * reward_distance_scale)
+    reward_ang_vel = torch.exp(-ang_vel_error * scale)
 
     assert reward_ang_vel.shape == (env.scene.num_envs,)
 

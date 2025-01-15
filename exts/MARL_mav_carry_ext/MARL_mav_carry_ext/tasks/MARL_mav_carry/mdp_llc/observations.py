@@ -97,6 +97,27 @@ def payload_orientation_error(
 
     return orientation_error
 
+def payload_velocity_error(
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload velocity error."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_vel_world = robot.data.body_com_state_w[:, payload_idx, 7:10].squeeze(1)
+    desired_vel = env.command_manager.get_command(command_name)[..., 7:10]
+    vel_error = desired_vel - payload_vel_world
+    return vel_error
+
+def payload_angular_velocity_error(
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload angular velocity error."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_ang_vel = robot.data.body_com_state_w[:, payload_idx, 10:13].squeeze(1)
+    desired_ang_vel = env.command_manager.get_command(command_name)[..., 10:13]
+    ang_vel_error = desired_ang_vel - payload_ang_vel
+
+    return ang_vel_error
+
 
 def payload_linear_velocity_error(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

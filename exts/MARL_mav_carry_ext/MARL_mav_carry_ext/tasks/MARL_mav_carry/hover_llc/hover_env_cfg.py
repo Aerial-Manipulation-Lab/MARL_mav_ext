@@ -51,18 +51,24 @@ class CarryingSceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Commands for the hovering task"""
 
-    pose_command = mdp.UniformPoseCommandGlobalCfg(
+    pose_twist_command = mdp.UniformTwistCommandGlobalCfg(
         asset_name="robot",
         body_name="load_link",
         resampling_time_range=(20, 20),  # out of range of max episode length for now
         debug_vis=True,
-        ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(
+        ranges=mdp.UniformTwistCommandGlobalCfg.Ranges(
             pos_x=(-2.0, 2.0),
             pos_y=(-2.0, 2.0),
             pos_z=(0.5, 2.5),
             roll=(-0.0, 0.0),
             pitch=(-0.0, 0.0),
             yaw=(-math.pi, math.pi),
+            vel_x=(-0.0, 0.0),
+            vel_y=(-0.0, 0.0),
+            vel_z=(-0.0, 0.0),
+            ang_vel_x=(-0.0, 0.0),
+            ang_vel_y=(-0.0, 0.0),
+            ang_vel_z=(-0.0, 0.0),
         ),
     )
 
@@ -103,8 +109,10 @@ class ObservationsCfg:
         drone_angular_accelerations = ObsTerm(func=mdp.drone_angular_acceleration)
 
         # goal error terms
-        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_command"})
-        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_command"})
+        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_twist_command"})
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_twist_command"})
+        payload_linear_velocity_error = ObsTerm(func=mdp.payload_velocity_error, params={"command_name": "pose_twist_command"})
+        payload_angular_velocity_error = ObsTerm(func=mdp.payload_angular_velocity_error, params={"command_name": "pose_twist_command"})
         # relative positions terms
         # payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
         # drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
@@ -197,13 +205,25 @@ class RewardsCfg:
     pos_reward = RewTerm(
         func=mdp.track_payload_pos_command,
         weight=1.5,
-        params={"command_name": "pose_command"},
+        params={"command_name": "pose_twist_command"},
     )
 
     ori_reward = RewTerm(
         func=mdp.track_payload_orientation_command,
         weight=1.5,
-        params={"command_name": "pose_command", "debug_vis": False},
+        params={"command_name": "pose_twist_command", "debug_vis": False},
+    )
+
+    vel_reward = RewTerm(
+        func=mdp.track_payload_lin_vel_command,
+        weight=1.0,
+        params={"command_name": "pose_twist_command", "scale": 1.5},
+    )
+
+    ang_vel_reward = RewTerm(
+        func=mdp.track_payload_ang_vel_command,
+        weight=1.0,
+        params={"command_name": "pose_twist_command", "scale": 1.5},
     )
 
     force_penalty = RewTerm(
