@@ -212,14 +212,10 @@ def spinnage_reward_payload(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward for minimizing the angular velocities of the payload."""
-    spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
     payload_angular_velocity = robot.data.body_com_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
-    reward_spin = spinnage_weight * torch.exp(-torch.square(payload_angular_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    pose_reward = track_payload_pose(env, asset_cfg)
-    reward_spin = reward_spin * sep_reward * pose_reward  # from omnidrones paper
-
+    reward_spin = torch.exp(-torch.square(payload_angular_velocity))
+    
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
 
@@ -239,13 +235,9 @@ def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = S
 
 def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for minimizing the linear velocities of the payload."""
-    swing_weight = 0.8
     robot = env.scene[asset_cfg.name]
     payload_linear_velocity = robot.data.body_com_state_w[:, payload_idx, 7:10].squeeze(1).abs().sum(-1)
-    reward_swing = swing_weight * torch.exp(-torch.square(payload_linear_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    pose_reward = track_payload_pose(env, asset_cfg)
-    reward_swing = reward_swing * sep_reward * pose_reward  # from omnidrones paper
+    reward_swing = torch.exp(-torch.square(payload_linear_velocity))
 
     assert reward_swing.shape == (env.scene.num_envs,)
     return reward_swing
