@@ -132,8 +132,8 @@ class EventCfg:
                 "x": (-1.0, 1.0),
                 "y": (-1.0, 1.0),
                 "z": (0.5, 1.5),
-                "roll": (-math.pi/4, math.pi/4),
-                "pitch": (-math.pi/4, math.pi/4),
+                "roll": (-math.pi/3, math.pi/3),
+                "pitch": (-math.pi/3, math.pi/3),
                 "yaw": (-math.pi, math.pi),
             },
             "velocity_range": {
@@ -246,7 +246,7 @@ class TerminationsCfg:
         func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
     )
     angle_load_cable = DoneTerm(
-        func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
+        func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0}
     )
 
     large_states = DoneTerm(func=mdp.large_states, params={"asset_cfg": SceneEntityCfg("robot")})
