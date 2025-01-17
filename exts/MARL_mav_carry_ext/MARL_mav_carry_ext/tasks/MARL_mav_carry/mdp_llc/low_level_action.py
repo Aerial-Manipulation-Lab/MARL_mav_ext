@@ -301,7 +301,7 @@ class LowLevelActionCfg(ActionTermCfg):
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
     num_drones: int = 3
     """Number of drones."""
-    waypoint_dim: int = 3
+    waypoint_dim: int = 12
     """Dimension of the waypoints: [pos, vel, acc, jerk]."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
