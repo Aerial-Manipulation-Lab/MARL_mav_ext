@@ -52,6 +52,7 @@ class LowLevelAction(ActionTerm):
         self._geometric_controller = GeometricController(self.num_envs)
         self._ll_counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
+        self._zeros = torch.zeros([self._env.num_envs, 3], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
         # inner loop controller
@@ -104,8 +105,8 @@ class LowLevelAction(ActionTerm):
 
             self._desired_position[:, i] = self.drone_setpoint[i]["pos"]
             self.drone_setpoint[i]["yaw"] = self._constant_yaw
-            self.drone_setpoint[i]["yaw_rate"] = torch.zeros(self.num_envs, 1, device=self.device)
-            self.drone_setpoint[i]["yaw_acc"] = torch.zeros(self.num_envs, 1, device=self.device)
+            self.drone_setpoint[i]["yaw_rate"] = self._constant_yaw
+            self.drone_setpoint[i]["yaw_acc"] = self._constant_yaw
 
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
@@ -300,7 +301,7 @@ class LowLevelActionCfg(ActionTermCfg):
     """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
     num_drones: int = 3
     """Number of drones."""
-    waypoint_dim: int = 12
+    waypoint_dim: int = 3
     """Dimension of the waypoints: [pos, vel, acc, jerk]."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
