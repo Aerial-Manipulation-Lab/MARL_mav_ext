@@ -132,8 +132,8 @@ class EventCfg:
                 "x": (-1.0, 1.0),
                 "y": (-1.0, 1.0),
                 "z": (0.5, 1.5),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
+                "roll": (-math.pi/4, math.pi/4),
+                "pitch": (-math.pi/4, math.pi/4),
                 "yaw": (-math.pi, math.pi),
             },
             "velocity_range": {
