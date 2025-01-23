@@ -18,9 +18,10 @@ class GeometricController:
 
     """
 
-    def __init__(self, num_envs: int):
+    def __init__(self, num_envs: int, control_mode: str):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.num_envs = num_envs
+        self.control_mode = control_mode
 
         self.p_err_max_ = torch.full((self.num_envs, 3), torch.finfo(torch.float32).max, device=self.device)
         self.v_err_max_ = torch.full(
@@ -80,12 +81,6 @@ class GeometricController:
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
 
-        # self.filter_sampling_frequency = torch.tensor([50, 50, 50], device=self.device)
-        # self.filter_cutoff_frequency = torch.tensor([20, 20, 20], device=self.device)
-        # self.filter_cutoff_frequency_bodyrate = 20
-
-        # self.filter_acc = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.gravity)
-
     # function to overwrite parameters from yaml file
     # function to check if all parameters are valid
 
@@ -106,11 +101,15 @@ class GeometricController:
         # update low pass filters: not here for now
 
         # acceleration command TODO: implement aceleration low pass filter
-        p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
-        pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
-        vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
-        des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
-        # des_acc = self.kd_acc * vel_error
+        if self.control_mode == "geometric":
+            p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
+            pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
+            vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
+            des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
+
+        elif self.control_mode == "ACCBR":
+            des_acc = setpoint["lin_acc"]
+
         # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(1)  # sum over all propellors
         acc_load = (
@@ -136,19 +135,22 @@ class GeometricController:
         q_cmd = quat_from_matrix(des_rot_matrix)
         # angular velocity command
         # retrieve the current body axes of the drone
-        current_rot_matrix = matrix_from_quat(state["quat"])
-        x_b = current_rot_matrix[..., 0]
-        y_b = current_rot_matrix[..., 1]
-        z_b = current_rot_matrix[..., 2]
+        if self.control_mode == "geometric":
+            current_rot_matrix = matrix_from_quat(state["quat"])
+            x_b = current_rot_matrix[..., 0]
+            y_b = current_rot_matrix[..., 1]
+            z_b = current_rot_matrix[..., 2]
 
-        T_dot = self.falcon_mass * torch.sum(setpoint["jerk"] * z_b, dim=-1, keepdim=True)
-        h_omega = self.falcon_mass * setpoint["jerk"] - T_dot * z_b  # rotational derivative of z_b
-        mask = (current_collective_thrust_magnitude > 0.01).squeeze()  # avoid division by zero
-        h_omega[mask] /= current_collective_thrust_magnitude[mask]
-        omega_b_x = (-h_omega * y_b).sum(-1, keepdim=True)
-        omega_b_y = (h_omega * x_b).sum(-1, keepdim=True)
-        omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(-1, keepdim=True)
-        omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
+            T_dot = self.falcon_mass * torch.sum(setpoint["jerk"] * z_b, dim=-1, keepdim=True)
+            h_omega = self.falcon_mass * setpoint["jerk"] - T_dot * z_b  # rotational derivative of z_b
+            mask = (current_collective_thrust_magnitude > 0.01).squeeze()  # avoid division by zero
+            h_omega[mask] /= current_collective_thrust_magnitude[mask]
+            omega_b_x = (-h_omega * y_b).sum(-1, keepdim=True)
+            omega_b_y = (h_omega * x_b).sum(-1, keepdim=True)
+            omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(-1, keepdim=True)
+            omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
+        elif self.control_mode == "ACCBR":
+            omega_b_ref = setpoint["body_rates"]
 
         # tilt prioritized attitude control
         quat_diff = quat_mul(quat_inv(state["quat"]), q_cmd)
