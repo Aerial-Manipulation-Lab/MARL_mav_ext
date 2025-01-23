@@ -255,7 +255,7 @@ class TerminationsCfg:
 
     drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
 
-
+    bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
 
 @configclass
 class CurriculumCfg:
