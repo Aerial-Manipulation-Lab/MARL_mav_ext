@@ -108,8 +108,8 @@ class LowLevelAction(ActionTerm):
                 self._desired_position[:, i] = self.drone_setpoint[i]["pos"]
             
             elif self._control_mode == "ACCBR":
-                self.drone_setpoint[i]["lin_acc"] = drone_waypoints[:, 0]
-                self.drone_setpoint[i]["body_rates"] = drone_waypoints[:, 1:]
+                self.drone_setpoint[i]["lin_acc"] = drone_waypoints[:, :3]
+                self.drone_setpoint[i]["body_rates"] = drone_waypoints[:, 3:]
 
             self.drone_setpoint[i]["yaw"] = self._constant_yaw
             self.drone_setpoint[i]["yaw_rate"] = self._constant_yaw
@@ -311,8 +311,8 @@ class LowLevelActionCfg(ActionTermCfg):
     """Number of drones."""
     control_mode: str = MISSING
     """Control mode for the low level controller. Eiter 'geometric' or 'ACCBR'."""
-    waypoint_dim: int = 4
-    """Dimension of the waypoints: [pos, vel, acc, jerk] (12), or [Acc, w_x, w_y, w_z] (4)."""
+    waypoint_dim: int = 6
+    """Dimension of the waypoints: [pos, vel, acc, jerk] (12), or [Acc, w_x, w_y, w_z] (6)."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
     time_horizon: int = 2
