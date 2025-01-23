@@ -109,7 +109,7 @@ class GeometricController:
 
         elif self.control_mode == "ACCBR":
             des_acc = setpoint["lin_acc"]
-        print("Desired acceleration: ", des_acc)
+
         # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(1)  # sum over all propellors
         acc_load = (
@@ -151,7 +151,7 @@ class GeometricController:
             omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
         elif self.control_mode == "ACCBR":
             omega_b_ref = setpoint["body_rates"]
-        print("omega_b_ref: ", omega_b_ref)
+
         # tilt prioritized attitude control
         quat_diff = quat_mul(quat_inv(state["quat"]), q_cmd)
         q_e_w = quat_diff[..., 0].view(self.num_envs, 1)
