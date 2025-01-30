@@ -55,7 +55,6 @@ class LowLevelAction(ActionTerm):
         self.spline_coeffs = torch.zeros(self.num_envs, 3, 3, 6, device=self.device) # num_envs, 3 drones, 3 dimensions, 6 coefficients
         self._policy_dt = 0.05
         self.decimation_counter = 0 #for spline
-        self.reset_idx = None
 
         # outer loop controller
         self._geometric_controller = GeometricController(self.num_envs, self._control_mode)
@@ -94,12 +93,6 @@ class LowLevelAction(ActionTerm):
     def processed_actions(self) -> torch.Tensor:
         return self._forces
 
-    def reset(self, env_ids):
-        super().reset()
-        if self._spline:
-            self.reset_idx = env_ids
-            print("RESET NOW")
-
     def process_actions(self, waypoints: torch.Tensor):
         """Process the waypoints to be used by the geometric low level controller.
         Args:
@@ -108,7 +101,7 @@ class LowLevelAction(ActionTerm):
             The processed external forces to be applied to the rotors."""
         self._waypoints = waypoints
         drone_positions = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
-        print("spline positions", self.spline_positions)
+
         for i in range(self._num_drones):
             start_drone_idx = i * self._waypoint_dim * self._num_waypoints
             end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
