@@ -10,6 +10,15 @@ from omni.isaac.lab.managers import EventTermCfg, ManagerTermBase, SceneEntityCf
 if TYPE_CHECKING:
     from omni.isaac.lab.envs import ManagerBasedRLEnv
 
+# Body indices found in the scene
+# payload_idx = [0]
+# drone_idx = [71, 72, 73]
+# base_rope_idx = [8, 9, 10]
+
+# for the case when the rod is used
+payload_idx = [0]
+drone_idx = [20, 27, 34]
+base_rope_idx = [8, 9, 10]
 
 def reset_root_state_ref_trajectory(
     env: ManagerBasedRLEnv,
@@ -136,3 +145,12 @@ def reset_root_state_uniform_collision_check(
     # set into the physics simulation
     asset.write_root_pose_to_sim(torch.cat([positions, orientations], dim=-1), env_ids=env_ids)
     asset.write_root_velocity_to_sim(velocities, env_ids=env_ids)
+
+def reset_spline_position_buffer(
+    env: ManagerBasedRLEnv,
+    env_ids: torch.Tensor,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    action_term: str = "low_level_action",
+):
+    drone_positions = env.scene[asset_cfg.name].data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    env.action_manager._terms[action_term].spline_positions[env_ids] = drone_positions[env_ids].unsqueeze(2).repeat(1, 1, 6, 1)
