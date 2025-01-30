@@ -24,7 +24,7 @@ def falcon_fly_low(
 ) -> torch.Tensor:
     """Terminate when the falcon flies too low."""
     robot = env.scene[asset_cfg.name]
-    falcon_pos = robot.data.body_com_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    falcon_pos = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
     is_falcon_pos_low = (falcon_pos[..., 2] < threshold).any(dim=1)
     assert is_falcon_pos_low.shape == (env.num_envs,)
     return is_falcon_pos_low
@@ -35,7 +35,7 @@ def falcon_spin(
 ) -> torch.Tensor:
     """Terminate when the falcon spins too fast."""
     robot = env.scene[asset_cfg.name]
-    falcon_ang_vel = robot.data.body_com_state_w[:, drone_idx, 10:].reshape(env.scene.num_envs, -1)
+    falcon_ang_vel = robot.data.body_state_w[:, drone_idx, 10:].reshape(env.scene.num_envs, -1)
     is_falcon_spin = (falcon_ang_vel > threshold).any(dim=1)
     assert is_falcon_spin.shape == (env.num_envs,)
     return is_falcon_spin
@@ -46,7 +46,7 @@ def payload_fly_low(
 ) -> torch.Tensor:
     """Terminate when the payload flies too low."""
     robot = env.scene[asset_cfg.name]
-    payload_pos = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
+    payload_pos = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
     is_payload_low = payload_pos[:, 2] < threshold
     assert is_payload_low.shape == (env.num_envs,)
     return is_payload_low
@@ -57,7 +57,7 @@ def payload_spin(
 ) -> torch.Tensor:
     """Terminate when the payload spins too fast."""
     robot = env.scene[asset_cfg.name]
-    payload_ang_vel = robot.data.body_com_state_w[:, payload_idx, 10:].squeeze(1)
+    payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1)
     is_payload_spin = (payload_ang_vel > threshold).any(dim=1)
     assert is_payload_spin.shape == (env.num_envs,)
     return is_payload_spin
@@ -68,7 +68,7 @@ def payload_angle_cos(
 ) -> torch.Tensor:
     """Terminate when the payload angle is too large."""
     robot = env.scene[asset_cfg.name]
-    payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
     roll, pitch, yaw = euler_xyz_from_quat(payload_quat)  # yaw can be whatever
     mapped_angle = torch.stack((torch.cos(roll), torch.cos(pitch)), dim=1)
     is_angle_limit = (mapped_angle < threshold).any(dim=1)
@@ -81,8 +81,8 @@ def cable_angle_drones_cos(
 ) -> torch.Tensor:
     """Angle of cable between cable and drones."""
     robot = env.scene[asset_cfg.name]
-    rope_orientations_world = robot.data.body_com_state_w[:, top_rope_idx, 3:7].view(-1, 4)
-    drone_orientation_world = robot.data.body_com_state_w[:, drone_idx, 3:7].view(-1, 4)
+    rope_orientations_world = robot.data.body_state_w[:, top_rope_idx, 3:7].view(-1, 4)
+    drone_orientation_world = robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
     drone_orientation_inv = quat_inv(drone_orientation_world)
     rope_orientations_drones = quat_mul(
         drone_orientation_inv, rope_orientations_world
@@ -99,8 +99,8 @@ def cable_angle_payload_cos(
 ) -> torch.Tensor:
     """Angle of cable between cable and payload."""
     robot: Articulation = env.scene[asset_cfg.name]
-    rope_orientations_world = robot.data.body_com_state_w[:, base_rope_idx, 3:7].view(-1, 4)
-    payload_orientation_world = robot.data.body_com_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
+    rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
+    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
     payload_orientation_inv = quat_inv(payload_orientation_world)
     rope_orientations_payload = quat_mul(
         payload_orientation_inv, rope_orientations_world
@@ -117,7 +117,7 @@ def bounding_box(
 ) -> torch.Tensor:
     """Terminate when the payload is outside the bounding box."""
     robot = env.scene[asset_cfg.name]
-    body_pos = robot.data.body_com_state_w[:, payload_idx, :3]
+    body_pos = robot.data.body_state_w[:, payload_idx, :3]
     body_pos_env = body_pos - env.scene.env_origins.unsqueeze(1)
     is_body_pos_outside = (body_pos_env.abs() > threshold).any(dim=-1).any(dim=-1)
     assert is_body_pos_outside.shape == (env.num_envs,)
@@ -130,7 +130,7 @@ def large_states(
     """Terminate when any body states are too large."""
     robot = env.scene[asset_cfg.name]
     body_idx = robot.find_bodies(".*")[0]
-    body_states = robot.data.body_com_state_w[:, body_idx, :]
+    body_states = robot.data.body_state_w[:, body_idx, :]
     is_large_states = (body_states.abs() > threshold).any(dim=-1).any(dim=-1)
     assert is_large_states.shape == (env.num_envs,)
     return is_large_states
@@ -157,7 +157,7 @@ def drone_collision(
 ) -> torch.Tensor:
     """Terminate when the drones collide."""
     robot = env.scene[asset_cfg.name]
-    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3]
+    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
     pdist = get_drone_pdist(rpos)
     separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
@@ -178,8 +178,8 @@ def cable_collision(
     on different cables is below the threshold.
     """
     robot = env.scene[asset_cfg.name]
-    cable_bottom_pos_env = robot.data.body_com_state_w[:, base_rope_idx, :3] - env.scene.env_origins.unsqueeze(1)
-    cable_top_pos_env = robot.data.body_com_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    cable_bottom_pos_env = robot.data.body_state_w[:, base_rope_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    cable_top_pos_env = robot.data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
     cable_directions = cable_top_pos_env - cable_bottom_pos_env  # (num_envs, num_cables, 3)
 
     # Create linearly spaced points for interpolation (num_points,)
@@ -232,7 +232,7 @@ def payload_target_distance(
 ) -> torch.Tensor:
     """Terminate when the payload is outisde a certain distance of the target."""
     robot = env.scene[asset_cfg.name]
-    payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
 
     desired_pos = env.command_manager.get_command(command_name)[..., :3]
