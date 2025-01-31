@@ -25,7 +25,7 @@ base_rope_idx = [8, 9, 10]
 def payload_position(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload pose xyz, quat in env frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_world_frame = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_world_frame = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
     payload_env_frame = payload_world_frame - env.scene.env_origins
     return payload_env_frame.view(env.num_envs, -1)
 
@@ -33,7 +33,7 @@ def payload_position(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEn
 def payload_orientation(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Payload orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
     payload_rot_matrix = matrix_from_quat(payload_quat)
     return payload_rot_matrix.view(env.num_envs, -1)
 
@@ -43,7 +43,7 @@ def payload_linear_velocities(
 ) -> torch.Tensor:
     """Payload linear velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    return robot.data.body_state_w[:, payload_idx, 7:10].view(env.num_envs, -1)
+    return robot.data.body_com_state_w[:, payload_idx, 7:10].view(env.num_envs, -1)
 
 
 def payload_angular_velocities(
@@ -51,7 +51,7 @@ def payload_angular_velocities(
 ) -> torch.Tensor:
     """Payload angular velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    return robot.data.body_state_w[:, payload_idx, 10:].view(env.num_envs, -1)
+    return robot.data.body_com_state_w[:, payload_idx, 10:].view(env.num_envs, -1)
 
 
 def payload_linear_acceleration(
@@ -75,7 +75,7 @@ def payload_positional_error(
 ) -> torch.Tensor:
     """Payload position error."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
     desired_pos = env.command_manager.get_command(command_name)[..., :3]
     positional_error = desired_pos - payload_pos_env
@@ -87,7 +87,7 @@ def payload_orientation_error(
 ) -> torch.Tensor:
     """Payload orientation error."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
     payload_rot_matrix = matrix_from_quat(payload_quat)
     desired_rot_matrix = matrix_from_quat(desired_quat)
@@ -100,7 +100,7 @@ def payload_velocity_error(
 ) -> torch.Tensor:
     """Payload velocity error."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_vel_world = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1)
+    payload_vel_world = robot.data.body_com_state_w[:, payload_idx, 7:10].squeeze(1)
     desired_vel = env.command_manager.get_command(command_name)[..., 7:10]
     vel_error = desired_vel - payload_vel_world
     return vel_error
@@ -111,7 +111,7 @@ def payload_linear_velocity_error(
 ) -> torch.Tensor:
     """Payload linear velocity error."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_lin_vel = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1)
+    payload_lin_vel = robot.data.body_com_state_w[:, payload_idx, 7:10].squeeze(1)
     desired_lin_vel = env.command_manager.get_command(command_name)[..., 7:10]
     lin_vel_error = desired_lin_vel - payload_lin_vel
 
@@ -123,7 +123,7 @@ def payload_angular_velocity_error(
 ) -> torch.Tensor:
     """Payload angular velocity error."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:13].squeeze(1)
+    payload_ang_vel = robot.data.com_[:, payload_idx, 10:13].squeeze(1)
     desired_ang_vel = env.command_manager.get_command(command_name)[..., 10:13]
     ang_vel_error = desired_ang_vel - payload_ang_vel
 
@@ -134,7 +134,7 @@ def cable_angle(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityC
     """Angle of cable between cable and payload."""
     robot: Articulation = env.scene[asset_cfg.name]
     rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
-    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
+    payload_orientation_world = robot.data.body_com_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
     payload_orientation_inv = quat_inv(payload_orientation_world)
     rope_orientations_payload = quat_mul(
         payload_orientation_inv, rope_orientations_world
@@ -202,7 +202,7 @@ def payload_drone_rpos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
     """Relative position of the payload from the drone."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
-    payload_pos_world_frame = robot.data.body_state_w[:, payload_idx, :3]
+    payload_pos_world_frame = robot.data.body_com_state_w[:, payload_idx, :3]
     rpos = drone_pos_world_frame - payload_pos_world_frame
     return rpos.view(env.num_envs, -1)
 
@@ -232,7 +232,7 @@ def payload_positional_error_traj(
 ) -> torch.Tensor:
     """Payload position error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3]
+    payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3]
     payload_pos_env = payload_pos_world - env.scene.env_origins.unsqueeze(1)
     desired_pos = env.command_manager.get_command(command_name)[..., :3]
     positional_error = (desired_pos - payload_pos_env).view(env.num_envs, -1)
@@ -245,7 +245,7 @@ def payload_orientation_error_traj(
     """Payload orientation error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
-    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, desired_quat.shape[1], 1)
+    payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].repeat(1, desired_quat.shape[1], 1)
     orientation_error = quat_mul(desired_quat.view(-1, 4), quat_conjugate(payload_quat.view(-1, 4))).view(
         env.num_envs, -1
     )
@@ -257,7 +257,7 @@ def payload_linear_velocity_error_traj(
 ) -> torch.Tensor:
     """Payload linear velocity error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_lin_vel = robot.data.body_state_w[:, payload_idx, 7:10]
+    payload_lin_vel = robot.data.body_com_state_w[:, payload_idx, 7:10]
     desired_lin_vel = env.command_manager.get_command(command_name)[..., 7:10]
     lin_vel_error = (desired_lin_vel - payload_lin_vel).view(env.num_envs, -1)
     return lin_vel_error
@@ -268,7 +268,7 @@ def payload_angular_velocity_error_traj(
 ) -> torch.Tensor:
     """Payload angular velocity error between the payload and all sampled points."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:13]
+    payload_ang_vel = robot.data.body_com_state_w[:, payload_idx, 10:13]
     desired_ang_vel = env.command_manager.get_command(command_name)[..., 10:13]
     ang_vel_error = (desired_ang_vel - payload_ang_vel).view(env.num_envs, -1)
     return ang_vel_error
@@ -301,8 +301,8 @@ def obstacle_rpos(
     """Get the relative distance to the obstacle"""
     obstacle = env.scene[obstacle_cfg.name]
     robot: Articulation = env.scene["robot"]
-    payload_pos_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
-    obstacle_pos = obstacle.data.body_state_w[:, 0, :3] - env.scene.env_origins
+    payload_pos_env = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
+    obstacle_pos = obstacle.data.body_com_state_w[:, 0, :3] - env.scene.env_origins
     rpos = obstacle_pos - payload_pos_env
     return rpos.view(env.num_envs, -1)
 
@@ -312,8 +312,8 @@ def obstacle_rpos_2(
     """Get the relative distance to the obstacle"""
     obstacle = env.scene[obstacle_cfg.name]
     robot: Articulation = env.scene["robot"]
-    payload_pos_env = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
-    obstacle_pos = obstacle.data.body_state_w[:, 0, :3] - env.scene.env_origins
+    payload_pos_env = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
+    obstacle_pos = obstacle.data.body_com_state_w[:, 0, :3] - env.scene.env_origins
     rpos = obstacle_pos - payload_pos_env
     return rpos.view(env.num_envs, -1)
 

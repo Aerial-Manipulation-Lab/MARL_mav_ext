@@ -46,7 +46,7 @@ def payload_fly_low(
 ) -> torch.Tensor:
     """Terminate when the payload flies too low."""
     robot = env.scene[asset_cfg.name]
-    payload_pos = robot.data.body_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
+    payload_pos = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1) - env.scene.env_origins
     is_payload_low = payload_pos[:, 2] < threshold
     assert is_payload_low.shape == (env.num_envs,)
     return is_payload_low
@@ -57,7 +57,7 @@ def payload_spin(
 ) -> torch.Tensor:
     """Terminate when the payload spins too fast."""
     robot = env.scene[asset_cfg.name]
-    payload_ang_vel = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1)
+    payload_ang_vel = robot.data.body_com_state_w[:, payload_idx, 10:].squeeze(1)
     is_payload_spin = (payload_ang_vel > threshold).any(dim=1)
     assert is_payload_spin.shape == (env.num_envs,)
     return is_payload_spin
@@ -68,7 +68,7 @@ def payload_angle_cos(
 ) -> torch.Tensor:
     """Terminate when the payload angle is too large."""
     robot = env.scene[asset_cfg.name]
-    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
     roll, pitch, yaw = euler_xyz_from_quat(payload_quat)  # yaw can be whatever
     mapped_angle = torch.stack((torch.cos(roll), torch.cos(pitch)), dim=1)
     is_angle_limit = (mapped_angle < threshold).any(dim=1)
@@ -100,7 +100,7 @@ def cable_angle_payload_cos(
     """Angle of cable between cable and payload."""
     robot: Articulation = env.scene[asset_cfg.name]
     rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
-    payload_orientation_world = robot.data.body_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
+    payload_orientation_world = robot.data.body_com_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
     payload_orientation_inv = quat_inv(payload_orientation_world)
     rope_orientations_payload = quat_mul(
         payload_orientation_inv, rope_orientations_world
@@ -117,7 +117,7 @@ def bounding_box(
 ) -> torch.Tensor:
     """Terminate when the payload is outside the bounding box."""
     robot = env.scene[asset_cfg.name]
-    body_pos = robot.data.body_state_w[:, payload_idx, :3]
+    body_pos = robot.data.body_com_state_w[:, payload_idx, :3]
     body_pos_env = body_pos - env.scene.env_origins.unsqueeze(1)
     is_body_pos_outside = (body_pos_env.abs() > threshold).any(dim=-1).any(dim=-1)
     assert is_body_pos_outside.shape == (env.num_envs,)
@@ -232,7 +232,7 @@ def payload_target_distance(
 ) -> torch.Tensor:
     """Terminate when the payload is outisde a certain distance of the target."""
     robot = env.scene[asset_cfg.name]
-    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
 
     desired_pos = env.command_manager.get_command(command_name)[..., :3]
