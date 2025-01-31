@@ -64,29 +64,26 @@ def main():
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
-    # print("Rope idx are: ", env.scene["robot"].find_bodies("rope_.*_link_.*"))
-    # print("Load link id:", env.scene["robot"].find_bodies("load_link"))
-    # print("drone_idx: ", env.scene["robot"].find_bodies("Falcon.*_base_link"))
+
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
     rope_mass = 0.0033692587500000004 * 7 + 0.001 * 14
     payload_mass = 1.4 + 0.00001 + 0.006
     mass_left_side = 2 * falcon_mass + 2 * rope_mass + 0.5 * payload_mass
     mass_right_side = falcon_mass + rope_mass + 0.5 * payload_mass
-    print("joint idx", env.scene["robot"].find_joints("Falcon.*_rotor_.*_joint"))
-
+    
     stretch_position = torch.tensor(
         [
             [
-                0.7,
-                -0.7,
-                2.5,  # drone 1
-                -0.7,
+                0.27,
+                1.0867,
+                1.7,  # drone 1
+                0.27,
+                -1.0867,
+                1.7,  # drone 2
+                -1.1367,
                 0.0,
-                2.5,  # drone 2
-                0.7,
-                0.7,
-                2.5,
+                1.7,
             ]
         ],
         dtype=torch.float32,
@@ -108,7 +105,36 @@ def main():
         ],
         dtype=torch.float32,
     )
+
+    ACC_BR_ref = torch.tensor(
+        [
+            [
+                0.0,
+                0.0,
+                9.0,
+                0.0,
+                0.0,
+                10.0,  # drone 1
+                0.0,
+                0.0,
+                8.0,
+                0.0,
+                0.0,
+                10.0,  # drone 2
+                0.0,
+                0.0,
+                7.0,
+                0.0,
+                0.0,
+                10.0,
+            ]
+        ],
+        dtype=torch.float32,
+    )
+
     count = 0
+    falcon_pos = env.scene["robot"].data.body_state_w[:, [20, 27, 34], :3] - env.scene.env_origins.unsqueeze(1)
+
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
@@ -116,16 +142,25 @@ def main():
                 env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
-                waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:, :3] = stretch_position[:, :3]
-                waypoint[:, 12:15] = stretch_position[:, 3:6]
-                waypoint[:, 24:27] = stretch_position[:, 6:9]
+            waypoint = torch.zeros_like(env.action_manager.action)
+            # When using geometric
+            # waypoint[:, :3] = stretch_position[:, :3]
+            # waypoint[:, 12:15] = stretch_position[:, 3:6]
+            # waypoint[:, 24:27] = stretch_position[:, 6:9]
+
+            waypoint[:, :3] = falcon_pos[:, 0]
+            waypoint[:, 3:6] = falcon_pos[:, 1]
+            waypoint[:, 6:9] = falcon_pos[:, 2]
+                        
+            # when using ACCBR
+            # waypoint[:] = ACC_BR_ref
             # step the environment
             obs, rew, terminated, truncated, info = env.step(waypoint)
             # print current orientation of pole
             # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
             # update counter
             count += 1
+            falcon_pos = env.scene["robot"].data.body_state_w[:, [20, 27, 34], :3] - env.scene.env_origins.unsqueeze(1)
 
             if args_cli.video:
                 if count == args_cli.video_length:

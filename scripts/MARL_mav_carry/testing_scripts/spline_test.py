@@ -232,31 +232,31 @@ def update_buffer(buffer, drone_id, new_position):
 
 spline_positions = torch.zeros(1, 3, 6, 3)
 spline_coeffs = torch.zeros(1, 3, 3, 6)
-spline_time_horizon = 10.0
+spline_time_horizon = 0.05
 
 # set postions for drone 1
-spline_positions[:, 0, 0, :] = torch.tensor([0.0, 0.0, 0.0])
-spline_positions[:, 0, 1, :] = torch.tensor([1.0, 1.0, 1.0])
-spline_positions[:, 0, 2, :] = torch.tensor([1.5, 1.0, 1.0])
-spline_positions[:, 0, 3, :] = torch.tensor([1.5, 1.5, 1.0])
-spline_positions[:, 0, 4, :] = torch.tensor([1.5, 1.5, 1.5])
-spline_positions[:, 0, 5, :] = torch.tensor([2.0, 2.0, 2.0])
+spline_positions[:, 0, 0, :] = torch.tensor([0.2699, 1.0911, 1.6906])
+spline_positions[:, 0, 1, :] = torch.tensor([0.2697, 1.0932, 1.6876])
+spline_positions[:, 0, 2, :] = torch.tensor([0.2693, 1.0955, 1.6840])
+spline_positions[:, 0, 3, :] = torch.tensor([0.2686, 1.0977, 1.6801])
+spline_positions[:, 0, 4, :] = torch.tensor([0.2676, 1.0994, 1.6759])
+spline_positions[:, 0, 5, :] = torch.tensor([0.2663, 1.1002, 1.6716])   
 
 # set postions for drone 2
-spline_positions[:, 1, 0, :] = torch.tensor([0.0, 0.0, 0.0])
-spline_positions[:, 1, 1, :] = torch.tensor([-1.0, -1.0, 1.0])
-spline_positions[:, 1, 2, :] = torch.tensor([-1.5, -1.0, 1.0])
-spline_positions[:, 1, 3, :] = torch.tensor([-1.5, -1.5, 1.0])
-spline_positions[:, 1, 4, :] = torch.tensor([-1.5, -1.5, 1.5])
-spline_positions[:, 1, 5, :] = torch.tensor([-2.0, -2.0, 2.0])
+spline_positions[:, 1, 0, :] = torch.tensor([0.2700, -1.0911,  1.6903])
+spline_positions[:, 1, 1, :] = torch.tensor([ 0.2700, -1.0931,  1.6867])
+spline_positions[:, 1, 2, :] = torch.tensor([ 0.2700, -1.0955,  1.6822])
+spline_positions[:, 1, 3, :] = torch.tensor([ 0.2699, -1.0981,  1.6765])
+spline_positions[:, 1, 4, :] = torch.tensor([ 0.2699, -1.1010,  1.6696])
+spline_positions[:, 1, 5, :] = torch.tensor([ 0.2698, -1.1040,  1.6613])
 
 # set postions for drone 3
-spline_positions[:, 2, 0, :] = torch.tensor([0.0, 0.0, 0.0])
-spline_positions[:, 2, 1, :] = torch.tensor([1.0, -1.0, 1.0])
-spline_positions[:, 2, 2, :] = torch.tensor([1.5, -1.0, 1.0])
-spline_positions[:, 2, 3, :] = torch.tensor([1.5, -1.5, 1.0])
-spline_positions[:, 2, 4, :] = torch.tensor([1.5, -1.5, 1.5])
-spline_positions[:, 2, 5, :] = torch.tensor([2.0, -2.0, 2.0])
+spline_positions[:, 2, 0, :] = torch.tensor([-1.1398e+00,  2.2524e-06,  1.6895e+00])
+spline_positions[:, 2, 1, :] = torch.tensor([-1.1414e+00,  6.0263e-06,  1.6856e+00])
+spline_positions[:, 2, 2, :] = torch.tensor([-1.1432e+00,  1.0099e-05,  1.6806e+00])
+spline_positions[:, 2, 3, :] = torch.tensor([-1.1453e+00,  1.0417e-05,  1.6744e+00])
+spline_positions[:, 2, 4, :] = torch.tensor([-1.1476e+00,  7.5383e-08,  1.6670e+00])
+spline_positions[:, 2, 5, :] = torch.tensor([-1.1502e+00, -2.9647e-05,  1.6583e+00])
 
 # compute spline coefficients
 spline_coeffs[:, 0] = quintic_trajectory_coeffs(spline_positions[:, 0], spline_time_horizon, 1)
@@ -289,22 +289,41 @@ for key in trajectories:
     jerks[key] = np.array(jerks[key])
 
 # Plot the trajectories
-fig = plt.figure(figsize=(8, 8))
-ax = fig.add_subplot(111, projection='3d')
+# fig = plt.figure(figsize=(8, 8))
+# ax = fig.add_subplot(111, projection='3d')
 
 # Define colors for each drone
 colors = ['r', 'g', 'b']
 labels = ['Drone 1', 'Drone 2', 'Drone 3']
 
-for drone_id in range(3):
-    traj = trajectories[drone_id]
-    ax.plot(traj[..., 0], traj[..., 1], traj[..., 2], color=colors[drone_id], label=labels[drone_id])
+# for drone_id in range(3):
+#     traj = trajectories[drone_id]
+#     ax.plot(traj[..., 0], traj[..., 1], traj[..., 2], color=colors[drone_id], label=labels[drone_id])
 
-# Formatting the plot
-ax.set_xlabel('X Position')
-ax.set_ylabel('Y Position')
-ax.set_zlabel('Z Position')
-ax.set_title('3D Spline Trajectories of Drones')
+# # Formatting the plot
+# ax.set_xlabel('X Position')
+# ax.set_ylabel('Y Position')
+# ax.set_zlabel('Z Position')
+# ax.set_title('3D Spline Trajectories of Drones')
+# ax.legend()
+fig, axes = plt.subplots(3, 1, figsize=(8, 12))
+fig.suptitle("Drone Positions")
+
+labels = ['Drone 1', 'Drone 2', 'Drone 3']
+components = ['X', 'Y', 'Z']
+
+for dim in range(3):  # Iterate over X, Y, Z components
+    for i in range(3):  # Iterate over drones
+        axes[dim].plot(time_samples * spline_time_horizon, trajectories[i].squeeze()[:, dim], label=labels[i])
+    
+    axes[dim].set_title(f'{components[dim]} Position Over Time')
+    axes[dim].legend()
+    axes[dim].set_xlabel('Time (s)')
+    axes[dim].set_ylabel(f'{components[dim]} Position')
+    axes[dim].grid()
+
+plt.tight_layout()
+
 
 fig, axes = plt.subplots(3, 1, figsize=(8, 12))
 fig.suptitle("Drone Velocities")

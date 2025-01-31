@@ -53,7 +53,7 @@ class LowLevelAction(ActionTerm):
         # num_envs, 3 drones, 6 waypoints, 3 dimensions
         self._spline = cfg.spline
         self.spline_coeffs = torch.zeros(self.num_envs, 3, 3, 6, device=self.device) # num_envs, 3 drones, 3 dimensions, 6 coefficients
-        self._policy_dt = 0.05
+        self._time_horizon = 0.05
         self.decimation_counter = 0 #for spline
 
         # outer loop controller
@@ -110,7 +110,7 @@ class LowLevelAction(ActionTerm):
             if self._spline:
                 # update buffer
                 self.spline_positions = update_buffer(self.spline_positions, i, drone_waypoints[:, :3])
-                self.spline_coeffs[:, i] = quintic_trajectory_coeffs(self.spline_positions[:, i], self._policy_dt, self.num_envs)
+                self.spline_coeffs[:, i] = quintic_trajectory_coeffs(self.spline_positions[:, i], self._time_horizon, self.num_envs)
                 # if using real past positions
                 self.spline_positions[:, i, -1] = drone_positions[:, i] 
     
@@ -158,7 +158,7 @@ class LowLevelAction(ActionTerm):
 
                 if self._spline:
                     time_eval = 0.9 if self.decimation_counter == 0 else 1.0 # TODO: create better logic for this
-                    pos, vel, acc, jerk = evaluate_trajectory(self.spline_coeffs[:, i], time_eval, self._policy_dt)
+                    pos, vel, acc, jerk = evaluate_trajectory(self.spline_coeffs[:, i], time_eval, self._time_horizon)
 
                     self.drone_setpoint[i]["pos"] = pos
                     self.drone_setpoint[i]["lin_vel"] = vel
@@ -183,17 +183,18 @@ class LowLevelAction(ActionTerm):
             target_rates = torch.cat(target_rates, dim=-1)
             thrusts, moments = self._motor_model.get_motor_thrusts_moments(target_rates, self.sampling_time)
             self._forces[..., 2] = thrusts
-            self._moments[..., 2] = moments.view(self.num_envs, self._num_drones, 4).sum(-1)
+            self._moments[..., 2] = moments.view(self.numsenvs, self._num_drones, 4).sum(-1)
             self._ll_counter = 0
         self.decimation_counter += 1
         self._ll_counter += 1
-        # apply forces to each rotor
-        self._env.scene["robot"].set_external_force_and_torque(
-            self._forces, torch.zeros_like(self._forces), self._body_ids
-        )
+
         # apply torques induced by rotors to each body
         self._env.scene["robot"].set_external_force_and_torque(
             torch.zeros_like(self._moments), self._moments, self._falcon_idx
+        )
+        # apply forces to each rotor
+        self._env.scene["robot"].set_external_force_and_torque(
+            self._forces, torch.zeros_like(self._forces), self._body_ids
         )
 
     """
@@ -209,8 +210,7 @@ class LowLevelAction(ActionTerm):
                 marker_cfg = FORCE_MARKER_Z_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_z_forces"
                 self.drone_force_z_visualizer = VisualizationMarkers(marker_cfg)
-            # set their visibility to true
-            self.drone_force_z_visualizer.set_visibility(False)
+            self.drone_force_z_visualizer.set_visibility(True)
             if not hasattr(self, "drone_pos_marker"):
                 marker_cfg = DRONE_POS_MARKER_CFG.copy()
                 marker_cfg.prim_path = "/Visuals/Actions/drone_pos_markers"
