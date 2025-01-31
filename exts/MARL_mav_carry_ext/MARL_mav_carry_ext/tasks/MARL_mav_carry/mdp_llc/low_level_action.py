@@ -183,7 +183,7 @@ class LowLevelAction(ActionTerm):
             target_rates = torch.cat(target_rates, dim=-1)
             thrusts, moments = self._motor_model.get_motor_thrusts_moments(target_rates, self.sampling_time)
             self._forces[..., 2] = thrusts
-            self._moments[..., 2] = moments.view(self.numsenvs, self._num_drones, 4).sum(-1)
+            self._moments[..., 2] = moments.view(self.num_envs, self._num_drones, 4).sum(-1)
             self._ll_counter = 0
         self.decimation_counter += 1
         self._ll_counter += 1
