@@ -31,7 +31,6 @@ class RotorMotor:
         # Check if body rate is going up or down
         tau = torch.where(target_rates > self.current_omega, self.tau_up, self.tau_down)
         alpha = torch.exp(-sampling_time / tau)
-        print("current_omega: ", self.current_omega)
 
         # Update current omega
         self.current_omega = alpha * self.current_omega + (1 - alpha) * target_rates
