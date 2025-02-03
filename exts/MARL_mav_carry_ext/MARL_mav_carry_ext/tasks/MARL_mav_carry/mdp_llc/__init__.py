@@ -1,6 +1,6 @@
 """Specific mdp functions for the hover task."""
 
-from omni.isaac.lab.envs.mdp import *  # noqa: F401, F403
+from isaaclab.envs.mdp import *  # noqa: F401, F403
 
 from .commands import *
 from .events import *

@@ -14,7 +14,7 @@ import argparse
 import os
 import torch
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
@@ -41,8 +41,8 @@ import matplotlib.pyplot as plt
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.utils.dict import print_dict
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.utils.dict import print_dict
 
 
 def main():
@@ -144,13 +144,13 @@ def main():
                 print("[INFO]: Resetting environment...")
             waypoint = torch.zeros_like(env.action_manager.action)
             # When using geometric
-            # waypoint[:, :3] = stretch_position[:, :3]
-            # waypoint[:, 12:15] = stretch_position[:, 3:6]
-            # waypoint[:, 24:27] = stretch_position[:, 6:9]
+            waypoint[:, :3] = stretch_position[:, :3]
+            waypoint[:, 12:15] = stretch_position[:, 3:6]
+            waypoint[:, 24:27] = stretch_position[:, 6:9]
 
-            waypoint[:, :3] = falcon_pos[:, 0]
-            waypoint[:, 3:6] = falcon_pos[:, 1]
-            waypoint[:, 6:9] = falcon_pos[:, 2]
+            # waypoint[:, :3] = falcon_pos[:, 0]
+            # waypoint[:, 3:6] = falcon_pos[:, 1]
+            # waypoint[:, 6:9] = falcon_pos[:, 2]
                         
             # when using ACCBR
             # waypoint[:] = ACC_BR_ref

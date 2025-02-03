@@ -10,16 +10,16 @@ from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_from_csv
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg
-from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sim import SimulationCfg
-from omni.isaac.lab.terrains import TerrainImporterCfg
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import euler_xyz_from_quat, normalize, quat_from_angle_axis
+import isaaclab.sim as sim_utils
+from isaaclab.assets import Articulation, ArticulationCfg
+from isaaclab.envs import DirectRLEnv, DirectRLEnvCfg
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sim import SimulationCfg
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.math import euler_xyz_from_quat, normalize, quat_from_angle_axis
 
-from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
+from isaaclab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
 
 
 @configclass

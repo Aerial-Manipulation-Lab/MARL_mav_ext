@@ -3,12 +3,12 @@ from __future__ import annotations
 import torch
 from dataclasses import MISSING
 
-import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import quat_inv, quat_mul
+import isaaclab.utils.math as math_utils
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import ActionTerm, ActionTermCfg
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.utils import configclass
+from isaaclab.utils.math import quat_inv, quat_mul
 
 from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
 

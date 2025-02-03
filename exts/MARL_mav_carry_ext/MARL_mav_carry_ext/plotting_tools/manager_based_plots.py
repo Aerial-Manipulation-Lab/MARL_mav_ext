@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import os
 import torch
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
 
 
 class ManagerBasedPlotter:
@@ -38,12 +38,12 @@ class ManagerBasedPlotter:
     def collect_load_data(self):
         """Collect the load data from the environment."""
         # load data
-        load_pos = self.robot.data.body_state_w[:, self.load_id, :3].squeeze(1)[0]
-        load_orientation = self.robot.data.body_state_w[:, self.load_id, 3:7].squeeze(1)[0]
-        load_vel = self.robot.data.body_state_w[:, self.load_id, 7:10].squeeze(1)[0]
-        load_ang_vel = self.robot.data.body_state_w[:, self.load_id, 10:].squeeze(1)[0]
-        load_acc = self.robot.data.body_state_w[:, self.load_id, 10:].squeeze(1)[0]
-        load_ang_acc = self.robot.data.body_state_w[:, self.load_id, 10:].squeeze(1)[0]
+        load_pos = self.robot.data.body_com_state_w[:, self.load_id, :3].squeeze(1)[0]
+        load_orientation = self.robot.data.body_com_state_w[:, self.load_id, 3:7].squeeze(1)[0]
+        load_vel = self.robot.data.body_com_state_w[:, self.load_id, 7:10].squeeze(1)[0]
+        load_ang_vel = self.robot.data.body_com_state_w[:, self.load_id, 10:].squeeze(1)[0]
+        load_acc = self.robot.data.body_com_state_w[:, self.load_id, 10:].squeeze(1)[0]
+        load_ang_acc = self.robot.data.body_com_state_w[:, self.load_id, 10:].squeeze(1)[0]
 
         # references
         load_pos_ref = self.env.command_manager._terms[self.command_name].pose_command_w[..., :3][0]

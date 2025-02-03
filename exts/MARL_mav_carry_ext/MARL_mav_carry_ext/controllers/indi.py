@@ -1,6 +1,6 @@
 import torch
 
-from omni.isaac.lab.utils.math import (
+from isaaclab.utils.math import (
     euler_xyz_from_quat,
     matrix_from_quat,
     normalize,

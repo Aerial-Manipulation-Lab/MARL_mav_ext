@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import os
 import torch
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
 
 
 class ManagerBasedPlotterTraj:

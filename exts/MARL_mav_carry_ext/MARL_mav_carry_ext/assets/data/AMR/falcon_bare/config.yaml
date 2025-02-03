@@ -1,5 +1,5 @@
-asset_path: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/omni.isaac.lab_assets/data/Robots/AMR/falcon_data/falcon.urdf
-usd_dir: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/omni.isaac.lab_assets/data/Robots/AMR/falcon_bare
+asset_path: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/isaaclab_assets/data/Robots/AMR/falcon_data/falcon.urdf
+usd_dir: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/isaaclab_assets/data/Robots/AMR/falcon_bare
 usd_file_name: falcon.usd
 force_usd_conversion: true
 make_instanceable: true

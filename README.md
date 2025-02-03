@@ -1,9 +1,9 @@
 # Multi-Agent reinforcement learning for multi-drone transport system
 
-[![IsaacSim](https://img.shields.io/badge/IsaacSim-4.2.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
-[![Isaac Lab](https://img.shields.io/badge/IsaacLab-1.0.0-silver)](https://isaac-sim.github.io/IsaacLab)
+[![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
+[![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.0.0-silver)](https://isaac-sim.github.io/IsaacLab)
 [![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
-[![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/20.04/)
+[![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/22.04/)
 [![Windows platform](https://img.shields.io/badge/platform-windows--64-orange.svg)](https://www.microsoft.com/en-us/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/license/mit)
@@ -55,7 +55,7 @@ Moreover, tasks for a single falcon drone are implemented in [exts/MARL_mav_carr
 
 ### Environment structure
 
-The configuration class for each task can be found in their respective folder. Following the Isaac Lab structure the environment is implemented as a [`ManagerBasedRLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/omni.isaac.lab.envs.html#omni.isaac.lab.envs.ManagerBasedRLEnv). Later, the environment will likely be rewritten to the [`DirectMARLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/omni.isaac.lab.envs.html#omni.isaac.lab.envs.DirectMARLEnv) class.
+The configuration class for each task can be found in their respective folder. Following the Isaac Lab structure the environment is implemented as a [`ManagerBasedRLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/isaaclab.envs.html#isaaclab.envs.ManagerBasedRLEnv). Later, the environment will likely be rewritten to the [`DirectMARLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/isaaclab.envs.html#isaaclab.envs.DirectMARLEnv) class.
 
 The manager based environment consists of multiple modules, and their configs can be found in the `$(TASK)_env_cfg.py` file:
 

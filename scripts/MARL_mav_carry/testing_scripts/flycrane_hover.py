@@ -13,7 +13,7 @@ This script demonstrates how to simulate a quadcopter.
 import argparse
 import torch
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
@@ -32,9 +32,9 @@ simulation_app = app_launcher.app
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover import CarryingSceneCfg
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.scene import InteractiveScene
-from omni.isaac.lab.sim import SimulationContext
+import isaaclab.sim as sim_utils
+from isaaclab.scene import InteractiveScene
+from isaaclab.sim import SimulationContext
 
 
 def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):

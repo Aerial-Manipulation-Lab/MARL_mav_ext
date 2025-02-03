@@ -1,9 +1,9 @@
 import torch
 
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.envs import ManagerBasedEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import quat_inv, quat_mul
+from isaaclab.assets import Articulation
+from isaaclab.envs import ManagerBasedEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils.math import quat_inv, quat_mul
 
 from .utils import get_drone_pdist, get_drone_rpos
 

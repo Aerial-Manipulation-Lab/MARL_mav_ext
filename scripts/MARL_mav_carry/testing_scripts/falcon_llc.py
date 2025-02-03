@@ -13,7 +13,7 @@ This script demonstrates how to simulate a quadcopter.
 import argparse
 import torch
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
@@ -40,9 +40,9 @@ import matplotlib.pyplot as plt
 
 from MARL_mav_carry_ext.tasks.single_falcon.track_ref import FalconEnv, FalconEnvCfg
 
-from omni.isaac.lab.envs import DirectRLEnv
-from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab.utils.timer import Timer
+from isaaclab.envs import DirectRLEnv
+from isaaclab.utils.dict import print_dict
+from isaaclab.utils.timer import Timer
 
 
 def main():

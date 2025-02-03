@@ -1,8 +1,8 @@
 import torch
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import euler_xyz_from_quat, quat_inv, quat_mul
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils.math import euler_xyz_from_quat, quat_inv, quat_mul
 
 
 def falcon_fly_low(

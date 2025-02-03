@@ -6,12 +6,12 @@ from dataclasses import MISSING
 from MARL_mav_carry_ext.controllers import GeometricController, IndiController
 from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
 
-import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import normalize, quat_from_angle_axis
+import isaaclab.utils.math as math_utils
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import ActionTerm, ActionTermCfg
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.utils import configclass
+from isaaclab.utils.math import normalize, quat_from_angle_axis
 from MARL_mav_carry_ext.splines.quintic_spline import quintic_trajectory_coeffs, evaluate_trajectory, update_buffer
 
 from .marker_utils import ACC_MARKER_CFG, DRONE_POS_MARKER_CFG, FORCE_MARKER_Z_CFG, ORIENTATION_MARKER_CFG
@@ -338,7 +338,7 @@ class LowLevelActionCfg(ActionTermCfg):
     """Number of drones."""
     control_mode: str = MISSING
     """Control mode for the low level controller. Eiter 'geometric' or 'ACCBR'."""
-    waypoint_dim: int = 3
+    waypoint_dim: int = 12
     """Dimension of the waypoints: [pos, vel, acc, jerk] (12), or [Acc, w_x, w_y, w_z] (6)."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""

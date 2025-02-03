@@ -1,5 +1,5 @@
-asset_path: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/omni.isaac.lab_assets/data/Robots/AMR/flycrane_data/flycrane.urdf
-usd_dir: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/omni.isaac.lab_assets/data/Robots/AMR/flycrane_rod
+asset_path: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/isaaclab_assets/data/Robots/AMR/flycrane_data/flycrane.urdf
+usd_dir: /home/isaac-sim/Jack_Zeng/MARL_mav_carry/source/extensions/isaaclab_assets/data/Robots/AMR/flycrane_rod
 usd_file_name: flycrane_rod.usd
 force_usd_conversion: true
 make_instanceable: true
