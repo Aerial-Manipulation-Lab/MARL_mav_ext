@@ -154,3 +154,14 @@ def reset_spline_position_buffer(
 ):
     drone_positions = env.scene[asset_cfg.name].data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
     env.action_manager._terms[action_term].spline_positions[env_ids] = drone_positions[env_ids].unsqueeze(2).repeat(1, 1, 6, 1)
+
+def reset_motor_low_pass_filter(
+    env: ManagerBasedRLEnv,
+    env_ids: torch.Tensor,
+    action_term: str = "low_level_action",
+):
+    # experimentally obtained
+    initial_rpm = torch.tensor([1880.4148, 1675.0350, 1670.4458, 1875.0309, 1702.9099, 1894.7073, 1838.3457, 1636.0341, 1337.6145, 1373.3019, 1519.6875, 1483.1881],
+    device='cuda:0')
+
+    env.action_manager._terms[action_term]._motor_model.current_omega[env_ids] = initial_rpm

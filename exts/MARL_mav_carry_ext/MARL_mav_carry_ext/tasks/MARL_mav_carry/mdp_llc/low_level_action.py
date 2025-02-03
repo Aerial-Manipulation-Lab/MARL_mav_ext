@@ -67,7 +67,11 @@ class LowLevelAction(ActionTerm):
         self._indi_controller = IndiController(self.num_envs)
 
         # motor model
-        self._motor_model = RotorMotor(self.num_envs, 1200*torch.ones(self.num_envs, self._num_drones * 4, device=self.device)) # hover mode ~ 1200 RPM
+        # experimentally obtained
+        initial_rpm = torch.tensor([[1880.4148, 1675.0350, 1670.4458, 1875.0309, 1702.9099, 1894.7073, 1838.3457, 1636.0341, 1337.6145, 1373.3019, 1519.6875, 1483.1881]],
+        device='cuda:0').repeat(self.num_envs, 1)
+
+        self._motor_model = RotorMotor(self.num_envs, initial_rpm)
         self.sampling_time = self._env.sim.get_physics_dt() * self.cfg.low_level_decimation
 
         # debug

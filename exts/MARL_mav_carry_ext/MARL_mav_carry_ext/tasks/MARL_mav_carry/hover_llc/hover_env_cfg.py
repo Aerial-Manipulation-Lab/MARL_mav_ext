@@ -188,7 +188,13 @@ class EventCfg:
     reset_spline_buffer = EventTerm(
         func=mdp.reset_spline_position_buffer,
         mode="reset",
-        params={"asset_cfg": SceneEntityCfg("robot")},
+        params={"action_term": "low_level_action"},
+    )
+
+    reset_motor_low_pass_filter = EventTerm(
+        func=mdp.reset_motor_low_pass_filter,
+        mode="reset",
+        params={"action_term": "low_level_action"},
     )
 
 @configclass
