@@ -16,7 +16,7 @@ from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as Gnoise
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
 
@@ -88,22 +88,19 @@ class ObservationsCfg:
         """Observation terms for the policy."""
 
         # payload and drone states
-        payload_position = ObsTerm(func=mdp.payload_position)
-        payload_orientation = ObsTerm(func=mdp.payload_orientation)
-        payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities)
-        payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities)
+        payload_position = ObsTerm(func=mdp.payload_position, noise=Gnoise(std=0.003))
+        payload_orientation = ObsTerm(func=mdp.payload_orientation, noise=Gnoise(std=0.01))
+        payload_linear_velocities = ObsTerm(func=mdp.payload_linear_velocities, noise=Gnoise(std=0.01))
+        payload_angular_velocities = ObsTerm(func=mdp.payload_angular_velocities, noise=Gnoise(std=0.02))
 
-        drone_positions = ObsTerm(func=mdp.drone_positions)
-        drone_orientations = ObsTerm(func=mdp.drone_orientations)
-        drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities)
-        drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities)
+        drone_positions = ObsTerm(func=mdp.drone_positions, noise=Gnoise(std=0.003), history_length=5)
+        drone_orientations = ObsTerm(func=mdp.drone_orientations, noise=Gnoise(std=0.01))
+        drone_linear_velocities = ObsTerm(func=mdp.drone_linear_velocities, noise=Gnoise(std=0.01))
+        drone_angular_velocities = ObsTerm(func=mdp.drone_angular_velocities, noise=Gnoise(std=0.02))
 
         # goal error terms
-        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_command"})
-        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_command"})
-        # relative positions terms
-        # payload_drone_rpos = ObsTerm(func=mdp.payload_drone_rpos)
-        # drone_rpos = ObsTerm(func=mdp.drone_rpos_obs)
+        payload_positional_error = ObsTerm(func=mdp.payload_positional_error, params={"command_name": "pose_command"}, noise=Gnoise(std=0.003))
+        payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_command"}, noise=Gnoise(std=0.01))
 
         def __post_init__(self):
             self.enable_corruption = True  # for adding noise to the observations

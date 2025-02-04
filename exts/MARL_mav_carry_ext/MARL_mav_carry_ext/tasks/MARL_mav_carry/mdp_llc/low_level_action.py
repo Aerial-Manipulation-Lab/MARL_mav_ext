@@ -105,6 +105,8 @@ class LowLevelAction(ActionTerm):
             The processed external forces to be applied to the rotors."""
         self._waypoints = waypoints
         drone_positions = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
+        pos_noise = torch.randn_like(drone_positions) * 0.003
+        drone_positions += pos_noise
 
         for i in range(self._num_drones):
             start_drone_idx = i * self._waypoint_dim * self._num_waypoints
@@ -140,12 +142,30 @@ class LowLevelAction(ActionTerm):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             target_rates = []
+
+            # Define standard deviations for noise
+            position_noise_std = 0.003  # 3 mm
+            orientation_noise_std = 0.01  # ~0.57 degrees in radians
+            linear_velocity_noise_std = 0.01  # 1 cm/s
+            angular_velocity_noise_std = 0.02  # 0.02 rad/s
+            linear_acceleration_noise_std = 0.05  # 0.05 m/s²
+            angular_acceleration_noise_std = 0.05  # 0.05 rad/s²
+
+            # Get drone states
             drone_positions = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
-            drone_orientations = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7]).view(self.num_envs, -1)
-            drone_linear_velocities = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 7:10]).view(self.num_envs, -1)
-            drone_angular_velocities = (self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 10:13]).view(self.num_envs, -1)
-            drone_linear_accelerations = (self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]).view(self.num_envs, -1)
-            drone_angular_accelerations = (self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6]).view(self.num_envs, -1)
+            drone_orientations = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7].view(self.num_envs, -1)
+            drone_linear_velocities = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 7:10].view(self.num_envs, -1)
+            drone_angular_velocities = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 10:13].view(self.num_envs, -1)
+            drone_linear_accelerations = self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3].view(self.num_envs, -1)
+            drone_angular_accelerations = self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6].view(self.num_envs, -1)
+
+            # Apply Gaussian noise with correctly sized tensors
+            drone_positions += torch.randn_like(drone_positions) * position_noise_std
+            drone_orientations += torch.randn_like(drone_orientations) * orientation_noise_std
+            drone_linear_velocities += torch.randn_like(drone_linear_velocities) * linear_velocity_noise_std
+            drone_angular_velocities += torch.randn_like(drone_angular_velocities) * angular_velocity_noise_std
+            drone_linear_accelerations += torch.randn_like(drone_linear_accelerations) * linear_acceleration_noise_std
+            drone_angular_accelerations += torch.randn_like(drone_angular_accelerations) * angular_acceleration_noise_std
 
             for i in range(self._num_drones):
                 drone_states: dict = {}  # dict of tensors
@@ -342,7 +362,7 @@ class LowLevelActionCfg(ActionTermCfg):
     """Number of drones."""
     control_mode: str = MISSING
     """Control mode for the low level controller. Eiter 'geometric' or 'ACCBR'."""
-    waypoint_dim: int = 12
+    waypoint_dim: int = 3
     """Dimension of the waypoints: [pos, vel, acc, jerk] (12), or [Acc, w_x, w_y, w_z] (6)."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
