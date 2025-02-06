@@ -177,12 +177,12 @@ class LowLevelAction(ActionTerm):
 
             for i in range(self._num_drones):
                 drone_states: dict = {}  # dict of tensors
-                drone_states["pos"] = self.drone_positions.view(self.num_envs, -1)[:, i * 3 : i * 3 + 3]
-                drone_states["quat"] = self.drone_orientations.view(self.num_envs, -1)[:, i * 4 : i * 4 + 4]
-                drone_states["lin_vel"] = self.drone_linear_velocities.view(self.num_envs, -1)[:, i * 3 : i * 3 + 3]
-                drone_states["ang_vel"] = self.drone_angular_velocities.view(self.num_envs, -1)[:, i * 3 : i * 3 + 3]
-                drone_states["lin_acc"] = self.drone_linear_accelerations.view(self.num_envs, -1)[:, i * 3 : i * 3 + 3]
-                drone_states["ang_acc"] = self.drone_angular_accelerations.view(self.num_envs, -1)[:, i * 3 : i * 3 + 3]
+                drone_states["pos"] = self.drone_positions[:, i]
+                drone_states["quat"] = self.drone_orientations[:, i]
+                drone_states["lin_vel"] = self.drone_linear_velocities[:, i]
+                drone_states["ang_vel"] = self.drone_angular_velocities[:, i]
+                drone_states["lin_acc"] = self.drone_linear_accelerations[:, i]
+                drone_states["ang_acc"] = self.drone_angular_accelerations[:, i]
                 # calculate current jerk and snap
                 self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
                 drone_states["jerk"] = self._drone_jerk[:, i]
