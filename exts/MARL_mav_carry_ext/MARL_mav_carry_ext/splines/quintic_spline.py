@@ -6,20 +6,17 @@ def quintic_trajectory_coeffs(waypoints: torch.tensor,
                        time_horizon: float, 
                        num_envs: int) -> tuple:
     # T0 is 0
-    T1 = 0.2 * time_horizon
-    T2 = 0.4 * time_horizon
-    T3 = 0.6 * time_horizon
-    T4 = 0.8 * time_horizon
-    T5 = time_horizon
+    T1 = 0.5 * time_horizon
+    T2 = time_horizon
 
     A = torch.tensor(
         [
             [0, 0, 0, 0, 0, 1],  # p(t0)
+            [0, 0, 0, 0, 1, 0],  # v(t0)
             [T1**5, T1**4, T1**3, T1**2, T1, 1],  # p(t1)
+            [5* T1**4, 4 * T1**3, 3 * T1**2, 2*T1, 1, 0],  # v(t1)
+            [20 * T1**3, 12 * T1**2, 6 * T1, 2, 0, 0],  # a(t1)
             [T2**5, T2**4, T2**3, T2**2, T2, 1],  # p(t2)
-            [T3**5, T3**4, T3**3, T3**2, T3, 1],  # p(t3)
-            [T4**5, T4**4, T4**3, T4**2, T4, 1],  # p(t4)
-            [T5**5, T5**4, T5**3, T5**2, T5, 1],  # p(t5)
         ],
         dtype=torch.float32,
         device=torch.device("cuda"),
