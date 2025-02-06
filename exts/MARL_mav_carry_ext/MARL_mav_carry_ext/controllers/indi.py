@@ -1,14 +1,8 @@
 import torch
 
 from isaaclab.utils.math import (
-    euler_xyz_from_quat,
-    matrix_from_quat,
-    normalize,
-    quat_from_matrix,
     quat_inv,
-    quat_mul,
     quat_rotate,
-    quat_rotate_inverse,
 )
 
 class IndiController:
@@ -19,7 +13,7 @@ class IndiController:
         # allocation matrix TODO: define this in a common place with the geometric controller
         self.kappa = 0.022
         self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
-        self.l = 0.075
+        self.l = 0.10606601717798213
         self.G_1 = torch.tensor(
             [
                 [1, 1, 1, 1],
