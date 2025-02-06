@@ -40,37 +40,8 @@ class GeometricController:
         # sim and drone parameters
         self.gravity = torch.tensor([[0.0, 0.0, -9.8066]] * self.num_envs, device=self.device)
         self.z_i = torch.tensor([[0.0, 0.0, 1.0]] * self.num_envs, device=self.device)
-        self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
-        self.torque_map = torch.tensor([3.4375484e-08, 0.0, 0.0], device=self.device)
-        self.t_last = 0.0
         self.falcon_mass = 0.6017  # kg
-        self.l = 0.075
         self._epsilon = torch.tensor(1e-6, device=self.device)  # avoid division by zero
-        self.kappa = 0.022
-        self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
-        self.G_1 = torch.tensor(
-            [
-                [1, 1, 1, 1],
-                [
-                    self.l * torch.sin(self.beta),
-                    -self.l * torch.sin(self.beta),
-                    -self.l * torch.sin(self.beta),
-                    self.l * torch.sin(self.beta),
-                ],
-                [
-                    -self.l * torch.cos(self.beta),
-                    -self.l * torch.cos(self.beta),
-                    self.l * torch.cos(self.beta),
-                    self.l * torch.cos(self.beta),
-                ],
-                [self.kappa, -self.kappa, self.kappa, -self.kappa],
-            ],
-            device=self.device,
-        )
-        self.G_1_inv = torch.linalg.inv(self.G_1)
-        self.inertia_mat = torch.diag(torch.tensor([0.00164, 0.00184, 0.0030], device=self.device))
-        self.min_thrust = torch.tensor(0.0, device=self.device)
-        self.max_thrust = torch.tensor(6.25, device=self.device)
 
         # controller parameters
         self.kp_acc = torch.tensor([4.0, 4.0, 9.0], device=self.device)
