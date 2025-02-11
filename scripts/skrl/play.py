@@ -20,6 +20,7 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Play a checkpoint of an RL agent from skrl.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--control_mode", type=str, default="ACCBR", help="Control mode for the agent.")
 parser.add_argument("--save_plots", action="store_true", default=False, help="Save plots during training.")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
@@ -162,7 +163,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
-    plotter = ManagerBasedPlotter(env, command_name="pose_command")
+    plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
 
     # reset environment
     obs, _ = env.reset()
