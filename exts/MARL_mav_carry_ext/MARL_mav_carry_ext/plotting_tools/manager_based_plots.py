@@ -7,13 +7,18 @@ import torch
 
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils.math import quat_rotate
 
 
 class ManagerBasedPlotter:
-    def __init__(self, env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
+    def __init__(self, env: ManagerBasedRLEnv, 
+                 command_name: str,
+                 control_mode: str,
+                 asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
 
         # environment
         self.command_name = command_name
+        self.control_mode = control_mode
         self.env = env
         self.robot = env.scene[asset_cfg.name]
         self.load_id = self.robot.find_bodies("load_link")[0]
@@ -76,6 +81,7 @@ class ManagerBasedPlotter:
         drone_orientation = self.robot.data.body_state_w[:, self.drone_idx, 3:7][0]
         drone_vel = self.robot.data.body_state_w[:, self.drone_idx, 7:10][0]
         drone_ang_vel = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
+        drone_BR = quat_rotate(drone_orientation.unsqueeze(0), drone_ang_vel.unsqueeze(0))[0]
         drone_acc = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
         drone_ang_acc = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
         drone_jerk = self.env.action_manager._terms["low_level_action"]._drone_jerk[0]
@@ -89,39 +95,74 @@ class ManagerBasedPlotter:
         # Loop through all drones
         for drone_num in range(drone_pos.shape[0]):
             ref_drone = policy_ref[drone_num * int(action_space) : (drone_num + 1) * int(action_space)]
-            ref_pos = ref_drone[:3]
-            ref_vel = ref_drone[3:6]
-            ref_acc = ref_drone[6:9]
-            ref_jerk = ref_drone[9:12]
-            # Append the data for this drone
-            both_drone_pos = torch.cat((ref_pos, drone_pos[drone_num]), dim=-1)
-            both_drone_vel = torch.cat((ref_vel, drone_vel[drone_num]), dim=-1)
-            both_drone_acc = torch.cat((ref_acc, drone_acc[drone_num]), dim=-1)
-            both_drone_jerk = torch.cat((ref_jerk, drone_jerk[drone_num]), dim=-1)
-            # If this drone's data doesn't exist yet, initialize it
-            if drone_num not in self.drone_data_by_id:
-                self.drone_data_by_id[drone_num] = {
-                    "both_drone_pos": both_drone_pos.unsqueeze(0).tolist(),
-                    "drone_orientation": drone_orientation[drone_num].unsqueeze(0).tolist(),
-                    "both_drone_vel": both_drone_vel.unsqueeze(0).tolist(),
-                    "drone_ang_vel": drone_ang_vel[drone_num].unsqueeze(0).tolist(),
-                    "both_drone_acc": both_drone_acc.unsqueeze(0).tolist(),
-                    "drone_ang_acc": drone_ang_acc[drone_num].unsqueeze(0).tolist(),
-                    "both_drone_jerk": both_drone_jerk.unsqueeze(0).tolist(),
-                    "rotor_forces": rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].unsqueeze(0).tolist(),
-                }
-            else:
+
+            if self.control_mode == "ACCBR":
+                ref_acc = ref_drone[:3]
+                ref_BR = ref_drone[3:6]
                 # Append the data for this drone
-                self.drone_data_by_id[drone_num]["both_drone_pos"].append(both_drone_pos.tolist())
-                self.drone_data_by_id[drone_num]["drone_orientation"].append(drone_orientation[drone_num].tolist())
-                self.drone_data_by_id[drone_num]["both_drone_vel"].append(both_drone_vel.tolist())
-                self.drone_data_by_id[drone_num]["drone_ang_vel"].append(drone_ang_vel[drone_num].tolist())
-                self.drone_data_by_id[drone_num]["both_drone_acc"].append(both_drone_acc.tolist())
-                self.drone_data_by_id[drone_num]["drone_ang_acc"].append(drone_ang_acc[drone_num].tolist())
-                self.drone_data_by_id[drone_num]["both_drone_jerk"].append(both_drone_jerk.tolist())
-                self.drone_data_by_id[drone_num]["rotor_forces"].append(
-                    rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].tolist()
-                )
+                both_drone_acc = torch.cat((ref_acc, drone_acc[drone_num]), dim=-1)
+                both_drone_BR = torch.cat((ref_BR, drone_BR[drone_num]), dim=-1)
+                # If this drone's data doesn't exist yet, initialize it
+                if drone_num not in self.drone_data_by_id:
+                    self.drone_data_by_id[drone_num] = {
+                        "drone_pos": drone_pos[drone_num].unsqueeze(0).tolist(),
+                        "drone_orientation": drone_orientation[drone_num].unsqueeze(0).tolist(),
+                        "drone_vel": drone_vel[drone_num].unsqueeze(0).tolist(),
+                        "drone_ang_vel": drone_ang_vel[drone_num].unsqueeze(0).tolist(),
+                        "both_drone_BR": both_drone_BR.unsqueeze(0).tolist(),
+                        "both_drone_acc": both_drone_acc.unsqueeze(0).tolist(),
+                        "drone_ang_acc": drone_ang_acc[drone_num].unsqueeze(0).tolist(),
+                        "drone_jerk": drone_jerk[drone_num].unsqueeze(0).tolist(),
+                        "rotor_forces": rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].unsqueeze(0).tolist(),
+                    }
+                else:
+                    # Append the data for this drone
+                    self.drone_data_by_id[drone_num]["drone_pos"].append(drone_pos[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["drone_orientation"].append(drone_orientation[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["drone_vel"].append(drone_vel[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["drone_ang_vel"].append(drone_ang_vel[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["both_drone_BR"].append(both_drone_BR.tolist())
+                    self.drone_data_by_id[drone_num]["both_drone_acc"].append(both_drone_acc.tolist())
+                    self.drone_data_by_id[drone_num]["drone_ang_acc"].append(drone_ang_acc[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["drone_jerk"].append(drone_jerk[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["rotor_forces"].append(
+                        rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].tolist()
+                    )
+
+            elif self.control_mode == "geometric":
+                ref_pos = ref_drone[:3]
+                ref_vel = ref_drone[3:6]
+                ref_acc = ref_drone[6:9]
+                ref_jerk = ref_drone[9:12]
+                # Append the data for this drone
+                both_drone_pos = torch.cat((ref_pos, drone_pos[drone_num]), dim=-1)
+                both_drone_vel = torch.cat((ref_vel, drone_vel[drone_num]), dim=-1)
+                both_drone_acc = torch.cat((ref_acc, drone_acc[drone_num]), dim=-1)
+                both_drone_jerk = torch.cat((ref_jerk, drone_jerk[drone_num]), dim=-1)
+                # If this drone's data doesn't exist yet, initialize it
+                if drone_num not in self.drone_data_by_id:
+                    self.drone_data_by_id[drone_num] = {
+                        "both_drone_pos": both_drone_pos.unsqueeze(0).tolist(),
+                        "drone_orientation": drone_orientation[drone_num].unsqueeze(0).tolist(),
+                        "both_drone_vel": both_drone_vel.unsqueeze(0).tolist(),
+                        "drone_ang_vel": drone_ang_vel[drone_num].unsqueeze(0).tolist(),
+                        "both_drone_acc": both_drone_acc.unsqueeze(0).tolist(),
+                        "drone_ang_acc": drone_ang_acc[drone_num].unsqueeze(0).tolist(),
+                        "both_drone_jerk": both_drone_jerk.unsqueeze(0).tolist(),
+                        "rotor_forces": rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].unsqueeze(0).tolist(),
+                    }
+                else:
+                    # Append the data for this drone
+                    self.drone_data_by_id[drone_num]["both_drone_pos"].append(both_drone_pos.tolist())
+                    self.drone_data_by_id[drone_num]["drone_orientation"].append(drone_orientation[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["both_drone_vel"].append(both_drone_vel.tolist())
+                    self.drone_data_by_id[drone_num]["drone_ang_vel"].append(drone_ang_vel[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["both_drone_acc"].append(both_drone_acc.tolist())
+                    self.drone_data_by_id[drone_num]["drone_ang_acc"].append(drone_ang_acc[drone_num].tolist())
+                    self.drone_data_by_id[drone_num]["both_drone_jerk"].append(both_drone_jerk.tolist())
+                    self.drone_data_by_id[drone_num]["rotor_forces"].append(
+                        rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].tolist()
+                    )
 
     def collect_data(self):
         """Collect all the data in the environment."""
