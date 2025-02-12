@@ -101,5 +101,6 @@ class IndiController:
         return rotor_speeds
 
 
-if __name__ == "__main__":
-    indi_controller = IndiController(1)
+    def reset(self, env_ids):
+        self.filterMot_.reset(env_ids)
+        self.filterRate_.reset(env_ids)

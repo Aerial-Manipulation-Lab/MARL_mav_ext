@@ -6,6 +6,7 @@ class LowPassFilter:
         self.sampling_freq = fs # envs x 1
         self.num = self.init_num(fc, fs) # envs x 1 x 2
         self.dem = self.init_dem(fc, fs)
+        self.initial_value = initial_value
         self.input = initial_value.unsqueeze(2).repeat(1, 1, 2) # envs x dim x 2
         self.output = initial_value.unsqueeze(2).repeat(1, 1, 2) # envs x dim x 2
 
@@ -35,9 +36,7 @@ class LowPassFilter:
         self.input[:, :, 1] = self.input[:, :, 0]
 
         self.input[:, :, 0] = sample # envs x dim x 1
-        # print(f"{self.num.shape} * {x2.shape} + ({self.num.shape} * {self.input.shape} - {self.dem.shape} * {self.output.shape})")
         out = self.num[:, :, 0] * x2 + (self.num * self.input - self.dem * self.output).sum(dim=2)
-
         self.output[:, :, 1] = self.output[:, :, 0]
         self.output[:, :, 0] = out
 
@@ -52,5 +51,9 @@ class LowPassFilter:
             and torch.isfinite(self.output).all()
         )
     
+    def reset(self, env_ids):
+        self.input[env_ids] = self.initial_value.unsqueeze(2).repeat(1, 1, 2)[env_ids] # envs x dim x 2
+        self.output[env_ids] = self.initial_value.unsqueeze(2).repeat(1, 1, 2)[env_ids] # envs x dim x 2
+
     def __call__(self):
         return self.output[:, :, 0]

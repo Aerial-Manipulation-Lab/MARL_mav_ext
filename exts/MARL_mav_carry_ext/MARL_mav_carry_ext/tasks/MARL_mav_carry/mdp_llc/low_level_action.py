@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 from dataclasses import MISSING
+from collections.abc import Sequence
 
 from MARL_mav_carry_ext.controllers import GeometricController, IndiController
 from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
@@ -120,6 +121,12 @@ class LowLevelAction(ActionTerm):
     @property
     def processed_actions(self) -> torch.Tensor:
         return self._forces
+
+    def reset(self, env_ids: Sequence[int]):
+        super().reset(env_ids)
+        for i in range(self._num_drones):
+            self.geo_controllers[i].reset(env_ids)
+            self._indi_controllers[i].reset(env_ids)
 
     def process_actions(self, waypoints: torch.Tensor):
         """Process the waypoints to be used by the geometric low level controller.

@@ -159,3 +159,8 @@ class GeometricController:
         )
 
         return alpha_b_des, acc_load, acc_cmd, q_cmd
+
+    def reset(self, env_ids):
+        self.filterAcc_.reset(env_ids)
+        self.filterMot_.reset(env_ids)
+        self.filterRate_.reset(env_ids)
