@@ -35,9 +35,12 @@ class LowLevelAction(ActionTerm):
         # configuration
         self.cfg = cfg
         self._num_drones = cfg.num_drones
-        self._waypoint_dim = cfg.waypoint_dim
         self._num_waypoints = cfg.num_waypoints
         self._control_mode = cfg.control_mode
+        if self._control_mode == "geometric":
+            self._waypoint_dim = 12
+        elif self._control_mode == "ACCBR":
+            self._waypoint_dim = 6
 
         # buffers
         self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
@@ -372,8 +375,6 @@ class LowLevelActionCfg(ActionTermCfg):
     """Number of drones."""
     control_mode: str = MISSING
     """Control mode for the low level controller. Eiter 'geometric' or 'ACCBR'."""
-    waypoint_dim: int = 12
-    """Dimension of the waypoints: [pos, vel, acc, jerk] (12), or [Acc, w_x, w_y, w_z] (6)."""
     num_waypoints: int = 1
     """Number of waypoints in the trajectory."""
     low_level_decimation: int = 1
