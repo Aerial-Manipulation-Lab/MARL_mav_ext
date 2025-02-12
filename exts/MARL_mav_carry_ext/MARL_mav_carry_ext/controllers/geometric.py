@@ -11,6 +11,8 @@ from isaaclab.utils.math import (
     quat_rotate_inverse,
 )
 
+from MARL_mav_carry_ext.controllers.utils import LowPassFilter
+
 
 class GeometricController:
     """
@@ -52,6 +54,18 @@ class GeometricController:
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
 
+        # low pass filters
+        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 200.0, device=self.device)   # filter frequency, same as control frequency (Hz)
+        self.filter_cutoff_frequency = torch.full((self.num_envs, 1), 6.0, device=self.device)    # accelerometer filter cut-off frequency (Hz)
+        self.filter_cutoff_frequency_bodyrate = torch.full((self.num_envs, 1), 20.0, device=self.device)  # rate control filter cut-off-freuqnecy (Hz)
+        self.filter_init_value_acc = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        self.filter_init_value_mot = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
+
+        self.filterAcc_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_acc)
+        self.filterMot_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot)
+        self.filterRate_ = LowPassFilter(self.filter_cutoff_frequency_bodyrate, self.filter_sampling_frequency, self.filter_init_value_rate)
+
     # function to overwrite parameters from yaml file
     # function to check if all parameters are valid
 
@@ -69,9 +83,14 @@ class GeometricController:
         setpoint: setpoint given by the policy [pos, lin_vel, lin_acc, quat, ang_vel]
         """
 
-        # update low pass filters: not here for now
+        current_collective_thrust = actions.sum(1)  # sum over all propellors
+        
+        # update low pass filters
+        acc_filtered = self.filterAcc_.add(state["lin_acc"])
+        ang_vel_filtered = self.filterRate_.add(state["ang_vel"])
+        actions_filtered = self.filterMot_.add(current_collective_thrust)
 
-        # acceleration command TODO: implement aceleration low pass filter
+        # acceleration command
         if self.control_mode == "geometric":
             p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
             pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
@@ -82,14 +101,13 @@ class GeometricController:
             des_acc = setpoint["lin_acc"]
 
         # estimation of load acceleration in world frame
-        current_collective_thrust = actions.sum(1)  # sum over all propellors
         acc_load = (
-            state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust / self.falcon_mass)
+            acc_filtered - self.gravity - quat_rotate(state["quat"], actions_filtered / self.falcon_mass)
         )
         acc_cmd = des_acc - self.gravity - acc_load
         z_b_des = normalize(acc_cmd)  # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1, keepdim=True) * self.falcon_mass
-        current_collective_thrust_magnitude = torch.norm(current_collective_thrust, dim=1, keepdim=True)
+        current_collective_thrust_magnitude = torch.norm(actions_filtered, dim=1, keepdim=True)
 
         # attitude command
         # Calculate the desired quaternion
@@ -133,7 +151,7 @@ class GeometricController:
         zeros = torch.zeros((self.num_envs, 1), device=self.device)
         q_e_red = norm_factor * torch.cat((q_e_w * q_e_x - q_e_y * q_e_z, q_e_w * q_e_y + q_e_x * q_e_z, zeros), dim=-1)
         q_e_yaw = norm_factor * torch.cat([zeros, zeros, q_e_z], dim=-1)
-        ang_vel_body = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])
+        ang_vel_body = quat_rotate(quat_inv(state["quat"]), ang_vel_filtered)
         alpha_b_des = (
             self.kp_att_xy * q_e_red
             + self.kp_att_z * torch.sign(q_e_w) * q_e_yaw

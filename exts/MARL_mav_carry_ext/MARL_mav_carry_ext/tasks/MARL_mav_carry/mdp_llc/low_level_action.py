@@ -65,14 +65,18 @@ class LowLevelAction(ActionTerm):
         self.decimation_counter = 0 #for spline
 
         # outer loop controller
-        self._geometric_controller = GeometricController(self.num_envs, self._control_mode)
+        self.geo_controllers = {}
+        for i in range(self._num_drones):
+            self.geo_controllers[i] = GeometricController(self.num_envs, self._control_mode)
         self._ll_counter = 0
         self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
         self._zeros = torch.zeros([self._env.num_envs, 3], device=self.device)
         self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
         # inner loop controller
-        self._indi_controller = IndiController(self.num_envs)
+        self._indi_controllers = {}
+        for i in range(self._num_drones):
+            self._indi_controllers[i] = IndiController(self.num_envs)
 
         # motor model
         # experimentally obtained
@@ -159,7 +163,6 @@ class LowLevelAction(ActionTerm):
         if self._ll_counter % self.cfg.low_level_decimation == 0:
             target_rates = []
 
-            # Get drone states
             drone_positions = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
             drone_orientations = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7]
             drone_linear_velocities = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 7:10]
@@ -168,12 +171,12 @@ class LowLevelAction(ActionTerm):
             drone_angular_accelerations = self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6]
 
             # Apply Gaussian noise with correctly sized tensors
-            self.drone_positions[:] = drone_positions + torch.randn_like(drone_positions) * self.position_noise_std
-            self.drone_orientations[:] = drone_orientations + torch.randn_like(drone_orientations) * self.orientation_noise_std
-            self.drone_linear_velocities[:] = drone_linear_velocities + torch.randn_like(drone_linear_velocities) * self.linear_velocity_noise_std
-            self.drone_angular_velocities[:] = drone_angular_velocities + torch.randn_like(drone_angular_velocities) * self.angular_velocity_noise_std
-            self.drone_linear_accelerations[:] = drone_linear_accelerations + torch.randn_like(drone_linear_accelerations) * self.linear_acceleration_noise_std
-            self.drone_angular_accelerations[:] = drone_angular_accelerations + torch.randn_like(drone_angular_accelerations) * self.angular_acceleration_noise_std
+            self.drone_positions[:] = drone_positions #+ torch.randn_like(drone_positions) * self.position_noise_std
+            self.drone_orientations[:] = drone_orientations #+ torch.randn_like(drone_orientations) * self.orientation_noise_std
+            self.drone_linear_velocities[:] = drone_linear_velocities #+ torch.randn_like(drone_linear_velocities) * self.linear_velocity_noise_std
+            self.drone_angular_velocities[:] = drone_angular_velocities #+ torch.randn_like(drone_angular_velocities) * self.angular_velocity_noise_std
+            self.drone_linear_accelerations[:] = drone_linear_accelerations #+ torch.randn_like(drone_linear_accelerations) * self.linear_acceleration_noise_std
+            self.drone_angular_accelerations[:] = drone_angular_accelerations #+ torch.randn_like(drone_angular_accelerations) * self.angular_acceleration_noise_std
 
             for i in range(self._num_drones):
                 drone_states: dict = {}  # dict of tensors
@@ -199,10 +202,10 @@ class LowLevelAction(ActionTerm):
 
                     self._desired_position[:, i] = pos
 
-                alpha_cmd, acc_load, acc_cmd, q_cmd = self._geometric_controller.getCommand(
+                alpha_cmd, acc_load, acc_cmd, q_cmd = self.geo_controllers[i].getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], self.drone_setpoint[i]
                 )
-                target_rpm = self._indi_controller.getCommand(drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load)
+                target_rpm = self._indi_controllers[i].getCommand(drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load)
 
                 target_rates.append(target_rpm)
                 if self.cfg.debug_vis:
