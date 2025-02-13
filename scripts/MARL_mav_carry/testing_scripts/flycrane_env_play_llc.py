@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser(description="This script demonstrates how to si
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during execution.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--control_mode", type=str, default="geometric", help="Control mode for the agent.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -40,6 +41,7 @@ import math
 import matplotlib.pyplot as plt
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
+from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
 
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.utils.dict import print_dict
@@ -52,6 +54,7 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
     # setup RL environment
     env = ManagerBasedRLEnv(cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
     if args_cli.video:
         video_kwargs = {
             "video_folder": "./videos",
@@ -75,13 +78,13 @@ def main():
     stretch_position = torch.tensor(
         [
             [
-                0.27,
+                1.27,
                 1.0867,
                 1.7,  # drone 1
-                0.27,
+                1.27,
                 -1.0867,
                 1.7,  # drone 2
-                -1.1367,
+                -0.1367,
                 0.0,
                 1.7,
             ]
@@ -138,7 +141,7 @@ def main():
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
-            if count % 2000 == 0:
+            if count % 500 == 0:
                 env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
@@ -155,19 +158,27 @@ def main():
             # when using ACCBR
             # waypoint[:] = ACC_BR_ref
             # step the environment
+            if env.num_envs == 1:
+                plotter.collect_data()
             obs, rew, terminated, truncated, info = env.step(waypoint)
-            # print current orientation of pole
-            # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
-            # update counter
             count += 1
-            falcon_pos = env.scene["robot"].data.body_state_w[:, [20, 27, 34], :3] - env.scene.env_origins.unsqueeze(1)
 
             if args_cli.video:
                 if count == args_cli.video_length:
                     break
 
+
     # close the simulator
     env.close()
+
+    if args_cli.num_envs == 1:
+        # if args_cli.save_plots:
+        #     # save plots
+        #     plot_path = os.path.join(log_dir, "plots", "play")
+        #     plotter.plot(save=True, save_dir=plot_path)
+        # else:
+            # show plots
+        plotter.plot(save=False)
 
 
 if __name__ == "__main__":

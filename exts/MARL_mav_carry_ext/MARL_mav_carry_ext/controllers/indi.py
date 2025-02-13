@@ -62,6 +62,11 @@ class IndiController:
         self.filterMot_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot)
         self.filterRate_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_rate)
 
+        self.debug = True
+        if self.debug:
+            self.filtered_ang_acc = torch.zeros((self.num_envs, 3), device=self.device)
+            self.unfiltered_mot = torch.zeros((self.num_envs, 4), device=self.device)
+            self.filtered_mot = torch.zeros((self.num_envs, 4), device=self.device)
 
     def getCommand(self, 
                    state: dict,
@@ -75,6 +80,11 @@ class IndiController:
         filtered_forces = self.filterMot_.add(forces)
         self.filterRate_.add(state["ang_vel"])
         ang_acc_filtered = self.filterRate_.derivative()
+
+        if self.debug:
+            self.filtered_ang_acc = ang_acc_filtered
+            self.unfiltered_mot = forces
+            self.filtered_mot = filtered_forces
 
         omega = quat_rotate(quat_inv(state["quat"]), state["ang_vel"]) # body rates # normally from IMU
         omega_dot = quat_rotate(quat_inv(state["quat"]), ang_acc_filtered) # body accelerations # normally from derivative filtered body rate
