@@ -103,7 +103,7 @@ class ObservationsCfg:
         payload_orientation_error = ObsTerm(func=mdp.payload_orientation_error, params={"command_name": "pose_command"}, noise=Gnoise(std=0.01))
 
         def __post_init__(self):
-            self.enable_corruption = True  # for adding noise to the observations
+            self.enable_corruption = False  # for adding noise to the observations
             self.concatenate_terms = True
 
     # Observation group
@@ -284,10 +284,10 @@ class HoverEnvCfg_llc(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 2
+        self.decimation = 3
         self.episode_length_s = 20.0
         # simulation settings
-        self.sim.dt = 0.005
+        self.sim.dt = 0.0033333333333333335
         self.sim.render_interval = self.decimation
         self.sim.disable_contact_processing = True
         self.sim.gravity = (0.0, 0.0, -9.8066)

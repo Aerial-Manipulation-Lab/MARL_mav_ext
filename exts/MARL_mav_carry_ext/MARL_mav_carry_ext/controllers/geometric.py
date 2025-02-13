@@ -55,7 +55,7 @@ class GeometricController:
         self.kp_att_z = 5.0
 
         # low pass filters
-        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 200.0, device=self.device)   # filter frequency, same as control frequency (Hz)
+        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 300.0, device=self.device)   # filter frequency, same as control frequency (Hz)
         self.filter_cutoff_frequency = torch.full((self.num_envs, 1), 6.0, device=self.device)    # accelerometer filter cut-off frequency (Hz)
         self.filter_cutoff_frequency_bodyrate = torch.full((self.num_envs, 1), 20.0, device=self.device)  # rate control filter cut-off-freuqnecy (Hz)
         self.filter_init_value_acc = torch.full((self.num_envs, 3), 0.0, device=self.device)

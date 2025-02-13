@@ -54,7 +54,7 @@ class IndiController:
         self.p_offset = torch.tensor([[0.0, 0.0, self.rope_offset]] * self.num_envs, device=self.device)
 
         # low pass filters
-        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 200.0, device=self.device)   # filter frequency, same as control frequency (Hz)
+        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 300.0, device=self.device)   # filter frequency, same as control frequency (Hz)
         self.filter_cutoff_frequency = torch.full((self.num_envs, 1), 12.0, device=self.device)    # accelerometer filter cut-off frequency (Hz)
         self.filter_init_value_mot = torch.full((self.num_envs, 4), 0.0, device=self.device)
         self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
