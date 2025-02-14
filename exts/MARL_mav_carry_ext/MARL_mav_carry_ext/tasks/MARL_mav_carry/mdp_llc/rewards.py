@@ -222,12 +222,10 @@ def spinnage_reward_payload(
 
 def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for minimizing the angular velocities of the drones."""
-    spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
-    drone_angular_velocity = (robot.data.body_state_w[:, drone_idx, 10:] / num_drones).square().sum(-1).sum(-1)
-    reward_spin = spinnage_weight * torch.exp(-torch.square(drone_angular_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    reward_spin = reward_spin * sep_reward  # from omnidrones paper
+    drone_angular_velocity_magnitude = torch.norm(robot.data.body_state_w[:, drone_idx, 10:], dim=-1)
+    max_ang_vels = torch.max(drone_angular_velocity_magnitude, dim=-1)[0]
+    reward_spin = torch.exp(-torch.square(max_ang_vels))
 
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
@@ -279,10 +277,11 @@ def action_penalty_rel(env: ManagerBasedRLEnv) -> torch.Tensor:
 
 def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
-    action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
-    action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
-    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones / 4  # num propellers
-    reward_action_smoothness_force = torch.exp(-action_smoothness_force)
+    action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
+    action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2]
+    diff_force = action_force - action_prev_force
+    max_diff_force = torch.max(diff_force, dim=-1)[0]
+    reward_action_smoothness_force = torch.exp(-max_diff_force * 5)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force
