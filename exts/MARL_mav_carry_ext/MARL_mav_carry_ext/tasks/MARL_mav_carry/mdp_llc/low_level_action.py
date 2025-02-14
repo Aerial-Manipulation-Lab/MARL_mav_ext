@@ -138,7 +138,7 @@ class LowLevelAction(ActionTerm):
         Returns:
             The processed external forces to be applied to the rotors."""
         self._waypoints = waypoints
-
+        self._prev_forces = self._forces.clone()
         for i in range(self._num_drones):
             start_drone_idx = i * self._waypoint_dim * self._num_waypoints
             end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
