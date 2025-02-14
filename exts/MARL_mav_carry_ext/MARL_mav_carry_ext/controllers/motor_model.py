@@ -3,6 +3,7 @@ import torch
 class RotorMotor:
     def __init__(self, num_envs: int, init_omega: torch.Tensor):
         # motor parameters
+        self.init_omega = init_omega
         self.num_envs = num_envs
         self.motor_omega_min = 150.0
         self.motor_omega_max = 2800.0
@@ -15,7 +16,7 @@ class RotorMotor:
         self.torque_map = torch.tensor([3.4375484e-08, 0.0, 0.0])
 
         self.current_omega = init_omega
-        self.direction = torch.tensor([1.,  -1., 1., -1., 1.,  -1., 1., -1.,  1.,  -1., 1., -1.], device="cuda")
+        self.direction = torch.tensor([1.,  -1., 1., -1.], device="cuda")
 
     def get_motor_thrusts_moments(self, target_rates: torch.Tensor, sampling_time: float):
         """
@@ -42,3 +43,6 @@ class RotorMotor:
         moments = self.torque_map[0] * self.current_omega**2 * self.direction
 
         return thrusts, moments
+    
+    def reset(self, env_ids):
+        self.current_omega[env_ids] = self.init_omega[env_ids]

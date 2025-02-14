@@ -84,10 +84,12 @@ class LowLevelAction(ActionTerm):
 
         # motor model
         # experimentally obtained
-        initial_rpm = torch.tensor([[1880.4148, 1675.0350, 1670.4458, 1875.0309, 1702.9099, 1894.7073, 1838.3457, 1636.0341, 1337.6145, 1373.3019, 1519.6875, 1483.1881]],
-        device='cuda:0').repeat(self.num_envs, 1)
-
-        self._motor_model = RotorMotor(self.num_envs, initial_rpm)
+        self.motor_models = {}
+        initial_rpms = [torch.tensor([[1880.4148, 1675.0350, 1670.4458, 1875.0309]], device=self.device).repeat(self.num_envs, 1),
+                        torch.tensor([[1702.9099, 1894.7073, 1838.3457, 1636.0341]], device=self.device).repeat(self.num_envs, 1),
+                        torch.tensor([[1337.6145, 1373.3019, 1519.6875, 1483.1881]], device=self.device).repeat(self.num_envs, 1)]
+        for i in range(self._num_drones):
+            self.motor_models[i] = RotorMotor(self.num_envs, initial_rpms[i])
         self.sampling_time = self._env.sim.get_physics_dt() * self.cfg.low_level_decimation
 
         # noise parameters
@@ -127,6 +129,7 @@ class LowLevelAction(ActionTerm):
         for i in range(self._num_drones):
             self.geo_controllers[i].reset(env_ids)
             self._indi_controllers[i].reset(env_ids)
+            self.motor_models[i].reset(env_ids)
 
     def process_actions(self, waypoints: torch.Tensor):
         """Process the waypoints to be used by the geometric low level controller.
@@ -171,7 +174,8 @@ class LowLevelAction(ActionTerm):
     def apply_actions(self):
         """Apply the processed external forces to the rotors/falcon bodies."""
         if self._ll_counter % self.cfg.low_level_decimation == 0:
-            target_rates = []
+            all_thrusts = []
+            all_moments = []
 
             drone_positions = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
             drone_orientations = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7]
@@ -195,6 +199,7 @@ class LowLevelAction(ActionTerm):
                 drone_states["lin_vel"] = self.drone_linear_velocities[:, i]
                 drone_states["ang_vel"] = self.drone_angular_velocities[:, i]
                 drone_states["lin_acc"] = self.drone_linear_accelerations[:, i]
+                drone_states["ang_acc"] = self.drone_angular_accelerations[:, i]
                 # calculate current jerk and snap
                 self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
                 drone_states["jerk"] = self._drone_jerk[:, i]
@@ -216,7 +221,6 @@ class LowLevelAction(ActionTerm):
                 )
                 target_rpm = self._indi_controllers[i].getCommand(drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load)
 
-                target_rates.append(target_rpm)
                 if self.cfg.debug_vis:
                     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
                     if self._control_mode == "geometric":
@@ -224,10 +228,14 @@ class LowLevelAction(ActionTerm):
                     self.des_acc_debug[:, i] = acc_cmd
                     self.des_ori_debug[:, i] = q_cmd
             
-            target_rates = torch.cat(target_rates, dim=-1)
-            thrusts, moments = self._motor_model.get_motor_thrusts_moments(target_rates, self.sampling_time)
-            self._forces[..., 2] = thrusts
-            self._moments[..., 2] = moments.view(self.num_envs, self._num_drones, 4).sum(-1)
+                thrusts, moments = self.motor_models[i].get_motor_thrusts_moments(target_rpm, self.sampling_time)
+                all_thrusts.append(thrusts)
+                all_moments.append(moments)
+
+            forces = torch.cat(all_thrusts, dim=-1)
+            torques = torch.cat(all_moments, dim=-1)
+            self._forces[..., 2] = forces
+            self._moments[..., 2] = torques.view(self.num_envs, self._num_drones, 4).sum(-1)
             self._ll_counter = 0
         self.decimation_counter += 1
         self._ll_counter += 1

@@ -188,12 +188,6 @@ class EventCfg:
         params={"action_term": "low_level_action"},
     )
 
-    reset_motor_low_pass_filter = EventTerm(
-        func=mdp.reset_motor_low_pass_filter,
-        mode="reset",
-        params={"action_term": "low_level_action"},
-    )
-
 @configclass
 class RewardsCfg:
     """Rewards for the hovering task."""
@@ -257,7 +251,7 @@ class TerminationsCfg:
         func=mdp.cable_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2, "num_points": 10}
     )
 
-    drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
+    # drones_collide = DoneTerm(func=mdp.drone_collision, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.2})
 
     bounding_box = DoneTerm(func=mdp.bounding_box, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 5.0})
 
