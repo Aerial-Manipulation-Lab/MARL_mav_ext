@@ -20,12 +20,12 @@ if TYPE_CHECKING:
 num_drones = 3
 
 # Body indices found in the scene
-# payload_idx = [0]
+# payload_idx = [1]
 # drone_idx = [71, 72, 73]
 # base_rope_idx = [8, 9, 10]
 
 # for the case when the rod is used
-payload_idx = [0]
+payload_idx = [1]
 drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 
@@ -97,7 +97,7 @@ def track_payload_pos_command(
         desired_pos = desired_pos[:, 0]
 
     positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
-    reward_distance_scale = 1.5
+    reward_distance_scale = 1.0
     reward_position = torch.exp(-positional_error * reward_distance_scale)
 
     assert reward_position.shape == (env.scene.num_envs,)
@@ -281,7 +281,7 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2]
     diff_force = action_force - action_prev_force
     max_diff_force = torch.max(diff_force, dim=-1)[0]
-    reward_action_smoothness_force = torch.exp(-max_diff_force * 5)
+    reward_action_smoothness_force = torch.exp(-max_diff_force * 3)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force

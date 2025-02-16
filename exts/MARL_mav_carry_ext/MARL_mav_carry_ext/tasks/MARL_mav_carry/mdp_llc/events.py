@@ -11,12 +11,12 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 # Body indices found in the scene
-# payload_idx = [0]
+# payload_idx = [1]
 # drone_idx = [71, 72, 73]
 # base_rope_idx = [8, 9, 10]
 
 # for the case when the rod is used
-payload_idx = [0]
+payload_idx = [1]
 drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 
@@ -154,4 +154,3 @@ def reset_spline_position_buffer(
 ):
     drone_positions = env.scene[asset_cfg.name].data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
     env.action_manager._terms[action_term].spline_positions[env_ids] = drone_positions[env_ids].unsqueeze(2).repeat(1, 1, 6, 1)
-    

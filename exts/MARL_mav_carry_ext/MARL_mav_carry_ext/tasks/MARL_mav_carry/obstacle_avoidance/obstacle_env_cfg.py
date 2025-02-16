@@ -79,7 +79,7 @@ class CommandsCfg:
 
     pose_command = mdp.UniformPoseCommandGlobalCfg(
         asset_name="robot",
-        body_name="load_link",
+        body_name="load_odometry_sensor_link",
         resampling_time_range=(20, 20),  # out of range of max episode length for now
         debug_vis=True,
         ranges=mdp.UniformPoseCommandGlobalCfg.Ranges(

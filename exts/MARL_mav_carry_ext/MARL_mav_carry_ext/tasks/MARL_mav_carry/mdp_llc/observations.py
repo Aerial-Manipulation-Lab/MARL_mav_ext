@@ -12,12 +12,12 @@ Observations for the payload
 """
 
 # Body indices found in the scene
-# payload_idx = [0]
+# payload_idx = [1]
 # drone_idx = [71, 72, 73]
 # base_rope_idx = [8, 9, 10]
 
 # for the case when the rod is used
-payload_idx = [0]
+payload_idx = [1]
 drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 

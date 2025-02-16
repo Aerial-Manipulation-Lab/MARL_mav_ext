@@ -53,7 +53,7 @@ class CommandsCfg:
 
     pose_twist_command = mdp.RefTrajectoryCommandCfg(
         asset_name="robot",
-        body_name="load_link",
+        body_name="load_odometry_sensor_link",
         resampling_time_range=(40, 40),  # out of range of max episode length for now
         debug_vis=True,
         reference_trajectories=import_ref_folder_from_csv(
