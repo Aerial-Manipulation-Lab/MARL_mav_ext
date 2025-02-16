@@ -21,7 +21,7 @@ class ManagerBasedPlotter:
         self.control_mode = control_mode
         self.env = env
         self.robot = env.scene[asset_cfg.name]
-        self.load_id = self.robot.find_bodies("load_link")[0]
+        self.load_id = self.robot.find_bodies("load_odometry_sensor_link")[0]
         self.drone_idx = self.robot.find_bodies("Falcon.*base_link")[0]
         self.sim_dt = env.sim.get_rendering_dt()
 
