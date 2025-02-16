@@ -104,8 +104,8 @@ class LowLevelAction(ActionTerm):
 
         # Get drone positions and orientations
         drone_idx = self._robot.find_bodies("Falcon.*base_link")[0]
-        drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].view(-1, 3)
-        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
+        drone_pos_world_frame = self._robot.data.body_com_state_w[:, drone_idx, :3].view(-1, 3)
+        drone_orientation = self._robot.data.body_com_state_w[:, drone_idx, 3:7].view(-1, 4)
 
         # Rotate the arrow to point in the direction of the force
         zeros = torch.zeros(self._env.scene.num_envs, 1)

@@ -118,7 +118,7 @@ def reset_root_state_uniform_collision_check(
 
     while in_collision.any():
         for rigid_body in env.scene.rigid_objects.values():
-            rigid_body_pos = rigid_body.data.body_state_w[:, 0, :3][env_ids]
+            rigid_body_pos = rigid_body.data.body_com_state_w[:, 0, :3][env_ids]
             robot_pos = positions
 
             # Compute distances between robot and rigid body positions
@@ -152,5 +152,5 @@ def reset_spline_position_buffer(
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     action_term: str = "low_level_action",
 ):
-    drone_positions = env.scene[asset_cfg.name].data.body_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
+    drone_positions = env.scene[asset_cfg.name].data.body_com_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
     env.action_manager._terms[action_term].spline_positions[env_ids] = drone_positions[env_ids].unsqueeze(2).repeat(1, 1, 6, 1)

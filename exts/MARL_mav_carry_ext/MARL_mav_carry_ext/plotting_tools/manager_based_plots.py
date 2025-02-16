@@ -77,10 +77,10 @@ class ManagerBasedPlotter:
 
     def collect_drone_data(self):
         """Collect the drone data from the environment."""
-        drone_pos = self.robot.data.body_state_w[:, self.drone_idx, :3][0]
-        drone_orientation = self.robot.data.body_state_w[:, self.drone_idx, 3:7][0]
-        drone_vel = self.robot.data.body_state_w[:, self.drone_idx, 7:10][0]
-        drone_ang_vel = self.robot.data.body_state_w[:, self.drone_idx, 10:][0]
+        drone_pos = self.robot.data.body_com_state_w[:, self.drone_idx, :3][0]
+        drone_orientation = self.robot.data.body_com_state_w[:, self.drone_idx, 3:7][0]
+        drone_vel = self.robot.data.body_com_state_w[:, self.drone_idx, 7:10][0]
+        drone_ang_vel = self.robot.data.body_com_state_w[:, self.drone_idx, 10:][0]
         drone_BR = quat_rotate(drone_orientation.unsqueeze(0), drone_ang_vel.unsqueeze(0))[0]
         drone_acc = self.robot.data.body_acc_w[:, self.drone_idx, :3][0]
         drone_ang_acc = self.robot.data.body_acc_w[:, self.drone_idx, 3:6][0]

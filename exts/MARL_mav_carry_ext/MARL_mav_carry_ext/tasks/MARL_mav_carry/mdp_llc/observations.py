@@ -133,7 +133,7 @@ def payload_angular_velocity_error(
 def cable_angle(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Angle of cable between cable and payload."""
     robot: Articulation = env.scene[asset_cfg.name]
-    rope_orientations_world = robot.data.body_state_w[:, base_rope_idx, 3:7].view(-1, 4)
+    rope_orientations_world = robot.data.body_com_state_w[:, base_rope_idx, 3:7].view(-1, 4)
     payload_orientation_world = robot.data.body_com_state_w[:, payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
     payload_orientation_inv = quat_inv(payload_orientation_world)
     rope_orientations_payload = quat_mul(
@@ -150,7 +150,7 @@ Observations for the drones
 def drone_positions(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone positions xyz in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
+    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3]
     drone_pos_env_frame = drone_pos_world_frame - env.scene.env_origins.unsqueeze(1)
     return drone_pos_env_frame.view(env.num_envs, -1)
 
@@ -158,7 +158,7 @@ def drone_positions(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnt
 def drone_orientations(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Drone orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    drone_quat = robot.data.body_state_w[:, drone_idx, 3:7]
+    drone_quat = robot.data.body_com_state_w[:, drone_idx, 3:7]
     drone_rot_matrix = matrix_from_quat(drone_quat)
     return drone_rot_matrix.view(env.num_envs, -1)
 
@@ -168,7 +168,7 @@ def drone_linear_velocities(
 ) -> torch.Tensor:
     """Drone linear velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    return robot.data.body_state_w[:, drone_idx, 7:10].view(env.num_envs, -1)
+    return robot.data.body_com_state_w[:, drone_idx, 7:10].view(env.num_envs, -1)
 
 
 def drone_angular_velocities(
@@ -176,7 +176,7 @@ def drone_angular_velocities(
 ) -> torch.Tensor:
     """Drone angular velocity in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
-    return robot.data.body_state_w[:, drone_idx, 10:].view(env.num_envs, -1)
+    return robot.data.body_com_state_w[:, drone_idx, 10:].view(env.num_envs, -1)
 
 
 def drone_linear_acceleration(
@@ -201,7 +201,7 @@ def drone_angular_acceleration(
 def payload_drone_rpos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Relative position of the payload from the drone."""
     robot: Articulation = env.scene[asset_cfg.name]
-    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
+    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3]
     payload_pos_world_frame = robot.data.body_com_state_w[:, payload_idx, :3]
     rpos = drone_pos_world_frame - payload_pos_world_frame
     return rpos.view(env.num_envs, -1)
@@ -210,7 +210,7 @@ def payload_drone_rpos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
 def drone_rpos_obs(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Relative position of the drones from each other."""
     robot: Articulation = env.scene[asset_cfg.name]
-    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
+    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
     return rpos.view(env.num_envs, -1)
 
@@ -218,7 +218,7 @@ def drone_rpos_obs(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
 def drone_pdist_obs(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Euclidean distance between drones."""
     robot: Articulation = env.scene[asset_cfg.name]
-    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
+    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
     pdist = torch.norm(rpos, dim=-1, keepdim=True)
     return pdist.view(env.num_envs, -1)

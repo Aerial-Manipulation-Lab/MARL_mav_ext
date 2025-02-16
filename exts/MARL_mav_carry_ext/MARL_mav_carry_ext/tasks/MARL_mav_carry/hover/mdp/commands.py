@@ -102,8 +102,8 @@ class UniformPoseCommandGlobal(CommandTerm):
         pos_error, rot_error = compute_pose_error(
             self.pose_command_w[:, :3],
             self.pose_command_w[:, 3:],
-            self.robot.data.body_state_w[:, self.body_idx, :3],
-            self.robot.data.body_state_w[:, self.body_idx, 3:7],
+            self.robot.data.body_com_state_w[:, self.body_idx, :3],
+            self.robot.data.body_com_state_w[:, self.body_idx, 3:7],
         )
         self.metrics["position_error"] = torch.norm(pos_error, dim=-1)
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
@@ -159,7 +159,7 @@ class UniformPoseCommandGlobal(CommandTerm):
         # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
 
         # -- current body pose
-        body_pose_w = self.robot.data.body_state_w[:, self.body_idx]
+        body_pose_w = self.robot.data.body_com_state_w[:, self.body_idx]
         self.body_pose_visualizer.visualize(body_pose_w[:, :3], body_pose_w[:, 3:7])
 
 

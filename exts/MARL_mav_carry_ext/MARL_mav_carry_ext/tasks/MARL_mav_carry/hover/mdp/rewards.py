@@ -57,7 +57,7 @@ def track_payload_pos(
     """Reward tracking of payload position commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
-    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
 
     desired_pos = env.command_manager.get_command(command_name)[
@@ -93,8 +93,8 @@ def track_payload_orientation(
     """Reward tracking of payload orientation commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
-    payload_quat = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
-    payload_pos_world = robot.data.body_state_w[:, payload_idx, :3].squeeze(1)
+    payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:]
     # compute the error
     orientation_error = torch.norm(desired_quat - payload_quat, dim=-1)
@@ -126,7 +126,7 @@ def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
     safe_distance = 0.44  # smallest distance where drones are just upright
     robot = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
-    drone_pos_world_frame = robot.data.body_state_w[:, drone_idx, :3]
+    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3]
     rpos = get_drone_rpos(drone_pos_world_frame)
     pdist = torch.norm(rpos, dim=-1, keepdim=True)
     separation = (
@@ -142,7 +142,7 @@ def upright_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
     """Reward for keeping the payload up."""
     robot = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
-    payload_orientation = robot.data.body_state_w[:, payload_idx, 3:7].squeeze(1)
+    payload_orientation = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
     payload_up = quat_axis(payload_orientation, axis=2)
     up = payload_up[:, 2]
     reward_up = torch.square((up + 1) / 2)
@@ -157,7 +157,7 @@ def spinnage_reward_payload(
     spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
-    payload_angular_velocity = robot.data.body_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
+    payload_angular_velocity = robot.data.body_com_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(payload_angular_velocity))
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
@@ -168,7 +168,7 @@ def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = S
     spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
     drone_idx = robot.find_bodies("Falcon.*base_link")[0]
-    drone_angular_velocity = robot.data.body_state_w[:, drone_idx, 10:].square().sum(-1).sum(-1)
+    drone_angular_velocity = robot.data.body_com_state_w[:, drone_idx, 10:].square().sum(-1).sum(-1)
     reward_spin = spinnage_weight * torch.exp(-torch.square(drone_angular_velocity))
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
@@ -179,7 +179,7 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     swing_weight = 0.8
     robot = env.scene[asset_cfg.name]
     payload_idx = robot.find_bodies("load_link")[0]
-    payload_linear_velocity = robot.data.body_state_w[:, payload_idx, 7:10].squeeze(1).abs().sum(-1)
+    payload_linear_velocity = robot.data.body_com_state_w[:, payload_idx, 7:10].squeeze(1).abs().sum(-1)
     reward_swing = swing_weight * torch.exp(-torch.square(payload_linear_velocity))
     assert reward_swing.shape == (env.scene.num_envs,)
     return reward_swing

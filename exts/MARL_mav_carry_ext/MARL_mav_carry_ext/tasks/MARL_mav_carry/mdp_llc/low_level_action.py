@@ -177,10 +177,10 @@ class LowLevelAction(ActionTerm):
             all_thrusts = []
             all_moments = []
 
-            drone_positions = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
-            drone_orientations = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 3:7]
-            drone_linear_velocities = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 7:10]
-            drone_angular_velocities = self._env.scene["robot"].data.body_state_w[:, self._falcon_idx, 10:13]
+            drone_positions = self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, :3] - self._env.scene.env_origins.unsqueeze(1)
+            drone_orientations = self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 3:7]
+            drone_linear_velocities = self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 7:10]
+            drone_angular_velocities = self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 10:13]
             drone_linear_accelerations = self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]
             drone_angular_accelerations = self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6]
 
@@ -298,8 +298,8 @@ class LowLevelAction(ActionTerm):
 
         # Get drone positions and orientations
         rotor_idx = self._body_ids
-        rotor_pos_world_frame = self._robot.data.body_state_w[:, rotor_idx, :3].view(-1, 3)
-        rotor_orientation = self._robot.data.body_state_w[:, rotor_idx, 3:7].view(-1, 4)
+        rotor_pos_world_frame = self._robot.data.body_com_state_w[:, rotor_idx, :3].view(-1, 3)
+        rotor_orientation = self._robot.data.body_com_state_w[:, rotor_idx, 3:7].view(-1, 4)
 
         # marker indices for multiple envs
         marker_indices = [0] * self.num_envs * len(rotor_idx)

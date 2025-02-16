@@ -96,7 +96,7 @@ def main():
             robot.reset()
             # reset command
             print(">>>>>>>> Reset!")
-        robot_state = robot.data.body_state_w[0, prop_body_ids, :]
+        robot_state = robot.data.body_com_state_w[0, prop_body_ids, :]
         print(f"robot position: {robot_state[0, :3]}")
         print(f"robot orientation: {robot_state[0, 3:7]}")
         print(f"robot linear velocity: {robot_state[0, 7:10]}")
