@@ -279,7 +279,7 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
     action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2]
-    diff_force = action_force - action_prev_force
+    diff_force = (action_force - action_prev_force).abs()
     max_diff_force = torch.max(diff_force, dim=-1)[0]
     reward_action_smoothness_force = torch.exp(-max_diff_force * 3)
 
