@@ -281,11 +281,21 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2]
     diff_force = (action_force - action_prev_force).abs()
     max_diff_force = torch.max(diff_force, dim=-1)[0]
-    reward_action_smoothness_force = torch.exp(-max_diff_force * 3)
+    reward_action_smoothness_force = torch.exp(-max_diff_force * 5)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force
 
+def action_smoothness_ACCBR_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high variation in force values."""
+    action = env.action_manager._action
+    action_prev = env.action_manager._prev_action
+    diff_action = (action - action_prev).abs()
+    diff_action_norm = torch.norm(diff_action / num_drones, dim=-1)
+    reward_action_smoothness_force = torch.exp(-diff_action_norm)
+
+    assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
+    return reward_action_smoothness_force
 
 def angle_cable_load(
     env: ManagerBasedRLEnv, threshold: float = 0.261799388, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

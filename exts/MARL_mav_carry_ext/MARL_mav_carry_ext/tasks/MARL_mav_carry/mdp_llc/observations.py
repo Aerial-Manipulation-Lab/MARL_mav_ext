@@ -323,3 +323,9 @@ def obstacle_geometry(
     """Get the obstacle size parameters"""
     wall_dimensions = torch.tensor([0.1, 10.0, 1.5], device=env.device).repeat(env.num_envs,1)
     return wall_dimensions
+
+# policy terms
+
+def previous_action(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Get the previous action taken by the policy."""
+    return env.action_manager._action
