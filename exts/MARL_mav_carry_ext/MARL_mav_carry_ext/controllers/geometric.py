@@ -116,12 +116,12 @@ class GeometricController:
 
         # estimation of load acceleration in world frame
         acc_load = (
-            acc_filtered - self.gravity - quat_rotate(state["quat"], actions_filtered / self.falcon_mass)
+            state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust / self.falcon_mass)
         )
         acc_cmd = des_acc - self.gravity - acc_load
         z_b_des = normalize(acc_cmd)  # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1, keepdim=True) * self.falcon_mass
-        current_collective_thrust_magnitude = torch.norm(actions_filtered, dim=1, keepdim=True)
+        current_collective_thrust_magnitude = torch.norm(current_collective_thrust, dim=1, keepdim=True)
 
         # attitude command
         # Calculate the desired quaternion
@@ -165,7 +165,7 @@ class GeometricController:
         zeros = torch.zeros((self.num_envs, 1), device=self.device)
         q_e_red = norm_factor * torch.cat((q_e_w * q_e_x - q_e_y * q_e_z, q_e_w * q_e_y + q_e_x * q_e_z, zeros), dim=-1)
         q_e_yaw = norm_factor * torch.cat([zeros, zeros, q_e_z], dim=-1)
-        ang_vel_body = quat_rotate(quat_inv(state["quat"]), ang_vel_filtered)
+        ang_vel_body = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])
         alpha_b_des = (
             self.kp_att_xy * q_e_red
             + self.kp_att_z * torch.sign(q_e_w) * q_e_yaw
