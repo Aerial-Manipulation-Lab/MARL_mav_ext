@@ -106,7 +106,7 @@ class ManagerBasedPlotter:
 
             if self.control_mode == "ACCBR":
                 ref_acc = ref_drone[:3]
-                ref_BR = ref_drone[3:6]
+                ref_BR = torch.cat((ref_drone[3:], torch.zeros((1), device="cuda")), dim=-1)
                 # Append the data for this drone
                 
                 both_drone_acc = torch.cat((ref_acc, drone_acc[drone_num]), dim=-1)
