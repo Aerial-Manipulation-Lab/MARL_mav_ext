@@ -7,8 +7,8 @@ import torch
 from MARL_mav_carry_ext.assets import FALCON_CFG
 from MARL_mav_carry_ext.controllers import GeometricController, IndiController
 from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_from_csv
+from MARL_mav_carry_ext.tasks.managerbased.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
+from MARL_mav_carry_ext.tasks.managerbased.mdp_llc.utils import import_ref_from_csv
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation, ArticulationCfg

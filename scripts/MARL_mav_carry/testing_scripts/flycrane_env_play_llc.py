@@ -40,7 +40,7 @@ import gymnasium as gym
 import math
 import matplotlib.pyplot as plt
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
+from MARL_mav_carry_ext.tasks.managerbased.hover_llc.hover_env_cfg import HoverEnvCfg_llc
 from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
 
 from isaaclab.envs import ManagerBasedRLEnv

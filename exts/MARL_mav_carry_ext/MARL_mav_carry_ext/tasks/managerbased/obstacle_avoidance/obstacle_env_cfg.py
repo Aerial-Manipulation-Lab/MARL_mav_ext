@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import math
 
-import MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc as mdp
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_folder_from_csv
+import MARL_mav_carry_ext.tasks.managerbased.mdp_llc as mdp
+from MARL_mav_carry_ext.tasks.managerbased.mdp_llc.utils import import_ref_folder_from_csv
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg

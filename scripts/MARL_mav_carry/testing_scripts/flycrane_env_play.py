@@ -32,7 +32,7 @@ simulation_app = app_launcher.app
 
 from gymnasium.spaces import Box
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+from MARL_mav_carry_ext.tasks.managerbased.hover.hover_env_cfg import HoverEnvCfg
 
 from isaaclab.envs import ManagerBasedRLEnv
 

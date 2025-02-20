@@ -1,6 +1,6 @@
 import gymnasium as gym
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.track import TrackEnvCfg
+from MARL_mav_carry_ext.tasks.managerbased.track import TrackEnvCfg
 
 from . import agents
 

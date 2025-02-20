@@ -53,8 +53,8 @@ from rl_games.common import env_configurations, vecenv
 from rl_games.common.algo_observer import IsaacAlgoObserver
 from rl_games.torch_runner import Runner
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.config.flycrane import agents
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
+from MARL_mav_carry_ext.tasks.managerbased.hover.config.flycrane import agents
+from MARL_mav_carry_ext.tasks.managerbased.hover.hover_env_cfg import HoverEnvCfg
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab.envs import (

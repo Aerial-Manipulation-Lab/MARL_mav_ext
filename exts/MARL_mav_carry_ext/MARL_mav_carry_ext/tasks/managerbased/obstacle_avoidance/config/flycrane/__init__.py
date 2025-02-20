@@ -1,6 +1,6 @@
 import gymnasium as gym
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.obstacle_avoidance import ObstacleEnvCfg
+from MARL_mav_carry_ext.tasks.managerbased.obstacle_avoidance import ObstacleEnvCfg
 
 from . import agents
 

@@ -30,7 +30,7 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover import CarryingSceneCfg
+from MARL_mav_carry_ext.tasks.managerbased.hover import CarryingSceneCfg
 
 import isaaclab.sim as sim_utils
 from isaaclab.scene import InteractiveScene

@@ -39,7 +39,7 @@ import gymnasium as gym
 import math
 import matplotlib.pyplot as plt
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.track import TrackEnvCfg
+from MARL_mav_carry_ext.tasks.managerbased.track import TrackEnvCfg
 
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.utils.dict import print_dict
