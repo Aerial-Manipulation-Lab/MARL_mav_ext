@@ -2,7 +2,7 @@
 <robot name="Falcon">
   <link name="Falcon/base_link"/>
   <joint name="Falcon/base_joint" type="fixed">
-    <origin rpy="0 0 1.5708" xyz="0 0 0.0"/>
+    <origin rpy="0 0 0" xyz="0 0 0.03"/>
     <parent link="Falcon/base_link"/>
     <child link="Falcon/base_link_inertia"/>
   </joint>
@@ -14,7 +14,7 @@
       <inertia ixx="0.00164" ixy="0.0" ixz="0.0" iyy="0.00184" iyz="0.0" izz="0.0030"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
       <geometry>
         <mesh filename="falcon_without_rotors.dae" scale="1.0 1.0 1.0"  />
         <box size="0.1 0.1 0.05"/>
@@ -30,7 +30,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_0_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 0.075 0.02"/>
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
@@ -60,7 +60,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_1_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="0.075 -0.075 0.02"/>
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
@@ -90,7 +90,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_2_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.02"/>
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
@@ -120,7 +120,7 @@
     </collision>
   </link>
   <joint name="Falcon/rotor_3_joint" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 0.075 0.02"/>
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
     <axis xyz="0 0 1"/>
     <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
     <parent link="Falcon/base_link"/>
