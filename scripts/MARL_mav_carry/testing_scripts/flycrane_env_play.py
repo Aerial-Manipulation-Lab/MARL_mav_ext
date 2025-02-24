@@ -13,7 +13,7 @@ This script demonstrates how to simulate a quadcopter.
 import argparse
 import torch
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
@@ -34,7 +34,7 @@ from gymnasium.spaces import Box
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover.hover_env_cfg import HoverEnvCfg
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
+from isaaclab.envs import ManagerBasedRLEnv
 
 
 def main():

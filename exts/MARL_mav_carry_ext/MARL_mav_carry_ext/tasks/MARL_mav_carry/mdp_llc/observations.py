@@ -1,9 +1,9 @@
 import torch
 
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import quat_conjugate, quat_inv, quat_mul, matrix_from_quat
+from isaaclab.assets import Articulation
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils.math import quat_conjugate, quat_inv, quat_mul, matrix_from_quat
 
 from .utils import get_drone_pdist, get_drone_rpos
 
@@ -12,13 +12,13 @@ Observations for the payload
 """
 
 # Body indices found in the scene
-# payload_idx = [0]
+# payload_idx = [1]
 # drone_idx = [71, 72, 73]
 # base_rope_idx = [8, 9, 10]
 
 # for the case when the rod is used
-payload_idx = [0]
-drone_idx = [17, 18, 19]
+payload_idx = [1]
+drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 
 
@@ -89,12 +89,21 @@ def payload_orientation_error(
     robot: Articulation = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
-    # orientation_error = quat_mul(desired_quat, quat_conjugate(payload_quat))
     payload_rot_matrix = matrix_from_quat(payload_quat)
     desired_rot_matrix = matrix_from_quat(desired_quat)
     orientation_error = torch.matmul(desired_rot_matrix, payload_rot_matrix.transpose(1, 2)).view(env.num_envs, -1)
 
     return orientation_error
+
+def payload_velocity_error(
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Payload velocity error."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    payload_vel_world = robot.data.body_com_state_w[:, payload_idx, 7:10].squeeze(1)
+    desired_vel = env.command_manager.get_command(command_name)[..., 7:10]
+    vel_error = desired_vel - payload_vel_world
+    return vel_error
 
 
 def payload_linear_velocity_error(
@@ -114,7 +123,7 @@ def payload_angular_velocity_error(
 ) -> torch.Tensor:
     """Payload angular velocity error."""
     robot: Articulation = env.scene[asset_cfg.name]
-    payload_ang_vel = robot.data.body_com_state_w[:, payload_idx, 10:13].squeeze(1)
+    payload_ang_vel = robot.data.com_[:, payload_idx, 10:13].squeeze(1)
     desired_ang_vel = env.command_manager.get_command(command_name)[..., 10:13]
     ang_vel_error = desired_ang_vel - payload_ang_vel
 
@@ -150,8 +159,8 @@ def drone_orientations(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
     """Drone orientation, quaternions in world frame."""
     robot: Articulation = env.scene[asset_cfg.name]
     drone_quat = robot.data.body_com_state_w[:, drone_idx, 3:7]
-    # drone_rot_matrix = matrix_from_quat(drone_quat)
-    return drone_quat.view(env.num_envs, -1)
+    drone_rot_matrix = matrix_from_quat(drone_quat)
+    return drone_rot_matrix.view(env.num_envs, -1)
 
 
 def drone_linear_velocities(
@@ -314,3 +323,9 @@ def obstacle_geometry(
     """Get the obstacle size parameters"""
     wall_dimensions = torch.tensor([0.1, 10.0, 1.5], device=env.device).repeat(env.num_envs,1)
     return wall_dimensions
+
+# policy terms
+
+def previous_action(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Get the previous action taken by the policy."""
+    return env.action_manager._action

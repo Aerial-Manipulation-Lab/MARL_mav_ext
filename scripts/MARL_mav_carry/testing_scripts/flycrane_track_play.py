@@ -14,7 +14,7 @@ import argparse
 import os
 import torch
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
@@ -41,8 +41,8 @@ import matplotlib.pyplot as plt
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.track import TrackEnvCfg
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.utils.dict import print_dict
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.utils.dict import print_dict
 
 
 def main():

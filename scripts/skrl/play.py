@@ -14,12 +14,13 @@ a more user-friendly way.
 
 import argparse
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Play a checkpoint of an RL agent from skrl.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--control_mode", type=str, default="ACCBR", help="Control mode for the agent.")
 parser.add_argument("--save_plots", action="store_true", default=False, help="Save plots during training.")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
@@ -83,11 +84,11 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
-import omni.isaac.lab_tasks  # noqa: F401
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
-from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
-from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
+import isaaclab_tasks  # noqa: F401
+from isaaclab.envs import DirectMARLEnv, multi_agent_to_single_agent
+from isaaclab.utils.dict import print_dict
+from isaaclab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
+from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
@@ -162,7 +163,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
-    plotter = ManagerBasedPlotter(env, command_name="pose_command")
+    plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
 
     # reset environment
     obs, _ = env.reset()

@@ -5,18 +5,18 @@ import math
 import MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc as mdp
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_folder_from_csv
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
-from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
-from omni.isaac.lab.managers import EventTermCfg as EventTerm
-from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
-from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
-from omni.isaac.lab.managers import RewardTermCfg as RewTerm
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import ContactSensorCfg
-from omni.isaac.lab.utils import configclass
+import isaaclab.sim as sim_utils
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
+from isaaclab.utils import configclass
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
 
@@ -53,7 +53,7 @@ class CommandsCfg:
 
     pose_twist_command = mdp.RefTrajectoryCommandCfg(
         asset_name="robot",
-        body_name="load_link",
+        body_name="load_odometry_sensor_link",
         resampling_time_range=(40, 40),  # out of range of max episode length for now
         debug_vis=True,
         reference_trajectories=import_ref_folder_from_csv(

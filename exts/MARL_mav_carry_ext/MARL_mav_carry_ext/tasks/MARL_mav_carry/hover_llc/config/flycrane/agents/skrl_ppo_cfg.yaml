@@ -46,7 +46,7 @@ agent:
   class: PPO
   rollouts: 32
   learning_epochs: 5
-  mini_batches: 4
+  mini_batches: 1
   discount_factor: 0.99
   lambda: 0.95
   learning_rate: 1.0e-03
@@ -71,7 +71,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "realistic_flycrane_hover"
-    experiment_name: "vel_100_hz_rotmatrix_obs_mat_error"
+    experiment_name: "insert_name"
     write_interval: 100
     checkpoint_interval: 2500
 
@@ -84,5 +84,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 150000000 #150M timesteps, like in OmniDrones
+  timesteps: 100000
   environment_info: log

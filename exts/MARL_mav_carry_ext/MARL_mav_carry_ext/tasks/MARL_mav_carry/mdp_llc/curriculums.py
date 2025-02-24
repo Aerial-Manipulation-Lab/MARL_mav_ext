@@ -1,6 +1,6 @@
 """Custom functions that can be used to create curriculum for the flycrane environment.
 
-The functions can be passed to the :class:`omni.isaac.lab.managers.CurriculumTermCfg` object to enable
+The functions can be passed to the :class:`isaaclab.managers.CurriculumTermCfg` object to enable
 the curriculum introduced by the function.
 """
 
@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING
 import torch
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedRLEnv
+    from isaaclab.envs import ManagerBasedRLEnv
 
-from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
 
 def modify_obstacle_position(
         env: ManagerBasedRLEnv, 

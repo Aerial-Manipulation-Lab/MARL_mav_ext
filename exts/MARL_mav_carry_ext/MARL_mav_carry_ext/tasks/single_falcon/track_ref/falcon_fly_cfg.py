@@ -5,20 +5,21 @@ import gymnasium as gym
 import torch
 
 from MARL_mav_carry_ext.assets import FALCON_CFG
-from MARL_mav_carry_ext.controllers import GeometricController
+from MARL_mav_carry_ext.controllers import GeometricController, IndiController
+from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.marker_utils import ACC_MARKER_CFG, ORIENTATION_MARKER_CFG
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.mdp_llc.utils import import_ref_from_csv
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg
-from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sim import SimulationCfg
-from omni.isaac.lab.terrains import TerrainImporterCfg
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import euler_xyz_from_quat, normalize, quat_from_angle_axis
+import isaaclab.sim as sim_utils
+from isaaclab.assets import Articulation, ArticulationCfg
+from isaaclab.envs import DirectRLEnv, DirectRLEnvCfg
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sim import SimulationCfg
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.math import euler_xyz_from_quat, normalize, quat_from_angle_axis
 
-from omni.isaac.lab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
+from isaaclab.markers import CUBOID_MARKER_CFG, VisualizationMarkers  # isort: skip
 
 
 @configclass
@@ -82,7 +83,7 @@ class FalconEnv(DirectRLEnv):
         self._rotor_idx = self._robot.find_bodies("Falcon_rotor.*")[0]
         self._falcon_idx = self._robot.find_bodies("Falcon_base_link")[0]
         self._action_space = gym.spaces.flatdim(self.single_action_space)
-        self._geometric_controller = GeometricController(self.num_envs)
+        self._geometric_controller = GeometricController(self.num_envs, "geometric")
         self._actions = torch.zeros(self.num_envs, self._action_space, device=self.sim.device)
         self._previous_actions = torch.zeros_like(self._actions)
         self._forces = torch.zeros(self.num_envs, len(self._rotor_idx), 3, device=self.device)
@@ -91,6 +92,10 @@ class FalconEnv(DirectRLEnv):
         self._high_level_decimation = self.cfg.decimation
         self._ll_counter = 0
         self._planner_dt = 1 / self._high_level_decimation
+        self._indi_controller = IndiController(self.num_envs)
+        self._motor_model = RotorMotor(self.num_envs, 1200*torch.ones(self.num_envs, 4, device=self.device)) # hover mode ~ 1200 RPM
+        self.sampling_time = self.sim.get_physics_dt() * self.cfg.low_level_decimation
+        self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
 
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -165,20 +170,28 @@ class FalconEnv(DirectRLEnv):
             drone_setpoint["yaw_rate"] = self._actions[:, 13].view(self.num_envs, 1)
             drone_setpoint["yaw_acc"] = self._actions[:, 19].view(self.num_envs, 1)
 
-            drone_thrusts, acc_cmd, q_cmd = self._geometric_controller.getCommand(
+            alpha_cmd, external_forces, acc_cmd, q_cmd = self._geometric_controller.getCommand(
                 drone_states, self._forces, drone_setpoint
             )
             if self.cfg.debug_vis:
                 self.des_acc_debug = acc_cmd
                 self.drone_positions_debug = drone_states["pos"]
                 self.des_ori_debug = q_cmd
+            target_rpm = self._indi_controller.getCommand(drone_states, self._forces, alpha_cmd, acc_cmd, external_forces)
 
+            drone_thrusts, moments = self._motor_model.get_motor_thrusts_moments(target_rpm, self.sampling_time)
             self._forces[..., 2] = drone_thrusts
+            self._moments[..., 2] = moments.view(self.num_envs, 1, 4).sum(-1)
             self._ll_counter = 0
 
         self._ll_counter += 1
         self._robot.set_external_force_and_torque(
             self._forces, torch.zeros_like(self._forces), body_ids=self._rotor_idx
+        )
+
+        # apply torques induced by rotors to each body
+        self._robot.set_external_force_and_torque(
+            torch.zeros_like(self._moments), self._moments, self._falcon_idx
         )
 
     def _get_observations(self) -> dict:
@@ -240,7 +253,7 @@ class FalconEnv(DirectRLEnv):
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]
         joint_vel = self._robot.data.default_joint_vel[env_ids]
-        default_root_state = self._robot.data.default_root_state[env_ids]
+        default_root_state = self._robot.data.default_root_state[env_ids] + torch.tensor([[0, 2.0, 0]], device=self.device)
         default_root_state[:, :3] += self._terrain.env_origins[env_ids]
         self._robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
         self._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)

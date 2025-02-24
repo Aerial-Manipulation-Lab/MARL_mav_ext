@@ -3,30 +3,30 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import RigidObject
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
-from omni.isaac.lab.utils.math import euler_xyz_from_quat, quat_error_magnitude, quat_inv, quat_mul, quat_rotate_inverse
+import isaaclab.sim as sim_utils
+from isaaclab.assets import RigidObject
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+from isaaclab.utils.math import euler_xyz_from_quat, quat_error_magnitude, quat_inv, quat_mul, quat_rotate_inverse
 
 from .marker_utils import DRONE_POS_MARKER_CFG
 from .utils import *
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedRLEnv
+    from isaaclab.envs import ManagerBasedRLEnv
 
 # TODO: put this somewhere else
 num_drones = 3
 
 # Body indices found in the scene
-# payload_idx = [0]
+# payload_idx = [1]
 # drone_idx = [71, 72, 73]
 # base_rope_idx = [8, 9, 10]
 
 # for the case when the rod is used
-payload_idx = [0]
-drone_idx = [17, 18, 19]
+payload_idx = [1]
+drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 
 def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
@@ -97,7 +97,7 @@ def track_payload_pos_command(
         desired_pos = desired_pos[:, 0]
 
     positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
-    reward_distance_scale = 1.5
+    reward_distance_scale = 1.0
     reward_position = torch.exp(-positional_error * reward_distance_scale)
 
     assert reward_position.shape == (env.scene.num_envs,)
@@ -140,7 +140,7 @@ def track_payload_pose_command(
 
 
 def track_payload_lin_vel_command(
-    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), scale: float = 15.0
 ) -> torch.Tensor:
     """Reward tracking of payload linear velocity commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
@@ -153,8 +153,7 @@ def track_payload_lin_vel_command(
         desired_vel = desired_vel[:, 0]
 
     lin_vel_error = torch.norm(desired_vel - payload_lin_vel, dim=-1)
-    reward_distance_scale = 15.0
-    reward_lin_vel = torch.exp(-lin_vel_error * reward_distance_scale)
+    reward_lin_vel = torch.exp(-lin_vel_error * scale)
 
     assert reward_lin_vel.shape == (env.scene.num_envs,)
 
@@ -162,7 +161,7 @@ def track_payload_lin_vel_command(
 
 
 def track_payload_ang_vel_command(
-    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), scale: float = 15.0
 ) -> torch.Tensor:
     """Reward tracking of payload angular velocity commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
@@ -175,8 +174,7 @@ def track_payload_ang_vel_command(
         desired_vel = desired_vel[:, 0]
 
     ang_vel_error = torch.norm(desired_vel - payload_ang_vel, dim=-1)
-    reward_distance_scale = 15.0
-    reward_ang_vel = torch.exp(-ang_vel_error * reward_distance_scale)
+    reward_ang_vel = torch.exp(-ang_vel_error * scale)
 
     assert reward_ang_vel.shape == (env.scene.num_envs,)
 
@@ -214,26 +212,20 @@ def spinnage_reward_payload(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward for minimizing the angular velocities of the payload."""
-    spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
     payload_angular_velocity = robot.data.body_com_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
-    reward_spin = spinnage_weight * torch.exp(-torch.square(payload_angular_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    pose_reward = track_payload_pose(env, asset_cfg)
-    reward_spin = reward_spin * sep_reward * pose_reward  # from omnidrones paper
-
+    reward_spin = torch.exp(-torch.square(payload_angular_velocity))
+    
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
 
 
 def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for minimizing the angular velocities of the drones."""
-    spinnage_weight = 0.8
     robot = env.scene[asset_cfg.name]
-    drone_angular_velocity = (robot.data.body_com_state_w[:, drone_idx, 10:] / num_drones).square().sum(-1).sum(-1)
-    reward_spin = spinnage_weight * torch.exp(-torch.square(drone_angular_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    reward_spin = reward_spin * sep_reward  # from omnidrones paper
+    drone_angular_velocity_magnitude = torch.norm(robot.data.body_com_state_w[:, drone_idx, 10:], dim=-1)
+    max_ang_vels = torch.max(drone_angular_velocity_magnitude, dim=-1)[0]
+    reward_spin = torch.exp(-torch.square(max_ang_vels))
 
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
@@ -241,13 +233,9 @@ def spinnage_reward_drones(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = S
 
 def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Reward for minimizing the linear velocities of the payload."""
-    swing_weight = 0.8
     robot = env.scene[asset_cfg.name]
     payload_linear_velocity = robot.data.body_com_state_w[:, payload_idx, 7:10].squeeze(1).abs().sum(-1)
-    reward_swing = swing_weight * torch.exp(-torch.square(payload_linear_velocity))
-    sep_reward = separation_reward(env, asset_cfg)
-    pose_reward = track_payload_pose(env, asset_cfg)
-    reward_swing = reward_swing * sep_reward * pose_reward  # from omnidrones paper
+    reward_swing = torch.exp(-torch.square(payload_linear_velocity))
 
     assert reward_swing.shape == (env.scene.num_envs,)
     return reward_swing
@@ -289,14 +277,25 @@ def action_penalty_rel(env: ManagerBasedRLEnv) -> torch.Tensor:
 
 def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
-    action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2] / 6.25
-    action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2] / 6.25
-    action_smoothness_force = torch.sum(action_force - action_prev_force, dim=-1) / num_drones / 4  # num propellers
-    reward_action_smoothness_force = torch.exp(-action_smoothness_force)
+    action_force = env.action_manager._terms["low_level_action"].processed_actions[..., 2]
+    action_prev_force = env.action_manager._terms["low_level_action"]._prev_forces[..., 2]
+    diff_force = (action_force - action_prev_force).abs()
+    max_diff_force = torch.max(diff_force, dim=-1)[0]
+    reward_action_smoothness_force = torch.exp(-max_diff_force * 5)
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force
 
+def action_smoothness_ACCBR_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty for high variation in force values."""
+    action = env.action_manager._action
+    action_prev = env.action_manager._prev_action
+    diff_action = (action - action_prev).abs()
+    diff_action_norm = torch.norm(diff_action / num_drones, dim=-1)
+    reward_action_smoothness_force = torch.exp(-diff_action_norm)
+
+    assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
+    return reward_action_smoothness_force
 
 def angle_cable_load(
     env: ManagerBasedRLEnv, threshold: float = 0.261799388, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")

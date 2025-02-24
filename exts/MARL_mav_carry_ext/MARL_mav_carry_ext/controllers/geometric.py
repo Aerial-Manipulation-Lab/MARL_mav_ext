@@ -1,6 +1,6 @@
 import torch
 
-from omni.isaac.lab.utils.math import (
+from isaaclab.utils.math import (
     euler_xyz_from_quat,
     matrix_from_quat,
     normalize,
@@ -11,6 +11,8 @@ from omni.isaac.lab.utils.math import (
     quat_rotate_inverse,
 )
 
+from MARL_mav_carry_ext.controllers.utils import LowPassFilter
+
 
 class GeometricController:
     """
@@ -18,9 +20,10 @@ class GeometricController:
 
     """
 
-    def __init__(self, num_envs: int):
+    def __init__(self, num_envs: int, control_mode: str):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.num_envs = num_envs
+        self.control_mode = control_mode
 
         self.p_err_max_ = torch.full((self.num_envs, 3), torch.finfo(torch.float32).max, device=self.device)
         self.v_err_max_ = torch.full(
@@ -32,43 +35,15 @@ class GeometricController:
             device=self.device,
         )
 
-        self.p_offset = torch.tensor([[0.0, 0.0, -0.0]] * self.num_envs, device=self.device)
+        self.rope_offset = -0.03
+        self.p_offset = torch.tensor([[0.0, 0.0, self.rope_offset]] * self.num_envs, device=self.device)
         self.integration_max = torch.tensor([0.0, 0.0, 0.0], device=self.device)
 
         # sim and drone parameters
         self.gravity = torch.tensor([[0.0, 0.0, -9.8066]] * self.num_envs, device=self.device)
         self.z_i = torch.tensor([[0.0, 0.0, 1.0]] * self.num_envs, device=self.device)
-        self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
-        self.torque_map = torch.tensor([3.4375484e-08, 0.0, 0.0], device=self.device)
-        self.t_last = 0.0
-        self.falcon_mass = 0.617  # kg
-        self.l = 0.075
+        self.falcon_mass = 0.6017  # kg
         self._epsilon = torch.tensor(1e-6, device=self.device)  # avoid division by zero
-        self.kappa = 0.022
-        self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
-        self.G_1 = torch.tensor(
-            [
-                [1, 1, 1, 1],
-                [
-                    self.l * torch.sin(self.beta),
-                    -self.l * torch.sin(self.beta),
-                    -self.l * torch.sin(self.beta),
-                    self.l * torch.sin(self.beta),
-                ],
-                [
-                    -self.l * torch.cos(self.beta),
-                    -self.l * torch.cos(self.beta),
-                    self.l * torch.cos(self.beta),
-                    self.l * torch.cos(self.beta),
-                ],
-                [self.kappa, -self.kappa, self.kappa, -self.kappa],
-            ],
-            device=self.device,
-        )
-        self.G_1_inv = torch.linalg.pinv(self.G_1)
-        self.inertia_mat = torch.diag(torch.tensor([0.00164, 0.00184, 0.0030], device=self.device))
-        self.min_thrust = torch.tensor(0.0, device=self.device)
-        self.max_thrust = torch.tensor(6.25, device=self.device)
 
         # controller parameters
         self.kp_acc = torch.tensor([4.0, 4.0, 9.0], device=self.device)
@@ -79,11 +54,25 @@ class GeometricController:
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
 
-        # self.filter_sampling_frequency = torch.tensor([50, 50, 50], device=self.device)
-        # self.filter_cutoff_frequency = torch.tensor([20, 20, 20], device=self.device)
-        # self.filter_cutoff_frequency_bodyrate = 20
+        # low pass filters
+        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 300.0, device=self.device)   # filter frequency, same as control frequency (Hz)
+        self.filter_cutoff_frequency = torch.full((self.num_envs, 1), 6.0, device=self.device)    # accelerometer filter cut-off frequency (Hz)
+        self.filter_cutoff_frequency_bodyrate = torch.full((self.num_envs, 1), 20.0, device=self.device)  # rate control filter cut-off-freuqnecy (Hz)
+        self.filter_init_value_acc = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        self.filter_init_value_mot = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
 
-        # self.filter_acc = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.gravity)
+        self.filterAcc_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_acc)
+        self.filterMot_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot)
+        self.filterRate_ = LowPassFilter(self.filter_cutoff_frequency_bodyrate, self.filter_sampling_frequency, self.filter_init_value_rate)
+
+        # debug
+        self.debug = True
+        if self.debug:
+            self.filtered_acc = torch.zeros((self.num_envs, 3), device=self.device)
+            self.filtered_rate = torch.zeros((self.num_envs, 3), device=self.device)
+            self.unfiltered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
+            self.filtered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
 
     # function to overwrite parameters from yaml file
     # function to check if all parameters are valid
@@ -102,16 +91,30 @@ class GeometricController:
         setpoint: setpoint given by the policy [pos, lin_vel, lin_acc, quat, ang_vel]
         """
 
-        # update low pass filters: not here for now
-
-        # acceleration command TODO: implement aceleration low pass filter
-        # p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
-        # pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
-        vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
-        # des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
-        des_acc = self.kd_acc * vel_error
-        # estimation of load acceleration in world frame
         current_collective_thrust = actions.sum(1)  # sum over all propellors
+        
+        # update low pass filters
+        acc_filtered = self.filterAcc_.add(state["lin_acc"])
+        ang_vel_filtered = self.filterRate_.add(state["ang_vel"])
+        actions_filtered = self.filterMot_.add(current_collective_thrust)
+
+        if self.debug:
+            self.filtered_acc = acc_filtered
+            self.filtered_rate = ang_vel_filtered
+            self.unfiltered_thrusts = current_collective_thrust
+            self.filtered_thrusts = actions_filtered
+
+        # acceleration command
+        if self.control_mode == "geometric":
+            p_ref_cg = setpoint["pos"] - quat_rotate(state["quat"], self.p_offset)
+            pos_error = torch.clamp(p_ref_cg - state["pos"], -self.p_err_max_, self.p_err_max_)
+            vel_error = torch.clamp(setpoint["lin_vel"] - state["lin_vel"], -self.v_err_max_, self.v_err_max_)
+            des_acc = self.kp_acc * pos_error + self.kd_acc * vel_error + setpoint["lin_acc"]
+
+        elif self.control_mode == "ACCBR":
+            des_acc = setpoint["lin_acc"]
+
+        # estimation of load acceleration in world frame
         acc_load = (
             state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust / self.falcon_mass)
         )
@@ -135,19 +138,22 @@ class GeometricController:
         q_cmd = quat_from_matrix(des_rot_matrix)
         # angular velocity command
         # retrieve the current body axes of the drone
-        current_rot_matrix = matrix_from_quat(state["quat"])
-        x_b = current_rot_matrix[..., 0]
-        y_b = current_rot_matrix[..., 1]
-        z_b = current_rot_matrix[..., 2]
+        if self.control_mode == "geometric":
+            current_rot_matrix = matrix_from_quat(state["quat"])
+            x_b = current_rot_matrix[..., 0]
+            y_b = current_rot_matrix[..., 1]
+            z_b = current_rot_matrix[..., 2]
 
-        T_dot = self.falcon_mass * torch.sum(setpoint["jerk"] * z_b, dim=-1, keepdim=True)
-        h_omega = self.falcon_mass * setpoint["jerk"] - T_dot * z_b  # rotational derivative of z_b
-        mask = (current_collective_thrust_magnitude > 0.01).squeeze()  # avoid division by zero
-        h_omega[mask] /= current_collective_thrust_magnitude[mask]
-        omega_b_x = (-h_omega * y_b).sum(-1, keepdim=True)
-        omega_b_y = (h_omega * x_b).sum(-1, keepdim=True)
-        omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(-1, keepdim=True)
-        omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
+            T_dot = self.falcon_mass * torch.sum(setpoint["jerk"] * z_b, dim=-1, keepdim=True)
+            h_omega = self.falcon_mass * setpoint["jerk"] - T_dot * z_b  # rotational derivative of z_b
+            mask = (current_collective_thrust_magnitude > 0.01).squeeze()  # avoid division by zero
+            h_omega[mask] /= current_collective_thrust_magnitude[mask]
+            omega_b_x = (-h_omega * y_b).sum(-1, keepdim=True)
+            omega_b_y = (h_omega * x_b).sum(-1, keepdim=True)
+            omega_b_z = setpoint["yaw_rate"] * (self.z_i * z_b).sum(-1, keepdim=True)
+            omega_b_ref = torch.cat((omega_b_x, omega_b_y, omega_b_z), dim=-1)
+        elif self.control_mode == "ACCBR":
+            omega_b_ref = setpoint["body_rates"]
 
         # tilt prioritized attitude control
         quat_diff = quat_mul(quat_inv(state["quat"]), q_cmd)
@@ -166,15 +172,9 @@ class GeometricController:
             + self.kp_rate * (omega_b_ref - ang_vel_body)
         )
 
-        # calculate the thrust per propellor
-        # inertia * alpha_cmd + omega x inertia * omega = torque = G * thrusts
-        product = self.inertia_mat.matmul(alpha_b_des.transpose(0, 1)).transpose(0, 1) + torch.linalg.cross(
-            ang_vel_body, self.inertia_mat.matmul(ang_vel_body.transpose(0, 1)).transpose(0, 1)
-        )
-        rh_side = torch.cat((collective_thrust_des_magntiude, product), dim=-1)
-        thrusts = self.G_1_inv.matmul(rh_side.transpose(0, 1)).transpose(0, 1)
-        thrusts = torch.clamp(thrusts, self.min_thrust, self.max_thrust)
+        return alpha_b_des, acc_load, acc_cmd, q_cmd
 
-        rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0])
-
-        return rotor_speeds, acc_cmd, q_cmd
+    def reset(self, env_ids):
+        self.filterAcc_.reset(env_ids)
+        self.filterMot_.reset(env_ids)
+        self.filterRate_.reset(env_ids)

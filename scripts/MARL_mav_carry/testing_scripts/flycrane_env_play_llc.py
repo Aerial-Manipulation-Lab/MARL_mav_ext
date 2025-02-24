@@ -14,13 +14,14 @@ import argparse
 import os
 import torch
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during execution.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--control_mode", type=str, default="geometric", help="Control mode for the agent.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -40,9 +41,10 @@ import math
 import matplotlib.pyplot as plt
 
 from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
+from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.utils.dict import print_dict
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.utils.dict import print_dict
 
 
 def main():
@@ -52,6 +54,7 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
     # setup RL environment
     env = ManagerBasedRLEnv(cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
     if args_cli.video:
         video_kwargs = {
             "video_folder": "./videos",
@@ -64,28 +67,26 @@ def main():
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     robot_mass = env.scene["robot"].root_physx_view.get_masses().sum()
-    # print("Rope idx are: ", env.scene["robot"].find_bodies("rope_.*_link_.*"))
-    # print("Load link id:", env.scene["robot"].find_bodies("load_link"))
-    # print("drone_idx: ", env.scene["robot"].find_bodies("Falcon.*_base_link"))
+
     gravity = torch.tensor(env.sim.cfg.gravity, device=env.sim.device).norm()
     falcon_mass = 0.6 + 0.0042 * 4 + 0.00002
     rope_mass = 0.0033692587500000004 * 7 + 0.001 * 14
     payload_mass = 1.4 + 0.00001 + 0.006
     mass_left_side = 2 * falcon_mass + 2 * rope_mass + 0.5 * payload_mass
     mass_right_side = falcon_mass + rope_mass + 0.5 * payload_mass
-
+    
     stretch_position = torch.tensor(
         [
             [
-                0.9,
-                -0.9,
-                2.5,  # drone 1
-                -0.9,
+                1.27,
+                1.0867,
+                1.7,  # drone 1
+                1.27,
+                -1.0867,
+                1.7,  # drone 2
+                -0.1367,
                 0.0,
-                2.5,  # drone 2
-                0.9,
-                0.9,
-                2.5,
+                1.7,
             ]
         ],
         dtype=torch.float32,
@@ -107,7 +108,35 @@ def main():
         ],
         dtype=torch.float32,
     )
+
+    ACC_BR_ref = torch.tensor(
+        [
+            [
+                0.0,
+                0.0,
+                9.0,
+                0.0,
+                0.0,
+                10.0,  # drone 1
+                0.0,
+                0.0,
+                8.0,
+                0.0,
+                0.0,
+                10.0,  # drone 2
+                0.0,
+                0.0,
+                7.0,
+                0.0,
+                0.0,
+                10.0,
+            ]
+        ],
+        dtype=torch.float32,
+    )
+
     count = 0
+        
     while simulation_app.is_running():
         with torch.inference_mode():
             # reset
@@ -115,26 +144,42 @@ def main():
                 env.reset()
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
-                waypoint = torch.zeros_like(env.action_manager.action)
-                waypoint[:, 0] = 2.0
-                waypoint[:, 1] = 0.05
-                waypoint[:, 2] = 0.05
-                # waypoint[:, :3] = stretch_position[:, :3]
-                # waypoint[:, 12:15] = stretch_position[:, 3:6]
-                # waypoint[:, 24:27] = stretch_position[:, 6:9]
+            waypoint = torch.zeros_like(env.action_manager.action)
+            # When using geometric
+            if args_cli.control_mode == "geometric":
+                waypoint[:, :3] = stretch_position[:, :3]
+                waypoint[:, 12:15] = stretch_position[:, 3:6]
+                waypoint[:, 24:27] = stretch_position[:, 6:9]
+
+            # waypoint[:, :3] = falcon_pos[:, 0]
+            # waypoint[:, 3:6] = falcon_pos[:, 1]
+            # waypoint[:, 6:9] = falcon_pos[:, 2]
+                        
+            # when using ACCBR
+            if args_cli.control_mode == "ACCRBR":
+                waypoint[:] = ACC_BR_ref
             # step the environment
+            if env.num_envs == 1:
+                plotter.collect_data()
             obs, rew, terminated, truncated, info = env.step(waypoint)
-            # print current orientation of pole
-            # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
-            # update counter
             count += 1
 
             if args_cli.video:
                 if count == args_cli.video_length:
                     break
 
+
     # close the simulator
     env.close()
+
+    if args_cli.num_envs == 1:
+        # if args_cli.save_plots:
+        #     # save plots
+        #     plot_path = os.path.join(log_dir, "plots", "play")
+        #     plotter.plot(save=True, save_dir=plot_path)
+        # else:
+            # show plots
+        plotter.plot(save=False)
 
 
 if __name__ == "__main__":

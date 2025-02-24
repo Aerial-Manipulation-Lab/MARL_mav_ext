@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.actuators import ImplicitActuatorCfg
-from omni.isaac.lab.assets import ArticulationCfg
+import isaaclab.sim as sim_utils
+from isaaclab.actuators import ImplicitActuatorCfg
+from isaaclab.assets import ArticulationCfg
 
 script_dir = Path(__file__).parent
 usd_path = script_dir / "data/AMR/falcon/falcon.usd"
@@ -39,17 +39,17 @@ FALCON_CFG = ArticulationCfg(
         copy_from_source=False,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.0),
+        pos=(0.0, 2.0, 1.5),
         # rot=(0.7071068, 0, 0, 0.7071068),
         rot=(1.0, 0, 0, 0.0),
         joint_pos={
             ".*": 0.0,
         },
         joint_vel={
-            "Falcon_rotor_0_joint": 200.0,
-            "Falcon_rotor_1_joint": -200.0,
-            "Falcon_rotor_2_joint": 200.0,
-            "Falcon_rotor_3_joint": -200.0,
+            "Falcon_rotor_0_joint": 0.0,
+            "Falcon_rotor_1_joint": -0.0,
+            "Falcon_rotor_2_joint": 0.0,
+            "Falcon_rotor_3_joint": -0.0,
         },
     ),
     actuators={

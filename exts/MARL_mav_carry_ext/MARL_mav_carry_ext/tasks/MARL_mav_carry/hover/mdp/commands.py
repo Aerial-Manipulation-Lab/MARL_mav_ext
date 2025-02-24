@@ -12,15 +12,15 @@ from collections.abc import Sequence
 from dataclasses import MISSING
 from typing import TYPE_CHECKING
 
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.managers import CommandTerm, CommandTermCfg
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.markers.config import FRAME_MARKER_CFG
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import combine_frame_transforms, compute_pose_error, quat_from_euler_xyz, quat_unique
+from isaaclab.assets import Articulation
+from isaaclab.managers import CommandTerm, CommandTermCfg
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.markers.config import FRAME_MARKER_CFG
+from isaaclab.utils import configclass
+from isaaclab.utils.math import combine_frame_transforms, compute_pose_error, quat_from_euler_xyz, quat_unique
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedEnv
+    from isaaclab.envs import ManagerBasedEnv
 
 
 class UniformPoseCommandGlobal(CommandTerm):
@@ -102,8 +102,8 @@ class UniformPoseCommandGlobal(CommandTerm):
         pos_error, rot_error = compute_pose_error(
             self.pose_command_w[:, :3],
             self.pose_command_w[:, 3:],
-            self.robot.data.body_state_w[:, self.body_idx, :3],
-            self.robot.data.body_state_w[:, self.body_idx, 3:7],
+            self.robot.data.body_com_state_w[:, self.body_idx, :3],
+            self.robot.data.body_com_state_w[:, self.body_idx, 3:7],
         )
         self.metrics["position_error"] = torch.norm(pos_error, dim=-1)
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
@@ -159,7 +159,7 @@ class UniformPoseCommandGlobal(CommandTerm):
         # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
 
         # -- current body pose
-        body_pose_w = self.robot.data.body_state_w[:, self.body_idx]
+        body_pose_w = self.robot.data.body_com_state_w[:, self.body_idx]
         self.body_pose_visualizer.visualize(body_pose_w[:, :3], body_pose_w[:, 3:7])
 
 

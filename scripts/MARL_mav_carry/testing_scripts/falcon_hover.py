@@ -13,7 +13,7 @@ This script demonstrates how to simulate a quadcopter.
 import argparse
 import torch
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
@@ -28,9 +28,9 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.sim import SimulationContext
+import isaaclab.sim as sim_utils
+from isaaclab.assets import Articulation
+from isaaclab.sim import SimulationContext
 
 ##
 # Pre-defined configs
@@ -96,7 +96,7 @@ def main():
             robot.reset()
             # reset command
             print(">>>>>>>> Reset!")
-        robot_state = robot.data.body_state_w[0, prop_body_ids, :]
+        robot_state = robot.data.body_com_state_w[0, prop_body_ids, :]
         print(f"robot position: {robot_state[0, :3]}")
         print(f"robot orientation: {robot_state[0, 3:7]}")
         print(f"robot linear velocity: {robot_state[0, 7:10]}")

@@ -1,83 +1,59 @@
+import torch 
 import math
-import torch
-
 
 class LowPassFilter:
-    def __init__(self, cutoff_frequency, sampling_frequency, initial_value):
-        """
-        cutoff_frequency: torch.Tensor of shape (rows,)
-        sampling_frequency: torch.Tensor of shape (rows,)
-        initial_value: torch.Tensor of shape (rows,)
-        """
-        self.sampling_frequency = sampling_frequency
-        self.denominator = self.init_den(cutoff_frequency, sampling_frequency)
-        self.numerator = self.init_num(cutoff_frequency, sampling_frequency)
+    def __init__(self, fc, fs, initial_value):
+        self.sampling_freq = fs # envs x 1
+        self.num = self.init_num(fc, fs) # envs x 1 x 2
+        self.dem = self.init_dem(fc, fs)
+        self.initial_value = initial_value
+        self.input = initial_value.unsqueeze(2).repeat(1, 1, 2) # envs x dim x 2
+        self.output = initial_value.unsqueeze(2).repeat(1, 1, 2) # envs x dim x 2
 
-        # Store input and output history (2-step)
-        self.input = initial_value.unsqueeze(1).repeat(1, 2)  # (rows, 2)
-        self.output = initial_value.unsqueeze(1).repeat(1, 2)  # (rows, 2)
-
-    def init_den(self, fc, fs):
+    def init_dem(self, fc, fs):
         K = torch.tan(math.pi * fc / fs)
-        poly = K**2 + math.sqrt(2) * K + 1.0
+        poly = K * K + math.sqrt(2.0) * K + 1.0
+        dem = torch.zeros_like(fc).repeat(1, 2)
+        dem[:, 0] = (2.0 * (K * K - 1.0) / poly).squeeze(1)
+        dem[:, 1] = ((K * K - math.sqrt(2.0) * K + 1.0) / poly).squeeze(1)
 
-        denominator = torch.zeros_like(fc).unsqueeze(1).repeat(1, 2)  # (rows, 2)
-        denominator[:, 0] = 2.0 * (K**2 - 1.0) / poly
-        denominator[:, 1] = (K**2 - math.sqrt(2) * K + 1.0) / poly
-
-        return denominator
-
+        return dem.unsqueeze(1)
+    
     def init_num(self, fc, fs):
         K = torch.tan(math.pi * fc / fs)
-        poly = K**2 + math.sqrt(2) * K + 1.0
+        poly = K * K + math.sqrt(2.0) * K + 1.0
+        num = torch.zeros_like(fc).repeat(1, 2)
+        num[:, 0] = (K * K / poly).squeeze(1)
+        num[:, 1] = 2.0 * num[:, 0]
 
-        numerator = torch.zeros_like(fc).unsqueeze(1).repeat(1, 2)  # (rows, 2)
-        numerator[:, 0] = K**2 / poly
-        numerator[:, 1] = 2.0 * numerator[:, 0]
-
-        return numerator
-
-    def add(self, sample):
-        """
-        sample: torch.Tensor of shape (rows,)
-        Returns filtered output.
-        """
-        # Shift the input and output history
-        self.input[:, 1] = self.input[:, 0]
-        self.input[:, 0] = sample
-
-        # Compute the filter output
-        out = self.numerator[:, 0] * self.input[:, 1] + (
-            self.numerator * self.input - self.denominator * self.output
-        ).sum(dim=1)
-
-        # Shift the output history
-        self.output[:, 1] = self.output[:, 0]
-        self.output[:, 0] = out
-        print("new value added")
-        return out
+        return num.unsqueeze(1)
 
     def derivative(self):
-        """
-        Returns the derivative of the filtered signal.
-        """
-        return self.sampling_frequency * (self.output[:, 0] - self.output[:, 1])
+        return self.sampling_freq * (self.output[:,:,0] - self.output[:,:,1])
 
+    def add(self, sample):
+        x2 = self.input[:, :, 1]
+        self.input[:, :, 1] = self.input[:, :, 0]
 
-# # Example usage
-# cutoff_frequency = torch.tensor([1.0, 0.5])  # Example: 2D input with different cutoffs
-# sampling_frequency = torch.tensor([100.0, 100.0])  # Sampling at 100Hz for both
-# initial_value = torch.tensor([0.0, 0.0])  # Starting with 0 for both dimensions
+        self.input[:, :, 0] = sample # envs x dim x 1
+        out = self.num[:, :, 0] * x2 + (self.num * self.input - self.dem * self.output).sum(dim=2)
+        self.output[:, :, 1] = self.output[:, :, 0]
+        self.output[:, :, 0] = out
 
-# lpf = LowPassFilter(cutoff_frequency=cutoff_frequency,
-#                     sampling_frequency=sampling_frequency,
-#                     initial_value=initial_value)
+        return out
+    
+    def valid(self):
+        return (
+            torch.isfinite(self.sampling_freq).all()
+            and torch.isfinite(self.dem).all()
+            and torch.isfinite(self.num).all()
+            and torch.isfinite(self.input).all()
+            and torch.isfinite(self.output).all()
+        )
+    
+    def reset(self, env_ids):
+        self.input[env_ids] = self.initial_value.unsqueeze(2).repeat(1, 1, 2)[env_ids] # envs x dim x 2
+        self.output[env_ids] = self.initial_value.unsqueeze(2).repeat(1, 1, 2)[env_ids] # envs x dim x 2
 
-# # Simulate some input signal (multi-dimensional)
-# input_signal = torch.tensor([[1.0, 0.9], [0.8, 0.7], [0.6, 0.5], [0.4, 0.3], [0.2, 0.1]])
-
-# # Apply the low-pass filter to the signal
-# for signal in input_signal:
-#     filtered_signal = lpf.add(signal)
-#     print("Filtered Output:", filtered_signal)
-#     print("Derivative:", lpf.derivative())
+    def __call__(self):
+        return self.output[:, :, 0]

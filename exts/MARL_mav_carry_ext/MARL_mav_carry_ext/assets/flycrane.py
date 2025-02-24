@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.actuators import ImplicitActuatorCfg
-from omni.isaac.lab.assets import ArticulationCfg
+import isaaclab.sim as sim_utils
+from isaaclab.actuators import ImplicitActuatorCfg
+from isaaclab.assets import ArticulationCfg
 
 script_dir = Path(__file__).parent
-usd_path = script_dir / "data/AMR/flycrane/flycrane.usd"
+usd_path = script_dir / "data/AMR/flycrane_offset/flycrane.usd"
 
 ##
 # Configuration
@@ -44,18 +44,18 @@ FLYCRANE_CFG = ArticulationCfg(
             ".*": 0.0,
         },
         joint_vel={
-            "Falcon1_rotor_0_joint": 200.0,
-            "Falcon1_rotor_1_joint": -200.0,
-            "Falcon1_rotor_2_joint": 200.0,
-            "Falcon1_rotor_3_joint": -200.0,
-            "Falcon2_rotor_0_joint": 200.0,
-            "Falcon2_rotor_1_joint": -200.0,
-            "Falcon2_rotor_2_joint": 200.0,
-            "Falcon2_rotor_3_joint": -200.0,
-            "Falcon3_rotor_0_joint": 200.0,
-            "Falcon3_rotor_1_joint": -200.0,
-            "Falcon3_rotor_2_joint": 200.0,
-            "Falcon3_rotor_3_joint": -200.0,
+            "Falcon1_rotor_0_joint": 0.0,
+            "Falcon1_rotor_1_joint": -0.0,
+            "Falcon1_rotor_2_joint": 0.0,
+            "Falcon1_rotor_3_joint": -0.0,
+            "Falcon2_rotor_0_joint": 0.0,
+            "Falcon2_rotor_1_joint": -0.0,
+            "Falcon2_rotor_2_joint": 0.0,
+            "Falcon2_rotor_3_joint": -0.0,
+            "Falcon3_rotor_0_joint": 0.0,
+            "Falcon3_rotor_1_joint": -0.0,
+            "Falcon3_rotor_2_joint": 0.0,
+            "Falcon3_rotor_3_joint": -0.0,
         },
     ),
     actuators={

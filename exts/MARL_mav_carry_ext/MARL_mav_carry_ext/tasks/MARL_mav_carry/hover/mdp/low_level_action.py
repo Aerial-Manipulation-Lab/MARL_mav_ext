@@ -3,12 +3,12 @@ from __future__ import annotations
 import torch
 from dataclasses import MISSING
 
-import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import ActionTerm, ActionTermCfg
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import quat_inv, quat_mul
+import isaaclab.utils.math as math_utils
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import ActionTerm, ActionTermCfg
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.utils import configclass
+from isaaclab.utils.math import quat_inv, quat_mul
 
 from .marker_utils import FORCE_MARKER_Z_CFG, TORQUE_MARKER_CFG
 
@@ -104,8 +104,8 @@ class LowLevelAction(ActionTerm):
 
         # Get drone positions and orientations
         drone_idx = self._robot.find_bodies("Falcon.*base_link")[0]
-        drone_pos_world_frame = self._robot.data.body_state_w[:, drone_idx, :3].view(-1, 3)
-        drone_orientation = self._robot.data.body_state_w[:, drone_idx, 3:7].view(-1, 4)
+        drone_pos_world_frame = self._robot.data.body_com_state_w[:, drone_idx, :3].view(-1, 3)
+        drone_orientation = self._robot.data.body_com_state_w[:, drone_idx, 3:7].view(-1, 4)
 
         # Rotate the arrow to point in the direction of the force
         zeros = torch.zeros(self._env.scene.num_envs, 1)
