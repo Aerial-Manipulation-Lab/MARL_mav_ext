@@ -122,12 +122,12 @@ class MARLHoverEnv(DirectMARLEnv):
             all_thrusts = []
             all_moments = []
 
-            drone_positions = self.scene["robot"].data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
-            drone_orientations = self.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 3:7]
-            drone_linear_velocities = self.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 7:10]
-            drone_angular_velocities = self.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 10:13]
-            drone_linear_accelerations = self.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]
-            drone_angular_accelerations = self.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6]
+            drone_positions = self.robot.data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
+            drone_orientations = self.robot.data.body_com_state_w[:, self._falcon_idx, 3:7]
+            drone_linear_velocities = self.robot.data.body_com_state_w[:, self._falcon_idx, 7:10]
+            drone_angular_velocities = self.robot.data.body_com_state_w[:, self._falcon_idx, 10:13]
+            drone_linear_accelerations = self.robot.data.body_acc_w[:, self._falcon_idx, :3]
+            drone_angular_accelerations = self.robot.data.body_acc_w[:, self._falcon_idx, 3:6]
             
             self.drone_positions[:] = drone_positions #+ torch.randn_like(drone_positions) * self.position_noise_std
             self.drone_orientations[:] = drone_orientations #+ torch.randn_like(drone_orientations) * self.orientation_noise_std
@@ -172,11 +172,11 @@ class MARLHoverEnv(DirectMARLEnv):
         self._ll_counter += 1
 
         # apply torques induced by rotors to each body
-        self.scene["robot"].set_external_force_and_torque(
+        self.robot.set_external_force_and_torque(
             torch.zeros_like(self._moments), self._moments, self._falcon_idx
         )
         # apply forces to each rotor
-        self.scene["robot"].set_external_force_and_torque(
+        self.robot.set_external_force_and_torque(
             self._forces, torch.zeros_like(self._forces), self._falcon_rotor_idx
         )
 
@@ -301,7 +301,7 @@ class MARLHoverEnv(DirectMARLEnv):
 
     def _compute_intermediate_values(self):
         # data for load
-        self.load_position[:] = self.scene["robot"].data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
+        self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
 
     def _cable_collision(
         self,
