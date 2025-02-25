@@ -130,9 +130,11 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     falcon_rotor_names = "Falcon.*_rotor_.*"
     # payload name
     payload_name = "load_odometry_sensor_link"
-    # rope name and limits
+    # rope name and termination terms
     rope_name = "rope_.*_link"
     cable_angle_limits = 0.0 # cos(angle) limits
+    cable_collision_threshold = 0.2
+    cable_collision_num_points = 10
     
     # control mode
     control_mode = "geometric" # ACCBR or geometric

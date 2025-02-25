@@ -21,7 +21,6 @@ from isaaclab.sensors import ContactSensor
 from .marl_hover_env_cfg import MARLHoverEnvCfg
 from MARL_mav_carry_ext.controllers import GeometricController, IndiController
 from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
-import MARL_mav_carry_ext.tasks.managerbased.mdp_llc as mdp
 
 
 class MARLHoverEnv(DirectMARLEnv):
@@ -278,8 +277,11 @@ class MARLHoverEnv(DirectMARLEnv):
         mapped_angle_load = torch.stack((torch.cos(roll_load), torch.cos(pitch_load)), dim=1)
         angle_limit_load = (mapped_angle_load < self.cfg.cable_angle_limits).any(dim=1).view(-1, 3).any(dim=1)
         
+        # cables colliding
+        cable_collision = self._cable_collision(self.cfg.cable_collision_threshold, self.cfg.cable_collision_num_points)
+        
         # reset when episode ends
-        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load
+        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load | cable_collision
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
@@ -301,7 +303,62 @@ class MARLHoverEnv(DirectMARLEnv):
         # data for load
         self.load_position[:] = self.scene["robot"].data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
 
+    def _cable_collision(
+        self,
+        threshold: float = 0.0,
+        num_points: int = 5,
+    ) -> torch.Tensor:
+        """Check for collisions between cables.
 
+        A collision is detected if the minimum Euclidean distance between any two points
+        on different cables is below the threshold.
+        """
+        cable_bottom_pos_env = self.robot.data.body_com_state_w[:, self._rope_idx, :3] - self.scene.env_origins.unsqueeze(1)
+        cable_directions = self.drone_positions - cable_bottom_pos_env  # (num_envs, num_cables, 3)
+
+        # Create linearly spaced points for interpolation (num_points,)
+        linspace_points = torch.linspace(0, 1, num_points, device=self.device).view(
+            1, 1, num_points, 1
+        )  # (1, 1, num_points, 1)
+
+        # Compute cable points (num_envs, num_cables, num_points, 3)
+        cable_points = cable_bottom_pos_env.unsqueeze(2) + linspace_points * cable_directions.unsqueeze(
+            2
+        )  # (num_envs, num_cables, num_points, 3)
+
+        # Flatten cable points for easier distance calculation (num_envs, num_cables * num_points, 3)
+        cable_points_flat = cable_points.view(self.num_envs, -1, 3)
+
+        # Pairwise distance calculation
+        cable_points_a = cable_points_flat.unsqueeze(2)  # (num_envs, num_points_total, 1, 3)
+        cable_points_b = cable_points_flat.unsqueeze(1)  # (num_envs, 1, num_points_total, 3)
+        pairwise_diff = cable_points_a - cable_points_b  # (num_envs, num_points_total, num_points_total, 3)
+        pairwise_distances = torch.norm(pairwise_diff, dim=-1)  # (num_envs, num_points_total, num_points_total)
+
+        # Mask to ignore self-distances and distances within the same cable
+        num_cables = cable_bottom_pos_env.shape[1]
+        points_per_cable = num_points
+
+        # Create mask to ignore points on the same cable
+        cable_indices = torch.arange(num_cables, device=self.device).repeat_interleave(
+            points_per_cable
+        )  # (num_points_total,)
+        same_cable_mask = cable_indices.unsqueeze(0) == cable_indices.unsqueeze(1)  # (num_points_total, num_points_total)
+        same_cable_mask = same_cable_mask.unsqueeze(0).expand(
+            self.num_envs, -1, -1
+        )  # (num_envs, num_points_total, num_points_total)
+
+        # Apply mask: set ignored distances to a large value
+        pairwise_distances[same_cable_mask] = 1000.0
+
+        # Find the minimum distance across all points in each environment
+        min_distances, _ = torch.min(pairwise_distances.view(self.num_envs, -1), dim=-1)  # Shape: (num_envs,)
+
+        # Check if the minimum distance is below the threshold
+        is_cable_collision = min_distances < threshold  # Shape: (num_envs,)
+
+        assert is_cable_collision.shape == (self.num_envs,)
+        return is_cable_collision
 
 @torch.jit.script
 def scale(x, lower, upper):
