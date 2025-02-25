@@ -15,7 +15,7 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.envs import DirectMARLEnv
 from isaaclab.markers import VisualizationMarkers
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
-from isaaclab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul, sample_uniform, saturate
+from isaaclab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul, sample_uniform, saturate, euler_xyz_from_quat, quat_inv
 from isaaclab.sensors import ContactSensor
 
 from .marl_hover_env_cfg import MARLHoverEnvCfg
@@ -34,6 +34,7 @@ class MARLHoverEnv(DirectMARLEnv):
         self._falcon_idx = self.robot.find_bodies(cfg.falcon_names)[0]
         self._falcon_rotor_idx = self.robot.find_bodies(cfg.falcon_rotor_names)[0]
         self._payload_idx = self.robot.find_bodies(cfg.payload_name)[0]
+        self._rope_idx = self.robot.find_bodies(cfg.rope_name)[0]
 
         # configuration
         self._num_drones = len(self._falcon_idx)
@@ -256,9 +257,29 @@ class MARLHoverEnv(DirectMARLEnv):
         net_contact_forces = contact_sensor.data.net_forces_w_history
         # check if any contact force exceeds the threshold
         illegal_contact = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.cfg.sensor_cfg.body_ids], dim=-1), dim=1)[0] > self.cfg.contact_sensor_threshold, dim=1)
-
-        terminations = falcon_fly_low | payload_fly_low | illegal_contact
-        # # reset when episode ends
+        
+        # angle limits
+        rope_orientations_world = self.robot.data.body_com_state_w[:, self._rope_idx, 3:7].view(-1, 4)
+        drone_orientation_world = self.drone_orientations.view(-1, 4)
+        drone_orientation_inv = quat_inv(drone_orientation_world)
+        rope_orientations_drones = quat_mul(
+            drone_orientation_inv, rope_orientations_world
+        )  # cable angles relative to drones
+        roll_drone, pitch_drone, _ = euler_xyz_from_quat(rope_orientations_drones)  # yaw can be whatever
+        mapped_angle_drone = torch.stack((torch.cos(roll_drone), torch.cos(pitch_drone)), dim=1)
+        angle_limit_drone = (mapped_angle_drone < self.cfg.cable_angle_limits).any(dim=1).view(-1, 3).any(dim=1)
+        
+        payload_orientation_world = self.robot.data.body_com_state_w[:, self._payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
+        payload_orientation_inv = quat_inv(payload_orientation_world)
+        rope_orientations_payload = quat_mul(
+            payload_orientation_inv, rope_orientations_world
+        )  # cable angles relative to payload
+        roll_load, pitch_load, _ = euler_xyz_from_quat(rope_orientations_payload)  # yaw can be whatever
+        mapped_angle_load = torch.stack((torch.cos(roll_load), torch.cos(pitch_load)), dim=1)
+        angle_limit_load = (mapped_angle_load < self.cfg.cable_angle_limits).any(dim=1).view(-1, 3).any(dim=1)
+        
+        # reset when episode ends
+        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
