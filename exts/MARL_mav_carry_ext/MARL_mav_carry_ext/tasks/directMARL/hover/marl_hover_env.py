@@ -247,7 +247,7 @@ class MARLHoverEnv(DirectMARLEnv):
         The terminations for the environment. Since all of the agents are connected by the cables,
         if 1 agent terminates, terminate all agents.
         """
-        self._compute_intermediate_values()
+        self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
 
         # crashing into ground
         falcon_fly_low = (self.drone_positions[:, :, 2] < 0.1).any(dim=-1)
@@ -311,10 +311,6 @@ class MARLHoverEnv(DirectMARLEnv):
     def _reset_target_pose(self, env_ids):
         # reset goal rotation
         pass
-
-    def _compute_intermediate_values(self):
-        # data for load
-        self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
 
     def _cable_collision(
         self,
