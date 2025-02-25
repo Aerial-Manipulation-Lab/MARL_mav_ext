@@ -138,6 +138,7 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     cable_collision_threshold = 0.2
     cable_collision_num_points = 10
     drone_collision_threshold = 0.2
+    bounding_box_threshold = 5.0
     
     # control mode
     control_mode = "geometric" # ACCBR or geometric

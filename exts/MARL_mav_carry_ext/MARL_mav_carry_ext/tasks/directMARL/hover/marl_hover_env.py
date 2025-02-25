@@ -288,8 +288,13 @@ class MARLHoverEnv(DirectMARLEnv):
         separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
         drone_collision = separation < self.cfg.drone_collision_threshold
         
+        # bounding box
+        body_pos = self.robot.data.body_com_state_w[:, self._falcon_idx, :3]
+        body_pos_env = body_pos - self.scene.env_origins.unsqueeze(1)
+        body_pos_outside = (body_pos_env.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
+        
         # reset when episode ends
-        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load | cable_collision | drone_collision
+        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load | cable_collision | drone_collision | body_pos_outside
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
