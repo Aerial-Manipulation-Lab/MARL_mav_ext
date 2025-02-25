@@ -59,7 +59,6 @@ def main():
             "video_length": args_cli.video_length,
             "disable_logger": True,
         }
-        print("[INFO] Recording videos during training.")
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
@@ -91,6 +90,8 @@ def main():
     while simulation_app.is_running():
         with torch.inference_mode():
             # step the environment
+            if count % 500 == 0:
+                env.reset()
             falcon1_geo_tensor[:, 0:3] = stretch_position[:, 0:3]
             falcon2_geo_tensor[:, 0:3] = stretch_position[:, 3:6]
             falcon3_geo_tensor[:, 0:3] = stretch_position[:, 6:9]
@@ -98,17 +99,17 @@ def main():
                       "falcon2": falcon2_geo_tensor,
                       "falcon3": falcon3_geo_tensor,}
             obs, rew, terminated, truncated, info = env.step(action)
-            # print("falcon base link pos", env._robot.data.body_com_state_w[:, ])
-            print("terminated", terminated)
-            print("truncated", truncated)
-            # if any(terminated.values()) or any(truncated.values()):
-            #     print("-" * 80)
-            #     print("[INFO]: Resetting environment...")
+            terminated = list(terminated.values())[0]
+            truncated = list(truncated.values())[0]
+            if any(terminated) or any(truncated):
+                print("-" * 80)
+                print("[INFO]: Resetting environment...")
             # update counter
 
             # if args_cli.video:
             #     if count/2 == args_cli.video_length:
             # break
+            count += 1
 
     # close the simulator
     env.close()
