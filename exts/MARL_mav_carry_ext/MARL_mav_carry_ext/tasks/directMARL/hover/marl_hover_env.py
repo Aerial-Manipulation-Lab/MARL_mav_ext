@@ -283,8 +283,7 @@ class MARLHoverEnv(DirectMARLEnv):
         cable_collision = self._cable_collision(self.cfg.cable_collision_threshold, self.cfg.cable_collision_num_points)
         
         # drones colliding
-        drone_pos_world_frame = self.robot.data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
-        rpos = get_drone_rpos(drone_pos_world_frame)
+        rpos = get_drone_rpos(self.drone_positions)
         pdist = get_drone_pdist(rpos)
         separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
         drone_collision = separation < self.cfg.drone_collision_threshold
