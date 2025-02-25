@@ -18,6 +18,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import PhysxCfg, SimulationCfg
 from isaaclab.sim.spawners.materials.physics_materials_cfg import RigidBodyMaterialCfg
 from isaaclab.utils import configclass
+from isaaclab.sensors import ContactSensorCfg
 
 
 @configclass
@@ -57,7 +58,7 @@ class EventCfg:
             "pose_range": {
                 "x": (0.0, 0.0),
                 "y": (0.0, 0.0),
-                "z": (0.0, 1.5),
+                "z": (1.5, 1.5),
                 "roll": (-0, 0),
                 "pitch": (-0, 0),
                 "yaw": (0.0, 0.0),
@@ -115,7 +116,14 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     # robot
     robot_cfg: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="/World/envs/env_.*/flycrane")
     robot_cfg.spawn.activate_contact_sensors = True
-
+    
+    # contact sensors
+    contact_forces = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
+    )
+    sensor_cfg = SceneEntityCfg("contact_forces", body_names=".*")
+    contact_sensor_threshold = 0.1
+    
     # falcon CoM names
     falcon_names = "Falcon.*_base_link_inertia"
 

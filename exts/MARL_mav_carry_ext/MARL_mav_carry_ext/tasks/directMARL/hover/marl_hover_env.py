@@ -16,6 +16,7 @@ from isaaclab.envs import DirectMARLEnv
 from isaaclab.markers import VisualizationMarkers
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from isaaclab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul, sample_uniform, saturate
+from isaaclab.sensors import ContactSensor
 
 from .marl_hover_env_cfg import MARLHoverEnvCfg
 from MARL_mav_carry_ext.controllers import GeometricController, IndiController
@@ -46,6 +47,13 @@ class MARLHoverEnv(DirectMARLEnv):
         self._setpoints = {}
         for agent in self.cfg.possible_agents:
             self._setpoints[agent] = {}
+            
+        self.drone_positions = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_orientations = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
+        self.drone_linear_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_angular_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_linear_accelerations = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_angular_accelerations = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
         # outer loop controller
         self.geo_controllers = {}
@@ -71,19 +79,19 @@ class MARLHoverEnv(DirectMARLEnv):
         self.sampling_time = self.sim.get_physics_dt() * self.cfg.low_level_decimation
 
         # termination buffers
-        self._drone_positions = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
-        self._load_position = torch.zeros(self.num_envs, 3, device=self.device)
+        self.load_position = torch.zeros(self.num_envs, 3, device=self.device)
 
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg)
-
+        contact_sensors = ContactSensor(self.cfg.contact_forces)
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
         # clone and replicate (no need to filter for this environment)
         self.scene.clone_environments(copy_from_source=False) # TODO: not sure what this does
         # add articulation to scene - we must register to scene to randomize with EventManager
         self.scene.articulations["robot"] = self.robot
+        self.scene.sensors["contact_forces"] = contact_sensors
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
@@ -120,15 +128,22 @@ class MARLHoverEnv(DirectMARLEnv):
             drone_angular_velocities = self.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 10:13]
             drone_linear_accelerations = self.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]
             drone_angular_accelerations = self.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6]
+            
+            self.drone_positions[:] = drone_positions #+ torch.randn_like(drone_positions) * self.position_noise_std
+            self.drone_orientations[:] = drone_orientations #+ torch.randn_like(drone_orientations) * self.orientation_noise_std
+            self.drone_linear_velocities[:] = drone_linear_velocities #+ torch.randn_like(drone_linear_velocities) * self.linear_velocity_noise_std
+            self.drone_angular_velocities[:] = drone_angular_velocities #+ torch.randn_like(drone_angular_velocities) * self.angular_velocity_noise_std
+            self.drone_linear_accelerations[:] = drone_linear_accelerations #+ torch.randn_like(drone_linear_accelerations) * self.linear_acceleration_noise_std
+            self.drone_angular_accelerations[:] = drone_angular_accelerations #+ torch.randn_like(drone_angular_accelerations) * self.angular_acceleration_noise_std
 
             for i in range(self._num_drones):
                 drone_states: dict = {}  # dict of tensors
-                drone_states["pos"] = drone_positions[:, i]
-                drone_states["quat"] = drone_orientations[:, i]
-                drone_states["lin_vel"] = drone_linear_velocities[:, i]
-                drone_states["ang_vel"] = drone_angular_velocities[:, i]
-                drone_states["lin_acc"] = drone_linear_accelerations[:, i]
-                drone_states["ang_acc"] = drone_angular_accelerations[:, i]
+                drone_states["pos"] = self.drone_positions[:, i]
+                drone_states["quat"] = self.drone_orientations[:, i]
+                drone_states["lin_vel"] = self.drone_linear_velocities[:, i]
+                drone_states["ang_vel"] = self.drone_angular_velocities[:, i]
+                drone_states["lin_acc"] = self.drone_linear_accelerations[:, i]
+                drone_states["ang_acc"] = self.drone_angular_accelerations[:, i]
                 # calculate current jerk and snap
                 # self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
                 # drone_states["jerk"] = self._drone_jerk[:, i]
@@ -226,22 +241,28 @@ class MARLHoverEnv(DirectMARLEnv):
                 "falcon3": pos_rew + ori_rew + action_smoothness_rew_3 + action_rew_3 + downwash_rew_3}
 
     def _get_dones(self) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+        """
+        The terminations for the environment. Since all of the agents are connected by the cables,
+        if 1 agent terminates, terminate all agents.
+        """
         self._compute_intermediate_values()
 
         # crashing into ground
-        # falcon_fly_low = self._drone_positions[:, :, 2] < 0.1
-        payload_fly_low = self._load_position[:, 2] < 0.1
-        print("payload_fly_low", payload_fly_low)
+        falcon_fly_low = (self.drone_positions[:, :, 2] < 0.1).any(dim=-1)
+        payload_fly_low = self.load_position[:, 2] < 0.1
+        
+        # illegal contact
+        contact_sensor = self.scene.sensors[self.cfg.sensor_cfg.name]
+        net_contact_forces = contact_sensor.data.net_forces_w_history
+        # check if any contact force exceeds the threshold
+        illegal_contact = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.cfg.sensor_cfg.body_ids], dim=-1), dim=1)[0] > self.cfg.contact_sensor_threshold, dim=1)
 
+        terminations = falcon_fly_low | payload_fly_low | illegal_contact
         # # reset when episode ends
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         
-
-        terminated = {agent: payload_fly_low for agent in self.cfg.possible_agents}
+        terminated = {agent: terminations for agent in self.cfg.possible_agents}
         time_outs = {agent: time_out for agent in self.cfg.possible_agents}
-        # terminated = {"falcon1": torch.tensor([False], device=self.device),
-        #                 "falcon2": torch.tensor([False], device=self.device),
-        #                 "falcon3": torch.tensor([False], device=self.device)}
 
         return terminated, time_outs
 
@@ -256,22 +277,9 @@ class MARLHoverEnv(DirectMARLEnv):
         pass
 
     def _compute_intermediate_values(self):
-        # data for falcons
-        self._drone_positions[:] = self.scene["robot"].data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
-        self._load_position[:] = self.scene["robot"].data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
+        # data for load
+        self.load_position[:] = self.scene["robot"].data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
 
-        # # data for load
-        # self.left_fingertip_pos = self.left_hand.data.body_pos_w[:, self.finger_bodies]
-        # self.left_fingertip_rot = self.left_hand.data.body_quat_w[:, self.finger_bodies]
-        # self.left_fingertip_pos -= self.scene.env_origins.repeat((1, self.num_fingertips)).reshape(
-        #     self.num_envs, self.num_fingertips, 3
-        # )
-        # self.left_fingertip_velocities = self.left_hand.data.body_vel_w[:, self.finger_bodies]
-
-        # self.left_hand_dof_pos = self.left_hand.data.joint_pos
-        # self.left_hand_dof_vel = self.left_hand.data.joint_vel
-
-        pass
 
 
 @torch.jit.script
