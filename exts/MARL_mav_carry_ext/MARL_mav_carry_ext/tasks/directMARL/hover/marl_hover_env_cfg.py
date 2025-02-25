@@ -9,6 +9,7 @@ from MARL_mav_carry_ext.assets import FLYCRANE_CFG
 
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
+import math
 from isaaclab.assets import ArticulationCfg, RigidObjectCfg
 from isaaclab.envs import DirectMARLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -132,9 +133,11 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     payload_name = "load_odometry_sensor_link"
     # rope name and termination terms
     rope_name = "rope_.*_link"
-    cable_angle_limits = 0.0 # cos(angle) limits
+    cable_angle_limits_drone = 0.0 # cos(angle) limits
+    cable_angle_limits_payload = -math.sqrt(2)/2 # cos(angle) limits
     cable_collision_threshold = 0.2
     cable_collision_num_points = 10
+    drone_collision_threshold = 0.2
     
     # control mode
     control_mode = "geometric" # ACCBR or geometric

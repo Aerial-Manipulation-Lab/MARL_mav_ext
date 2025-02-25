@@ -21,6 +21,8 @@ from isaaclab.sensors import ContactSensor
 from .marl_hover_env_cfg import MARLHoverEnvCfg
 from MARL_mav_carry_ext.controllers import GeometricController, IndiController
 from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
+from MARL_mav_carry_ext.tasks.managerbased.mdp_llc.utils import get_drone_pdist, get_drone_rpos
+
 
 
 class MARLHoverEnv(DirectMARLEnv):
@@ -266,7 +268,7 @@ class MARLHoverEnv(DirectMARLEnv):
         )  # cable angles relative to drones
         roll_drone, pitch_drone, _ = euler_xyz_from_quat(rope_orientations_drones)  # yaw can be whatever
         mapped_angle_drone = torch.stack((torch.cos(roll_drone), torch.cos(pitch_drone)), dim=1)
-        angle_limit_drone = (mapped_angle_drone < self.cfg.cable_angle_limits).any(dim=1).view(-1, 3).any(dim=1)
+        angle_limit_drone = (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, 3).any(dim=1)
         
         payload_orientation_world = self.robot.data.body_com_state_w[:, self._payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
         payload_orientation_inv = quat_inv(payload_orientation_world)
@@ -275,13 +277,20 @@ class MARLHoverEnv(DirectMARLEnv):
         )  # cable angles relative to payload
         roll_load, pitch_load, _ = euler_xyz_from_quat(rope_orientations_payload)  # yaw can be whatever
         mapped_angle_load = torch.stack((torch.cos(roll_load), torch.cos(pitch_load)), dim=1)
-        angle_limit_load = (mapped_angle_load < self.cfg.cable_angle_limits).any(dim=1).view(-1, 3).any(dim=1)
+        angle_limit_load = (mapped_angle_load < self.cfg.cable_angle_limits_payload).any(dim=1).view(-1, 3).any(dim=1)
         
         # cables colliding
         cable_collision = self._cable_collision(self.cfg.cable_collision_threshold, self.cfg.cable_collision_num_points)
         
+        # drones colliding
+        drone_pos_world_frame = self.robot.data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
+        rpos = get_drone_rpos(drone_pos_world_frame)
+        pdist = get_drone_pdist(rpos)
+        separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
+        drone_collision = separation < self.cfg.drone_collision_threshold
+        
         # reset when episode ends
-        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load | cable_collision
+        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load | cable_collision | drone_collision
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
