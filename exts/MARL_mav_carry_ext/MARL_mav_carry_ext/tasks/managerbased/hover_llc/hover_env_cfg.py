@@ -239,10 +239,10 @@ class TerminationsCfg:
     )
 
     angle_drones_cable = DoneTerm(
-        func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.05}
+        func=mdp.cable_angle_drones_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0}
     )
     angle_load_cable = DoneTerm(
-        func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.0}
+        func=mdp.cable_angle_payload_cos, params={"asset_cfg": SceneEntityCfg("robot"), "threshold": -math.sqrt(2)/2}
     )
 
     cables_collide = DoneTerm(

@@ -157,7 +157,7 @@ def drone_collision(
 ) -> torch.Tensor:
     """Terminate when the drones collide."""
     robot = env.scene[asset_cfg.name]
-    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3]
+    drone_pos_world_frame = robot.data.body_com_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
     rpos = get_drone_rpos(drone_pos_world_frame)
     pdist = get_drone_pdist(rpos)
     separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
