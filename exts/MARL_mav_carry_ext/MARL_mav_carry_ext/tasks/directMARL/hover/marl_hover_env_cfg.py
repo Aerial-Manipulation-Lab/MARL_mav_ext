@@ -14,7 +14,8 @@ from isaaclab.assets import ArticulationCfg, RigidObjectCfg
 from isaaclab.envs import DirectMARLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.markers import VisualizationMarkersCfg
+from isaaclab.markers.config import FRAME_MARKER_CFG
+
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import PhysxCfg, SimulationCfg
 from isaaclab.sim.spawners.materials.physics_materials_cfg import RigidBodyMaterialCfg
@@ -154,7 +155,6 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
         "yaw": (-math.pi, math.pi),
     }
     make_quat_unique_command = False
-    # goal object TODO: make this a frame
     # goal_object_cfg: VisualizationMarkersCfg = VisualizationMarkersCfg(
     #     prim_path="/Visuals/goal_marker",
     #     markers={
@@ -164,8 +164,20 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     #         ),
     #     },
     # )
-    # scene
+    
+    # debug visualization
+    debug_vis : bool = True
+    if debug_vis:
+        marker_cfg_goal = FRAME_MARKER_CFG.copy()
+        marker_cfg_goal.markers["frame"].scale = (0.1, 0.1, 0.1)
+        marker_cfg_goal.prim_path = "/Visuals/Command/goal_pose"
+        
+        marker_cfg_body = FRAME_MARKER_CFG.copy()
+        marker_cfg_body.markers["frame"].scale = (0.1, 0.1, 0.1)
+        marker_cfg_body.prim_path = "/Visuals/Command/body_pose"
 
+    
+    # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
 
     events = EventCfg()

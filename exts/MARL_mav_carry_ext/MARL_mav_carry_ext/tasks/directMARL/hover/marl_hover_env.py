@@ -94,6 +94,8 @@ class MARLHoverEnv(DirectMARLEnv):
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
 
+        # debug vis
+        self.set_debug_vis(cfg.debug_vis) 
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg)
@@ -432,6 +434,30 @@ class MARLHoverEnv(DirectMARLEnv):
 
         assert is_cable_collision.shape == (self.num_envs,)
         return is_cable_collision
+    
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        if not hasattr(self, "goal_pose_visualizer"):
+            # -- goal pose
+            self.goal_pose_visualizer = VisualizationMarkers(self.cfg.marker_cfg_goal)
+            # -- current body pose
+            self.body_pose_visualizer = VisualizationMarkers(self.cfg.marker_cfg_body)
+            # set their visibility to true
+            self.goal_pose_visualizer.set_visibility(True)
+            self.body_pose_visualizer.set_visibility(True)
+        else:
+            if hasattr(self, "goal_pose_visualizer"):
+                self.goal_pose_visualizer.set_visibility(False)
+                self.body_pose_visualizer.set_visibility(False)
+                
+    def _debug_vis_callback(self, event):
+        if not self.robot.is_initialized:
+            return
+        # update the markers
+        # -- goal pose
+        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3] + self.scene.env_origins, self.pose_command_w[:, 3:])
+
+        # -- current body pose
+        self.body_pose_visualizer.visualize(self.load_position + self.scene.env_origins, self.load_orientation)
 
 @torch.jit.script
 def scale(x, lower, upper):
