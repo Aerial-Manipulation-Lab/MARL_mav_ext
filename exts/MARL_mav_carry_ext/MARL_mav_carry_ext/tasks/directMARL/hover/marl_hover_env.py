@@ -15,7 +15,7 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.envs import DirectMARLEnv
 from isaaclab.markers import VisualizationMarkers
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
-from isaaclab.utils.math import quat_conjugate, quat_from_angle_axis, quat_mul, sample_uniform, saturate, euler_xyz_from_quat, quat_inv
+from isaaclab.utils.math import sample_uniform, quat_from_angle_axis, quat_mul, compute_pose_error, quat_from_euler_xyz, euler_xyz_from_quat, quat_inv, quat_unique, matrix_from_quat
 from isaaclab.sensors import ContactSensor
 
 from .marl_hover_env_cfg import MARLHoverEnvCfg
@@ -80,8 +80,19 @@ class MARLHoverEnv(DirectMARLEnv):
             self.motor_models[i] = RotorMotor(self.num_envs, initial_rpms[i])
         self.sampling_time = self.sim.get_physics_dt() * self.cfg.low_level_decimation
 
-        # termination buffers
+        # load buffers
         self.load_position = torch.zeros(self.num_envs, 3, device=self.device)
+        self.load_orientation = torch.zeros(self.num_envs, 4, device=self.device)
+        
+        # Goal terms
+        # # goal buffers
+        self.pose_command_w = torch.zeros(self.num_envs, 7, device=self.device)
+        self.pose_command_w[:, 3] = 1.0
+        
+        # # -- metrics
+        self.metrics = {}
+        self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
 
 
     def _setup_scene(self):
@@ -206,9 +217,38 @@ class MARLHoverEnv(DirectMARLEnv):
         return observations
 
     def _get_states(self) -> torch.Tensor:
+        
+        # Load terms
+        # load pos and orientation are updated in get_dones
+        current_load_matrix = matrix_from_quat(self.load_orientation)
+        load_vel = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10]
+        load_ang_vel = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13]
+        
+        # drone terms are updated in _apply_action
+        drone_rot_matrices = matrix_from_quat(self.drone_orientations)
+        
+        # goal terms
+        positional_error = self.pose_command_w[:, :3] - self.load_position
+        goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
+        difference_matrix = torch.matmul(goal_load_matrix, current_load_matrix.transpose(1, 2)).view(self.num_envs, -1)
+
         states = torch.cat(
             (
-                torch.tensor([0.0], device=self.device),
+                # load terms
+                self.load_position,
+                self.current_load_matrix,
+                load_vel,
+                load_ang_vel,
+                
+                # drone terms
+                self.drone_positions.view(self.num_envs, -1),
+                drone_rot_matrices.view(self.num_envs, -1),
+                self.drone_linear_velocities.view(self.num_envs, -1),
+                self.drone_angular_velocities.view(self.num_envs, -1),
+                
+                # goal terms
+                positional_error,
+                difference_matrix,
             ),
             dim=-1,
         )
@@ -231,6 +271,9 @@ class MARLHoverEnv(DirectMARLEnv):
         action_smoothness_rew_3 = torch.tensor([0.0], device=self.device)
         action_rew_3 = torch.tensor([0.0], device=self.device)
         downwash_rew_3 = torch.tensor([0.0], device=self.device)
+
+        # update metrics
+        self._update_metrics()
 
         # log reward components
         if "log" not in self.extras:
@@ -270,7 +313,8 @@ class MARLHoverEnv(DirectMARLEnv):
         mapped_angle_drone = torch.stack((torch.cos(roll_drone), torch.cos(pitch_drone)), dim=1)
         angle_limit_drone = (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, 3).any(dim=1)
         
-        payload_orientation_world = self.robot.data.body_com_state_w[:, self._payload_idx, 3:7].repeat(1, 3, 1).view(-1, 4)
+        self.load_orientation[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 3:7].squeeze(1)
+        payload_orientation_world = self.load_orientation.repeat(1, 3, 1).view(-1, 4)
         payload_orientation_inv = quat_inv(payload_orientation_world)
         rope_orientations_payload = quat_mul(
             payload_orientation_inv, rope_orientations_world
@@ -289,9 +333,7 @@ class MARLHoverEnv(DirectMARLEnv):
         drone_collision = separation < self.cfg.drone_collision_threshold
         
         # bounding box
-        body_pos = self.robot.data.body_com_state_w[:, self._falcon_idx, :3]
-        body_pos_env = body_pos - self.scene.env_origins.unsqueeze(1)
-        body_pos_outside = (body_pos_env.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
+        body_pos_outside = (self.drone_positions.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
         
         # reset when episode ends
         terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load | cable_collision | drone_collision | body_pos_outside
@@ -302,15 +344,37 @@ class MARLHoverEnv(DirectMARLEnv):
 
         return terminated, time_outs
 
-    # def _reset_idx(self, env_ids: Sequence[int] | torch.Tensor | None):
-    #     if env_ids is None:
-    #         env_ids = self.robot._ALL_INDICES
-    #     # reset articulation and rigid body attributes
-    #     super()._reset_idx(env_ids)
+    def _reset_idx(self, env_ids: Sequence[int] | torch.Tensor | None):
+        if env_ids is None:
+            env_ids = self.robot._ALL_INDICES
+        # reset articulation and rigid body attributes
+        super()._reset_idx(env_ids)
+        self._reset_target_pose(env_ids)
 
     def _reset_target_pose(self, env_ids):
         # reset goal rotation
-        pass
+        r = torch.empty(len(env_ids), device=self.device)
+        self.pose_command_w[env_ids, 0] = r.uniform_(*self.cfg.goal_range["pos_x"])
+        self.pose_command_w[env_ids, 1] = r.uniform_(*self.cfg.goal_range["pos_y"])
+        self.pose_command_w[env_ids, 2] = r.uniform_(*self.cfg.goal_range["pos_z"])
+        # -- orientation
+        euler_angles = torch.zeros_like(self.pose_command_w[env_ids, :3])
+        euler_angles[:, 0].uniform_(*self.cfg.goal_range["roll"])
+        euler_angles[:, 1].uniform_(*self.cfg.goal_range["pitch"])
+        euler_angles[:, 2].uniform_(*self.cfg.goal_range["yaw"])
+        quat = quat_from_euler_xyz(euler_angles[:, 0], euler_angles[:, 1], euler_angles[:, 2])
+        # make sure the quaternion has real part as positive
+        self.pose_command_w[env_ids, 3:] = quat_unique(quat) if self.cfg.make_quat_unique_command else quat
+    
+    def _update_metrics(self):
+        pos_error, rot_error = compute_pose_error(
+            self.pose_command_w[:, :3],
+            self.pose_command_w[:, 3:],
+            self.load_position,
+            self.load_orientation,
+        )
+        self.metrics["position_error"] = torch.norm(pos_error, dim=-1)
+        self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
 
     def _cable_collision(
         self,

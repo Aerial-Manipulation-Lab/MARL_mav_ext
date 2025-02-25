@@ -144,6 +144,16 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     control_mode = "geometric" # ACCBR or geometric
     low_level_decimation : int =  1
 
+    # goal terms
+    goal_range = {
+        "pos_x": (-2.0, 2.0),
+        "pos_y": (-2.0, 2.0),
+        "pos_z": (0.5, 2.5),
+        "roll": (-math.pi/4, math.pi/4),
+        "pitch": (-math.pi/4, math.pi/4),
+        "yaw": (-math.pi, math.pi),
+    }
+    make_quat_unique_command = False
     # goal object TODO: make this a frame
     # goal_object_cfg: VisualizationMarkersCfg = VisualizationMarkersCfg(
     #     prim_path="/Visuals/goal_marker",
