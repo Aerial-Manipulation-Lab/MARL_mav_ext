@@ -52,6 +52,7 @@ class MARLHoverEnv(DirectMARLEnv):
             
         self.drone_positions = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_orientations = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
+        self.drone_rot_matrices = torch.zeros(self.num_envs, self._num_drones, 3, 3, device=self.device)
         self.drone_linear_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_angular_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_linear_accelerations = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
@@ -83,11 +84,17 @@ class MARLHoverEnv(DirectMARLEnv):
         # load buffers
         self.load_position = torch.zeros(self.num_envs, 3, device=self.device)
         self.load_orientation = torch.zeros(self.num_envs, 4, device=self.device)
+        self.current_load_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
+        self.load_vel = torch.zeros(self.num_envs, 3, device=self.device)
+        self.load_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
         
         # Goal terms
         # # goal buffers
         self.pose_command_w = torch.zeros(self.num_envs, 7, device=self.device)
         self.pose_command_w[:, 3] = 1.0
+        
+        self.goal_pos_error = torch.zeros(self.num_envs, 3, device=self.device)
+        self.difference_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
         
         # # -- metrics
         self.metrics = {}
@@ -196,22 +203,104 @@ class MARLHoverEnv(DirectMARLEnv):
         )
 
     def _get_observations(self) -> dict[str, torch.Tensor]:
+        
+        # local observations include: 
+        # load state
+        # ego-drone drone
+        # other-drone_states
+        # goal terms
+
+        self.current_load_matrix[:] = matrix_from_quat(self.load_orientation)
+        self.drone_rot_matrices[:] = matrix_from_quat(self.drone_orientations)
+        self.load_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10]
+        self.load_ang_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13]
+        
+        self.goal_pos_error[:] = self.pose_command_w[:, :3] - self.load_position
+        goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
+        self.difference_matrix[:] = torch.matmul(goal_load_matrix, self.current_load_matrix.transpose(1, 2))
+
         observations = {
             "falcon1": torch.cat(
                 (
-                    torch.tensor([0.0], device=self.device),
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    self.load_vel,
+                    self.load_ang_vel,
+                    
+                    self.drone_positions[:, 0],
+                    self.drone_positions[:, 1],
+                    self.drone_positions[:, 2],
+                    
+                    self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
+                    
+                    self.drone_linear_velocities[:, 0],
+                    self.drone_linear_velocities[:, 1],
+                    self.drone_linear_velocities[:, 2],
+                    
+                    self.drone_angular_velocities[:, 0],
+                    self.drone_angular_velocities[:, 1],
+                    self.drone_angular_velocities[:, 2],
+                    
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
                 ),
                 dim=-1,
             ),
             "falcon2": torch.cat(
                 (
-                   torch.tensor([0.0], device=self.device),
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    self.load_vel,
+                    self.load_ang_vel,
+                    
+                    self.drone_positions[:, 1],
+                    self.drone_positions[:, 2],
+                    self.drone_positions[:, 0],
+                    
+                    self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
+                    
+                    self.drone_linear_velocities[:, 1],
+                    self.drone_linear_velocities[:, 2],
+                    self.drone_linear_velocities[:, 0],
+                    
+                    self.drone_angular_velocities[:, 1],
+                    self.drone_angular_velocities[:, 2],
+                    self.drone_angular_velocities[:, 0],
+                    
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
                 ),
                 dim=-1,
             ),
             "falcon3": torch.cat(
                 (
-                    torch.tensor([0.0], device=self.device),
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    self.load_vel,
+                    self.load_ang_vel,
+                    
+                    self.drone_positions[:, 2],
+                    self.drone_positions[:, 0],
+                    self.drone_positions[:, 1],
+                    
+                    self.drone_rot_matrices[:, 2].view(self.num_envs, -1),  
+                    self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
+                    
+                    self.drone_linear_velocities[:, 2],
+                    self.drone_linear_velocities[:, 0],
+                    self.drone_linear_velocities[:, 1],
+                    
+                    self.drone_angular_velocities[:, 2],
+                    self.drone_angular_velocities[:, 0],
+                    self.drone_angular_velocities[:, 1],
+                    
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1)
                 ),
                 dim=-1,
             ),
@@ -220,37 +309,23 @@ class MARLHoverEnv(DirectMARLEnv):
 
     def _get_states(self) -> torch.Tensor:
         
-        # Load terms
-        # load pos and orientation are updated in get_dones
-        current_load_matrix = matrix_from_quat(self.load_orientation)
-        load_vel = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10]
-        load_ang_vel = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13]
-        
-        # drone terms are updated in _apply_action
-        drone_rot_matrices = matrix_from_quat(self.drone_orientations)
-        
-        # goal terms
-        positional_error = self.pose_command_w[:, :3] - self.load_position
-        goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
-        difference_matrix = torch.matmul(goal_load_matrix, current_load_matrix.transpose(1, 2)).view(self.num_envs, -1)
-
         states = torch.cat(
             (
                 # load terms
                 self.load_position,
-                self.current_load_matrix,
-                load_vel,
-                load_ang_vel,
+                self.current_load_matrix.view(self.num_envs, -1),
+                self.load_vel,
+                self.load_ang_vel,
                 
                 # drone terms
                 self.drone_positions.view(self.num_envs, -1),
-                drone_rot_matrices.view(self.num_envs, -1),
+                self.drone_rot_matrices.view(self.num_envs, -1),
                 self.drone_linear_velocities.view(self.num_envs, -1),
                 self.drone_angular_velocities.view(self.num_envs, -1),
                 
                 # goal terms
-                positional_error,
-                difference_matrix,
+                self.goal_pos_error,
+                self.difference_matrix.view(self.num_envs, -1),
             ),
             dim=-1,
         )
