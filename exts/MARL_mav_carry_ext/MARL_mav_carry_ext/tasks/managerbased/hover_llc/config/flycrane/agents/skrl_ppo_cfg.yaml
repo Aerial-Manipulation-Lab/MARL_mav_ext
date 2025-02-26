@@ -15,10 +15,8 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [512, 256, 128]
+        layers: [1024, 1024, 512, 256, 128]
         activations:
-        - elu
-        - elu
         - elu
 
     output: ACTIONS
@@ -28,7 +26,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [512, 256, 128]
+        layers: [1024, 1024, 512, 256, 128]
         activations: elu
     output: ONE
 
@@ -71,7 +69,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "realistic_flycrane_hover"
-    experiment_name: "insert_name"
+    experiment_name: "bigbigNN_curr"
     write_interval: 100
     checkpoint_interval: 2500
 
@@ -84,5 +82,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 100000
+  timesteps: 200000
   environment_info: log
