@@ -98,11 +98,16 @@ class EventCfg:
 
 @configclass
 class MARLHoverEnvCfg(DirectMARLEnvCfg):
+    # control mode
+    control_mode = "geometric" # ACCBR or geometric
     # env
     decimation = 3
     episode_length_s = 20
     possible_agents = ["falcon1", "falcon2", "falcon3"]
-    action_spaces = {"falcon1": 5, "falcon2": 5, "falcon3": 5}
+    if control_mode == "geometric":
+        action_spaces = {"falcon1": 12, "falcon2": 12, "falcon3": 12}
+    elif control_mode == "ACCBR":
+        action_spaces = {"falcon1": 5, "falcon2": 5, "falcon3": 5}
     # start with full observability: own state 18 + other drones 18 * 2 + payload 18 + goal terms 12 = 84
     observation_spaces = {"falcon1": 84, "falcon2": 84, "falcon3": 84}
     state_space = 84
@@ -140,10 +145,10 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     cable_collision_num_points = 10
     drone_collision_threshold = 0.2
     bounding_box_threshold = 5.0
-    
-    # control mode
-    control_mode = "geometric" # ACCBR or geometric
+
+    # low level control
     low_level_decimation : int =  1
+    max_thrust_pp = 6.25 # N
 
     # goal terms
     goal_range = {

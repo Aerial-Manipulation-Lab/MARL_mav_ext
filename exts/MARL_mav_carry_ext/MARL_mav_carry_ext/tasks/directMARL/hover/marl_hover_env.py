@@ -15,8 +15,9 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.envs import DirectMARLEnv
 from isaaclab.markers import VisualizationMarkers
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
-from isaaclab.utils.math import sample_uniform, quat_from_angle_axis, quat_mul, compute_pose_error, quat_from_euler_xyz, euler_xyz_from_quat, quat_inv, quat_unique, matrix_from_quat
+from isaaclab.utils.math import sample_uniform, quat_from_angle_axis, quat_mul, compute_pose_error, quat_from_euler_xyz, euler_xyz_from_quat, quat_inv, quat_unique, matrix_from_quat, quat_error_magnitude, quat_rotate
 from isaaclab.sensors import ContactSensor
+import copy
 
 from .marl_hover_env_cfg import MARLHoverEnvCfg
 from MARL_mav_carry_ext.controllers import GeometricController, IndiController
@@ -44,7 +45,6 @@ class MARLHoverEnv(DirectMARLEnv):
         # action buffers
         # buffers
         self._forces = torch.zeros(self.num_envs, len(self._falcon_rotor_idx), 3, device=self.device)
-        self._prev_forces = torch.zeros(self.num_envs, len(self._falcon_rotor_idx), 3, device=self.device)
         self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
         self._setpoints = {}
         for agent in self.cfg.possible_agents:
@@ -87,6 +87,8 @@ class MARLHoverEnv(DirectMARLEnv):
         self.current_load_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
         self.load_vel = torch.zeros(self.num_envs, 3, device=self.device)
         self.load_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
+        self.load_length_x = torch.tensor([[0.275, 0, 0]] * self.num_envs, device=self.device)
+        self.load_length_y = torch.tensor([[0, 0.275, 0]] * self.num_envs, device=self.device)
         
         # Goal terms
         # # goal buffers
@@ -119,8 +121,8 @@ class MARLHoverEnv(DirectMARLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: dict[str, torch.Tensor]) -> None:
+        self.prev_actions = copy.deepcopy(self.actions)
         self.actions = actions
-        self._prev_forces = self._forces.clone()
         for drone, action in actions.items():
 
             if self._control_mode == "geometric":
@@ -210,10 +212,16 @@ class MARLHoverEnv(DirectMARLEnv):
         # other-drone_states
         # goal terms
 
+        self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
         self.current_load_matrix[:] = matrix_from_quat(self.load_orientation)
-        self.drone_rot_matrices[:] = matrix_from_quat(self.drone_orientations)
         self.load_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10].squeeze(1)
         self.load_ang_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13].squeeze(1)
+        
+        self.drone_positions[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
+        self.drone_orientations[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, 3:7]
+        self.drone_rot_matrices[:] = matrix_from_quat(self.drone_orientations)
+        self.drone_linear_velocities[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, 7:10]
+        self.drone_angular_velocities[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, 10:13]
         
         self.goal_pos_error[:] = self.pose_command_w[:, :3] - self.load_position
         goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
@@ -332,35 +340,49 @@ class MARLHoverEnv(DirectMARLEnv):
         return states
 
     def _get_rewards(self) -> dict[str, torch.Tensor]:
-        # global rewards
-        pos_rew = torch.tensor([0.0], device=self.device)
-        ori_rew = torch.tensor([0.0], device=self.device)
+        # pos reward
+        goal_pos_error_norm = torch.norm(self.pose_command_w[:, :3] - self.load_position, dim=-1)
+        reward_distance_scale = 1.5
+        reward_position = torch.exp(-goal_pos_error_norm * reward_distance_scale)
+        
+        # orientation reward
+        orientation_error = quat_error_magnitude(self.pose_command_w[:, 3:7], self.load_orientation)
+        reward_distance_scale = 1.5
+        reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
 
-        # rewards per drone
-        action_smoothness_rew_1 = torch.tensor([0.0], device=self.device)
-        action_rew_1 = torch.tensor([0.0], device=self.device)
-        downwash_rew_1 = torch.tensor([0.0], device=self.device)
-
-        action_smoothness_rew_2 = torch.tensor([0.0], device=self.device)
-        action_rew_2 = torch.tensor([0.0], device=self.device)
-        downwash_rew_2 = torch.tensor([0.0], device=self.device)
-
-        action_smoothness_rew_3 = torch.tensor([0.0], device=self.device)
-        action_rew_3 = torch.tensor([0.0], device=self.device)
-        downwash_rew_3 = torch.tensor([0.0], device=self.device)
-
+        # action smoothness reward
+        current_actions = torch.cat([self.actions[agent] for agent in self.cfg.possible_agents], dim=-1)
+        action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
+        diff_action = ((current_actions - action_prev).square())/self._num_drones
+        reward_action_smoothness = torch.exp(-diff_action.sum(dim=-1))
+        
+        # force penalty
+        normalized_forces = self._forces[..., 2] / self.cfg.max_thrust_pp
+        effort_sum = torch.max(normalized_forces, dim=-1)[0]
+        reward_effort = torch.exp(-effort_sum)
+        
+        # downwash reward
+        reward_downwash = self._downwash_reward()
+        
         # update metrics
         self._update_metrics()
 
         # log reward components
         if "log" not in self.extras:
             self.extras["log"] = dict()
-        # self.extras["log"]["dist_reward"] = rew_dist.mean()
-        # self.extras["log"]["dist_goal"] = goal_dist.mean()
+        self.extras["log"]["Episode_Reward/pos_reward"] = reward_position.mean()
+        self.extras["log"]["Episode_Reward/ori_reward"] = reward_orientation.mean()
+        self.extras["log"]["Episode_Reward/action_smoothness"] = reward_action_smoothness.mean()
+        self.extras["log"]["Episode_Reward/force_penalty"] = reward_effort.mean()
+        self.extras["log"]["Episode_Reward/downwash_reward"] = reward_downwash.mean()
+        
+        # log metrics
+        self.extras["log"]["Metrics/pose_command/position_error"] = self.metrics["position_error"]
+        self.extras["log"]["Metrics/pose_command/orientation_error"] = self.metrics["orientation_error"]
+        
+        shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_effort + reward_downwash
 
-        return {"falcon1": pos_rew + ori_rew + action_smoothness_rew_1 + action_rew_1 + downwash_rew_1, 
-                "falcon2": pos_rew + ori_rew + action_smoothness_rew_2 + action_rew_2 + downwash_rew_2,
-                "falcon3": pos_rew + ori_rew + action_smoothness_rew_3 + action_rew_3 + downwash_rew_3}
+        return {agent: shared_rewards for agent in self.cfg.possible_agents}
 
     def _get_dones(self) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         """
@@ -509,6 +531,40 @@ class MARLHoverEnv(DirectMARLEnv):
 
         assert is_cable_collision.shape == (self.num_envs,)
         return is_cable_collision
+    
+    def _downwash_reward(self):
+        # Plane equation for the payload
+        x_len_payload_env = quat_rotate(self.load_orientation, self.load_length_x)
+        y_len_payload_env = quat_rotate(self.load_orientation, self.load_length_y)
+        edge_payload_x = self.load_position + x_len_payload_env
+        edge_payload_y = self.load_position + y_len_payload_env
+        plane_vec1 = edge_payload_x - self.load_position
+        plane_vec2 = edge_payload_y - self.load_position
+        normal = torch.linalg.cross(plane_vec1, plane_vec2)
+        d = torch.sum(normal * self.load_position, dim=-1).unsqueeze(-1).unsqueeze(-1)  # Shape (num_envs, 1, 1)
+
+        # Line equations for each drone's thrust direction
+        thrust_directions = quat_rotate(
+            self.drone_orientations.view(-1,4), torch.tensor([[0, 0, 1.0]] * self.num_envs * self._num_drones, device=self.device)
+        ).view(self.num_envs, self._num_drones, 3)
+
+        # Calculate intersection points with the plane
+        # t = (d - normal * drone_pos) / (normal * thrust_direction)
+        numerator = d - torch.sum(normal.unsqueeze(1) * self.drone_positions, dim=-1, keepdim=True)
+        denominator = (
+            torch.sum(normal.unsqueeze(1) * thrust_directions, dim=-1, keepdim=True) + 1e-6
+        )  # Avoid division by zero
+        t = numerator / denominator
+
+        # Intersection points on the plane for each drone
+        line_point_proj = self.drone_positions + t * thrust_directions  # Shape (num_envs, num_drones, 3)
+
+        # Calculate distance between intersection points and payload position
+        line_dist = torch.norm(line_point_proj - self.load_position.unsqueeze(1), dim=-1)  # Shape (num_envs, num_drones)
+        # Reward: penalize based on distance from the intersection point to the payload position
+        scaling_factor = 3
+        reward_downwash = (1 - torch.exp(-torch.min(line_dist, dim=-1).values * scaling_factor))  # Min distance from the payload    
+        return reward_downwash
     
     def _set_debug_vis_impl(self, debug_vis: bool):
         if not hasattr(self, "goal_pose_visualizer"):
