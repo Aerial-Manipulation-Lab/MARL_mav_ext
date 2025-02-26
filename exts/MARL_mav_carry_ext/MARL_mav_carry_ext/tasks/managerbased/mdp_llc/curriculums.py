@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 import torch
+import MARL_mav_carry_ext.tasks.managerbased.mdp_llc as mdp
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -51,3 +52,21 @@ def modify_obstacle_position(
             term_cfg.params["pose_range"]["y"] = tuple(y_range)
 
     return torch.tensor([term_cfg.params["pose_range"]["y"][1]], dtype=torch.float32)
+
+def modify_command_range(env: ManagerBasedRLEnv, env_ids: Sequence[int], term_name: str, 
+                        range: mdp.UniformPoseCommandGlobalCfg.Ranges, num_steps: int):
+    """Curriculum that modifies the command range given a number of steps.
+
+    Args:
+        env: The learning environment.
+        env_ids: Not used since all environments are affected.
+        term_name: The name of the term to be modified.
+        range: The new range to be applied.
+        num_steps: The number of steps after which the change should be applied.
+    """
+    if env.common_step_counter > num_steps:
+        print("changing range")
+        # obtain term settings
+        term_cfg = env.command_manager.get_term(term_name).cfg
+        # update term settings
+        term_cfg.ranges = range
