@@ -379,8 +379,8 @@ class MARLHoverEnv(DirectMARLEnv):
         self.extras["log"]["Episode_Reward/downwash_reward"] = reward_downwash.mean()
         
         # log metrics
-        self.extras["log"]["Metrics/pose_command/position_error"] = self.metrics["position_error"]
-        self.extras["log"]["Metrics/pose_command/orientation_error"] = self.metrics["orientation_error"]
+        for metric_name, metric_value in self.metrics.items():
+                self.extras[f"Metrics/pose_command/{metric_name}"] = metric_value
         
         shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_effort + reward_downwash
 
