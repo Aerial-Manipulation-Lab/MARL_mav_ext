@@ -52,6 +52,7 @@ class MARLHoverEnv(DirectMARLEnv):
             
         self.drone_positions = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_orientations = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
+        self.drone_orientations[..., 0] = 1.0
         self.drone_rot_matrices = torch.zeros(self.num_envs, self._num_drones, 3, 3, device=self.device)
         self.drone_linear_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_angular_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
@@ -84,6 +85,7 @@ class MARLHoverEnv(DirectMARLEnv):
         # load buffers
         self.load_position = torch.zeros(self.num_envs, 3, device=self.device)
         self.load_orientation = torch.zeros(self.num_envs, 4, device=self.device)
+        self.load_orientation[:, 0] = 1.0
         self.current_load_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
         self.load_vel = torch.zeros(self.num_envs, 3, device=self.device)
         self.load_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
@@ -213,7 +215,9 @@ class MARLHoverEnv(DirectMARLEnv):
         # goal terms
 
         self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
+        print("self load orientation", self.load_orientation)
         self.current_load_matrix[:] = matrix_from_quat(self.load_orientation)
+        print("self current load matrix", self.current_load_matrix)
         self.load_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10].squeeze(1)
         self.load_ang_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13].squeeze(1)
         
