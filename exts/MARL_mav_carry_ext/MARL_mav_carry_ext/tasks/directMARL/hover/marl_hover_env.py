@@ -9,6 +9,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 from collections.abc import Sequence
+import math
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation, RigidObject
@@ -475,8 +476,16 @@ class MARLHoverEnv(DirectMARLEnv):
         self.extras["log"]["Episode_Termination/payload_fly_low"] = torch.count_nonzero(self.payload_fly_low[env_ids]).item()
         self.extras["log"]["Episode_Termination/illegal_contact"] = torch.count_nonzero(self.illegal_contact[env_ids]).item()
         self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
-        
-        
+    
+        if self.common_step_counter > self.cfg.range_curriculum_steps:
+            self.cfg.goal_range ={
+            "pos_x": (-2.0, 2.0),
+            "pos_y": (-2.0, 2.0),
+            "pos_z": (0.5, 2.5),
+            "roll": (-math.pi/4, math.pi/4),
+            "pitch": (-math.pi/4, math.pi/4),
+            "yaw": (-math.pi, math.pi),
+        }
 
     def _reset_target_pose(self, env_ids):
         # reset goal rotation

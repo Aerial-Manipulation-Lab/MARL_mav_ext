@@ -30,40 +30,17 @@ class EventCfg:
     Resetting states on resets, disturbances, etc.
     """
 
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (-1.0, 1.0),
-    #             "y": (-1.0, 1.0),
-    #             "z": (0.5, 1.5),
-    #             "roll": (-0, 0),
-    #             "pitch": (-0, 0),
-    #             "yaw": (-math.pi, math.pi),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (-0.0, 0.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #     },
-    # )
-
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
             "pose_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (1.5, 1.5),
+                "x": (-1.0, 1.0),
+                "y": (-1.0, 1.0),
+                "z": (0.5, 1.5),
                 "roll": (-0, 0),
                 "pitch": (-0, 0),
-                "yaw": (0.0, 0.0),
+                "yaw": (-math.pi, math.pi),
             },
             "velocity_range": {
                 "x": (-0.0, 0.0),
@@ -75,6 +52,29 @@ class EventCfg:
             },
         },
     )
+
+    # reset_base = EventTerm(
+    #     func=mdp.reset_root_state_uniform,
+    #     mode="reset",
+    #     params={
+    #         "pose_range": {
+    #             "x": (0.0, 0.0),
+    #             "y": (0.0, 0.0),
+    #             "z": (1.5, 1.5),
+    #             "roll": (-0, 0),
+    #             "pitch": (-0, 0),
+    #             "yaw": (0.0, 0.0),
+    #         },
+    #         "velocity_range": {
+    #             "x": (-0.0, 0.0),
+    #             "y": (-0.0, 0.0),
+    #             "z": (-0.0, 0.0),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (-0.0, 0.0),
+    #         },
+    #     },
+    # )
 
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
@@ -159,13 +159,15 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
 
     # goal terms
     goal_range = {
-        "pos_x": (-2.0, 2.0),
-        "pos_y": (-2.0, 2.0),
-        "pos_z": (0.5, 2.5),
+        "pos_x": (-1.0, 1.0),
+        "pos_y": (-1.0, 1.0),
+        "pos_z": (0.5, 1.5),
         "roll": (-math.pi/4, math.pi/4),
         "pitch": (-math.pi/4, math.pi/4),
         "yaw": (-math.pi, math.pi),
     }
+    range_curriculum_steps = 7500
+
     make_quat_unique_command = False
     # goal_object_cfg: VisualizationMarkersCfg = VisualizationMarkersCfg(
     #     prim_path="/Visuals/goal_marker",
