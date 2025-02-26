@@ -150,6 +150,13 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     low_level_decimation : int =  1
     max_thrust_pp = 6.25 # N
 
+    # rewards
+    pos_track_weight = 1.5
+    ori_track_weight = 1.5
+    action_smoothness_weight = 0.5
+    force_penalty_weight = 0.5
+    downwash_rew_weight = 0.5
+
     # goal terms
     goal_range = {
         "pos_x": (-2.0, 2.0),

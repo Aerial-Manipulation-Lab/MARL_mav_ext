@@ -356,26 +356,26 @@ class MARLHoverEnv(DirectMARLEnv):
         # pos reward
         goal_pos_error_norm = torch.norm(self.pose_command_w[:, :3] - self.load_position, dim=-1)
         reward_distance_scale = 1.5
-        reward_position = torch.exp(-goal_pos_error_norm * reward_distance_scale)
+        reward_position = self.cfg.pos_track_weight * torch.exp(-goal_pos_error_norm * reward_distance_scale)
         
         # orientation reward
         orientation_error = quat_error_magnitude(self.pose_command_w[:, 3:7], self.load_orientation)
         reward_distance_scale = 1.5
-        reward_orientation = torch.exp(-orientation_error * reward_distance_scale)
+        reward_orientation = self.cfg.ori_track_weight * torch.exp(-orientation_error * reward_distance_scale)
 
         # action smoothness reward
         current_actions = torch.cat([self.actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         diff_action = ((current_actions - action_prev).square())/self._num_drones
-        reward_action_smoothness = torch.exp(-diff_action.sum(dim=-1))
+        reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-diff_action.sum(dim=-1))
         
         # force penalty
         normalized_forces = self._forces[..., 2] / self.cfg.max_thrust_pp
         effort_sum = torch.max(normalized_forces, dim=-1)[0]
-        reward_effort = torch.exp(-effort_sum)
+        reward_effort = self.cfg.force_penalty_weight * torch.exp(-effort_sum)
         
         # downwash reward
-        reward_downwash = self._downwash_reward()
+        reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward()
         
         # update metrics
         self._update_metrics()
