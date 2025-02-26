@@ -212,8 +212,8 @@ class MARLHoverEnv(DirectMARLEnv):
 
         self.current_load_matrix[:] = matrix_from_quat(self.load_orientation)
         self.drone_rot_matrices[:] = matrix_from_quat(self.drone_orientations)
-        self.load_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10]
-        self.load_ang_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13]
+        self.load_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10].squeeze(1)
+        self.load_ang_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13].squeeze(1)
         
         self.goal_pos_error[:] = self.pose_command_w[:, :3] - self.load_position
         goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
