@@ -215,9 +215,7 @@ class MARLHoverEnv(DirectMARLEnv):
         # goal terms
 
         self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
-        print("self load orientation", self.load_orientation)
         self.current_load_matrix[:] = matrix_from_quat(self.load_orientation)
-        print("self current load matrix", self.current_load_matrix)
         self.load_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10].squeeze(1)
         self.load_ang_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13].squeeze(1)
         
