@@ -105,6 +105,17 @@ class MARLHoverEnv(DirectMARLEnv):
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
 
+        # termination buffers
+        self.falcon_fly_low = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.payload_fly_low = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.illegal_contact = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.angle_limit_drone = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.angle_limit_load = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.cable_collision = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.drone_collision = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.body_pos_outside = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.time_out = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+
         # debug vis
         self.set_debug_vis(cfg.debug_vis) 
 
@@ -380,7 +391,7 @@ class MARLHoverEnv(DirectMARLEnv):
         
         # log metrics
         for metric_name, metric_value in self.metrics.items():
-                self.extras[f"Metrics/pose_command/{metric_name}"] = metric_value
+                self.extras["log"][f"Metrics/pose_command/{metric_name}"] = metric_value.mean()
         
         shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_effort + reward_downwash
 
@@ -394,14 +405,14 @@ class MARLHoverEnv(DirectMARLEnv):
         self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
 
         # crashing into ground
-        falcon_fly_low = (self.drone_positions[:, :, 2] < 0.1).any(dim=-1)
-        payload_fly_low = self.load_position[:, 2] < 0.1
+        self.falcon_fly_low = (self.drone_positions[:, :, 2] < 0.1).any(dim=-1)
+        self.payload_fly_low = self.load_position[:, 2] < 0.1
         
         # illegal contact
         contact_sensor = self.scene.sensors[self.cfg.sensor_cfg.name]
         net_contact_forces = contact_sensor.data.net_forces_w_history
         # check if any contact force exceeds the threshold
-        illegal_contact = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.cfg.sensor_cfg.body_ids], dim=-1), dim=1)[0] > self.cfg.contact_sensor_threshold, dim=1)
+        self.illegal_contact = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.cfg.sensor_cfg.body_ids], dim=-1), dim=1)[0] > self.cfg.contact_sensor_threshold, dim=1)
         
         # angle limits
         rope_orientations_world = self.robot.data.body_com_state_w[:, self._rope_idx, 3:7].view(-1, 4)
@@ -412,7 +423,7 @@ class MARLHoverEnv(DirectMARLEnv):
         )  # cable angles relative to drones
         roll_drone, pitch_drone, _ = euler_xyz_from_quat(rope_orientations_drones)  # yaw can be whatever
         mapped_angle_drone = torch.stack((torch.cos(roll_drone), torch.cos(pitch_drone)), dim=1)
-        angle_limit_drone = (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, 3).any(dim=1)
+        self.angle_limit_drone = (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, 3).any(dim=1)
         
         self.load_orientation[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 3:7].squeeze(1)
         payload_orientation_world = self.load_orientation.repeat(1, 3, 1).view(-1, 4)
@@ -422,26 +433,26 @@ class MARLHoverEnv(DirectMARLEnv):
         )  # cable angles relative to payload
         roll_load, pitch_load, _ = euler_xyz_from_quat(rope_orientations_payload)  # yaw can be whatever
         mapped_angle_load = torch.stack((torch.cos(roll_load), torch.cos(pitch_load)), dim=1)
-        angle_limit_load = (mapped_angle_load < self.cfg.cable_angle_limits_payload).any(dim=1).view(-1, 3).any(dim=1)
+        self.angle_limit_load = (mapped_angle_load < self.cfg.cable_angle_limits_payload).any(dim=1).view(-1, 3).any(dim=1)
         
         # cables colliding
-        cable_collision = self._cable_collision(self.cfg.cable_collision_threshold, self.cfg.cable_collision_num_points)
+        self.cable_collision = self._cable_collision(self.cfg.cable_collision_threshold, self.cfg.cable_collision_num_points)
         
         # drones colliding
         rpos = get_drone_rpos(self.drone_positions)
         pdist = get_drone_pdist(rpos)
         separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
-        drone_collision = separation < self.cfg.drone_collision_threshold
+        self.drone_collision = separation < self.cfg.drone_collision_threshold
         
         # bounding box
-        body_pos_outside = (self.drone_positions.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
+        self.body_pos_outside = (self.drone_positions.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
         
         # reset when episode ends
-        terminations = falcon_fly_low | payload_fly_low | illegal_contact | angle_limit_drone | angle_limit_load | cable_collision | drone_collision | body_pos_outside
-        time_out = self.episode_length_buf >= self.max_episode_length - 1
+        terminations = self.falcon_fly_low | self.payload_fly_low | self.illegal_contact | self.angle_limit_drone | self.angle_limit_load | self.cable_collision | self.drone_collision | self.body_pos_outside
+        self.time_out = self.episode_length_buf >= self.max_episode_length - 1
         
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
-        time_outs = {agent: time_out for agent in self.cfg.possible_agents}
+        time_outs = {agent: self.time_out for agent in self.cfg.possible_agents}
 
         return terminated, time_outs
 
@@ -451,6 +462,21 @@ class MARLHoverEnv(DirectMARLEnv):
         # reset articulation and rigid body attributes
         super()._reset_idx(env_ids)
         self._reset_target_pose(env_ids)
+        
+        # log reward components
+        if "log" not in self.extras:
+            self.extras["log"] = dict()
+        self.extras["log"]["Episode_Termination/angle_drones_cable"] = torch.count_nonzero(self.angle_limit_drone[env_ids]).item()
+        self.extras["log"]["Episode_Termination/angle_load_cable"] = torch.count_nonzero(self.angle_limit_load[env_ids]).item()
+        self.extras["log"]["Episode_Termination/cables_collide"] = torch.count_nonzero(self.cable_collision[env_ids]).item()
+        self.extras["log"]["Episode_Termination/drones_collide"] = torch.count_nonzero(self.drone_collision[env_ids]).item()
+        self.extras["log"]["Episode_Termination/bounding_box"] = torch.count_nonzero(self.body_pos_outside[env_ids]).item()
+        self.extras["log"]["Episode_Termination/falcon_fly_low"] = torch.count_nonzero(self.falcon_fly_low[env_ids]).item()
+        self.extras["log"]["Episode_Termination/payload_fly_low"] = torch.count_nonzero(self.payload_fly_low[env_ids]).item()
+        self.extras["log"]["Episode_Termination/illegal_contact"] = torch.count_nonzero(self.illegal_contact[env_ids]).item()
+        self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
+        
+        
 
     def _reset_target_pose(self, env_ids):
         # reset goal rotation
