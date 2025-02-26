@@ -65,7 +65,6 @@ def modify_command_range(env: ManagerBasedRLEnv, env_ids: Sequence[int], term_na
         num_steps: The number of steps after which the change should be applied.
     """
     if env.common_step_counter > num_steps:
-        print("changing range")
         # obtain term settings
         term_cfg = env.command_manager.get_term(term_name).cfg
         # update term settings
