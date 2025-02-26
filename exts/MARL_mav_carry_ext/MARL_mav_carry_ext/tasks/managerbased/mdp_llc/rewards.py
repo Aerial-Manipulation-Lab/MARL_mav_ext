@@ -111,7 +111,6 @@ def track_payload_orientation_command(
     """Reward tracking of payload orientation commands."""
     robot: RigidObject = env.scene[asset_cfg.name]
     payload_quat = robot.data.body_com_state_w[:, payload_idx, 3:7].squeeze(1)
-    payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
     desired_quat = env.command_manager.get_command(command_name)[..., 3:7]
     # compute the error
     # for the trajectory case
