@@ -139,6 +139,7 @@ def main():
         
     while simulation_app.is_running():
         with torch.inference_mode():
+            falcon_pos = env.scene["robot"].data.body_com_state_w[:, [20, 27, 34], :3]
             # reset
             if count % 500 == 0:
                 env.reset()
@@ -152,8 +153,8 @@ def main():
                 waypoint[:, 24:27] = stretch_position[:, 6:9]
 
             # waypoint[:, :3] = falcon_pos[:, 0]
-            # waypoint[:, 3:6] = falcon_pos[:, 1]
-            # waypoint[:, 6:9] = falcon_pos[:, 2]
+            # waypoint[:, 12:15] = falcon_pos[:, 1]
+            # waypoint[:, 24:27] = falcon_pos[:, 2]
                         
             # when using ACCBR
             if args_cli.control_mode == "ACCRBR":

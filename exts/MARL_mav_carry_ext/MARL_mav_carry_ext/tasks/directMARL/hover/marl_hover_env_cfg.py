@@ -30,6 +30,8 @@ class EventCfg:
     Resetting states on resets, disturbances, etc.
     """
 
+    reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -83,15 +85,6 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
             "force_range": (0.0, 0.0),
             "torque_range": (-0.0, 0.0),
-        },
-    )
-
-    reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_by_scale,
-        mode="reset",
-        params={
-            "position_range": (0.0, 0.0),
-            "velocity_range": (0.0, 0.0),
         },
     )
 

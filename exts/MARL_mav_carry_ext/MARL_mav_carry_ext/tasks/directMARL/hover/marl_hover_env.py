@@ -76,9 +76,9 @@ class MARLHoverEnv(DirectMARLEnv):
         # motor model
         # experimentally obtained
         self.motor_models = {}
-        initial_rpms = [torch.tensor([[1880.4148, 1675.0350, 1670.4458, 1875.0309]], device=self.device).repeat(self.num_envs, 1),
-                        torch.tensor([[1702.9099, 1894.7073, 1838.3457, 1636.0341]], device=self.device).repeat(self.num_envs, 1),
-                        torch.tensor([[1337.6145, 1373.3019, 1519.6875, 1483.1881]], device=self.device).repeat(self.num_envs, 1)]
+        initial_rpms = [torch.tensor([[1441.5819, 1351.1626, 1341.0111, 1428.5597]], device=self.device).repeat(self.num_envs, 1),
+                        torch.tensor([[1377.9199, 1451.8428, 1408.9022, 1329.2014]], device=self.device).repeat(self.num_envs, 1),
+                        torch.tensor([[1281.3964, 1293.0708, 1361.7539, 1347.2434]], device=self.device).repeat(self.num_envs, 1)]
         for i in range(self._num_drones):
             self.motor_models[i] = RotorMotor(self.num_envs, initial_rpms[i])
         self.sampling_time = self.sim.get_physics_dt() * self.cfg.low_level_decimation

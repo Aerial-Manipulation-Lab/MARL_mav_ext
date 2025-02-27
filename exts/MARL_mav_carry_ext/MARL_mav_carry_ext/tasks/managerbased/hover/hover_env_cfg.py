@@ -17,7 +17,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
-from MARL_mav_carry_ext.assets.flycrane import FLYCRANE_CFG  # isort:skip
+from MARL_mav_carry_ext.assets.flycrane import FLYCRANE_OLD_CFG as FLYCRANE_CFG # isort:skip
 
 # Define the scene configuration
 
