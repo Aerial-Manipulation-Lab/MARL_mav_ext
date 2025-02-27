@@ -101,6 +101,18 @@ class MARLHoverEnv(DirectMARLEnv):
         self.goal_pos_error = torch.zeros(self.num_envs, 3, device=self.device)
         self.difference_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
         
+        # reward logging
+        self._episode_sums = {
+            key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
+            for key in [
+                "pos_reward",
+                "ori_reward",
+                "action_smoothness",
+                "force_penalty",
+                "downwash_reward",
+            ]
+        }
+        
         # # -- metrics
         self.metrics = {}
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
@@ -357,42 +369,42 @@ class MARLHoverEnv(DirectMARLEnv):
         # pos reward
         goal_pos_error_norm = torch.norm(self.pose_command_w[:, :3] - self.load_position, dim=-1)
         reward_distance_scale = 1.5
-        reward_position = self.cfg.pos_track_weight * torch.exp(-goal_pos_error_norm * reward_distance_scale)
+        reward_position = self.cfg.pos_track_weight * torch.exp(-goal_pos_error_norm * reward_distance_scale) * self.step_dt
         
         # orientation reward
         orientation_error = quat_error_magnitude(self.pose_command_w[:, 3:7], self.load_orientation)
         reward_distance_scale = 1.5
-        reward_orientation = self.cfg.ori_track_weight * torch.exp(-orientation_error * reward_distance_scale)
+        reward_orientation = self.cfg.ori_track_weight * torch.exp(-orientation_error * reward_distance_scale) * self.step_dt
 
         # action smoothness reward
         current_actions = torch.cat([self.actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         diff_action = ((current_actions - action_prev).square())/self._num_drones
-        reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-diff_action.sum(dim=-1))
+        reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-diff_action.sum(dim=-1)) * self.step_dt
         
         # force penalty
         normalized_forces = self._forces[..., 2] / self.cfg.max_thrust_pp
         effort_sum = torch.max(normalized_forces, dim=-1)[0]
-        reward_effort = self.cfg.force_penalty_weight * torch.exp(-effort_sum)
+        reward_effort = self.cfg.force_penalty_weight * torch.exp(-effort_sum) * self.step_dt
         
         # downwash reward
-        reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward()
+        reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward() * self.step_dt
         
         # update metrics
         self._update_metrics()
 
-        # log reward components
-        if "log" not in self.extras:
-            self.extras["log"] = dict()
-        self.extras["log"]["Episode_Reward/pos_reward"] = reward_position.mean()
-        self.extras["log"]["Episode_Reward/ori_reward"] = reward_orientation.mean()
-        self.extras["log"]["Episode_Reward/action_smoothness"] = reward_action_smoothness.mean()
-        self.extras["log"]["Episode_Reward/force_penalty"] = reward_effort.mean()
-        self.extras["log"]["Episode_Reward/downwash_reward"] = reward_downwash.mean()
+        rewards = {
+            "pos_reward": reward_position,
+            "ori_reward": reward_orientation,
+            "action_smoothness": reward_action_smoothness,
+            "force_penalty": reward_effort,
+            "downwash_reward": reward_downwash,
+        }
         
-        # log metrics
-        for metric_name, metric_value in self.metrics.items():
-                self.extras["log"][f"Metrics/pose_command/{metric_name}"] = metric_value.mean()
+        shared_rewards = torch.sum(torch.stack(list(rewards.values())), dim=0)
+        # Logging
+        for key, value in rewards.items():
+            self._episode_sums[key] += value
         
         shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_effort + reward_downwash
 
@@ -476,6 +488,11 @@ class MARLHoverEnv(DirectMARLEnv):
         self.extras["log"]["Episode_Termination/payload_fly_low"] = torch.count_nonzero(self.payload_fly_low[env_ids]).item()
         self.extras["log"]["Episode_Termination/illegal_contact"] = torch.count_nonzero(self.illegal_contact[env_ids]).item()
         self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
+    
+        for key in self._episode_sums.keys():
+            episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
+            self.extras["log"]["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
+            self._episode_sums[key][env_ids] = 0.0
     
         if self.common_step_counter > self.cfg.range_curriculum_steps:
             self.cfg.goal_range ={
