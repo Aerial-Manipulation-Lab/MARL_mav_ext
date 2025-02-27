@@ -92,7 +92,7 @@ class EventCfg:
 @configclass
 class MARLHoverEnvCfg(DirectMARLEnvCfg):
     # control mode
-    control_mode = "geometric" # ACCBR or geometric
+    control_mode = "ACCBR" # ACCBR or geometric
     # env
     decimation = 3
     episode_length_s = 20

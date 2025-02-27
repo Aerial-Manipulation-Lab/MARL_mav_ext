@@ -493,6 +493,10 @@ class MARLHoverEnv(DirectMARLEnv):
             episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
             self.extras["log"]["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
             self._episode_sums[key][env_ids] = 0.0
+
+        # log metrics
+        for metric_name, metric_value in self.metrics.items():
+                self.extras["log"][f"Metrics/pose_command/{metric_name}"] = metric_value.mean()
     
         if self.common_step_counter > self.cfg.range_curriculum_steps:
             self.cfg.goal_range ={
