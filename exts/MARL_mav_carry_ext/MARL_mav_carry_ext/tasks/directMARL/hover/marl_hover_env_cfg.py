@@ -101,8 +101,8 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
         action_spaces = {"falcon1": 12, "falcon2": 12, "falcon3": 12}
     elif control_mode == "ACCBR":
         action_spaces = {"falcon1": 5, "falcon2": 5, "falcon3": 5}
-    # start with full observability: own state 18 + other drones 18 * 2 + payload 18 + goal terms 12 = 84
-    observation_spaces = {"falcon1": 84, "falcon2": 84, "falcon3": 84}
+    # start with full observability: own state 18 + other drones 18 * 2 + payload 18 + goal terms 12 = 84 + OH vector
+    observation_spaces = {"falcon1": 87, "falcon2": 87, "falcon3": 87}
     state_space = 84
     # TODO: start with that the state_space is the same as the local observations, then go down
 

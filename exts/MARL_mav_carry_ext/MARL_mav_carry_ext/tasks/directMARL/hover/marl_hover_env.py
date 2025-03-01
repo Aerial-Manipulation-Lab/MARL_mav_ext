@@ -261,21 +261,12 @@ class MARLHoverEnv(DirectMARLEnv):
                     self.load_vel,
                     self.load_ang_vel,
                     
-                    self.drone_positions[:, 0],
-                    self.drone_positions[:, 1],
-                    self.drone_positions[:, 2],
-                    
-                    self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
-                    self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
-                    self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
-                    
-                    self.drone_linear_velocities[:, 0],
-                    self.drone_linear_velocities[:, 1],
-                    self.drone_linear_velocities[:, 2],
-                    
-                    self.drone_angular_velocities[:, 0],
-                    self.drone_angular_velocities[:, 1],
-                    self.drone_angular_velocities[:, 2],
+                     # drone terms
+                    torch.tensor([[1, 0, 0]] * self.num_envs, device=self.device), # one-hot encoding
+                    self.drone_positions.view(self.num_envs, -1),
+                    self.drone_rot_matrices.view(self.num_envs, -1),
+                    self.drone_linear_velocities.view(self.num_envs, -1),
+                    self.drone_angular_velocities.view(self.num_envs, -1),
                     
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
@@ -289,21 +280,12 @@ class MARLHoverEnv(DirectMARLEnv):
                     self.load_vel,
                     self.load_ang_vel,
                     
-                    self.drone_positions[:, 1],
-                    self.drone_positions[:, 2],
-                    self.drone_positions[:, 0],
-                    
-                    self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
-                    self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
-                    self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
-                    
-                    self.drone_linear_velocities[:, 1],
-                    self.drone_linear_velocities[:, 2],
-                    self.drone_linear_velocities[:, 0],
-                    
-                    self.drone_angular_velocities[:, 1],
-                    self.drone_angular_velocities[:, 2],
-                    self.drone_angular_velocities[:, 0],
+                     # drone terms
+                    torch.tensor([[0, 1, 0]] * self.num_envs, device=self.device), # one-hot encoding
+                    self.drone_positions.view(self.num_envs, -1),
+                    self.drone_rot_matrices.view(self.num_envs, -1),
+                    self.drone_linear_velocities.view(self.num_envs, -1),
+                    self.drone_angular_velocities.view(self.num_envs, -1),
                     
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
@@ -314,24 +296,15 @@ class MARLHoverEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    self.load_vel,
+                    self.load_vel,  
                     self.load_ang_vel,
                     
-                    self.drone_positions[:, 2],
-                    self.drone_positions[:, 0],
-                    self.drone_positions[:, 1],
-                    
-                    self.drone_rot_matrices[:, 2].view(self.num_envs, -1),  
-                    self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
-                    self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
-                    
-                    self.drone_linear_velocities[:, 2],
-                    self.drone_linear_velocities[:, 0],
-                    self.drone_linear_velocities[:, 1],
-                    
-                    self.drone_angular_velocities[:, 2],
-                    self.drone_angular_velocities[:, 0],
-                    self.drone_angular_velocities[:, 1],
+                     # drone terms
+                    torch.tensor([[0, 0, 1]] * self.num_envs, device=self.device), # one-hot encoding
+                    self.drone_positions.view(self.num_envs, -1),
+                    self.drone_rot_matrices.view(self.num_envs, -1),
+                    self.drone_linear_velocities.view(self.num_envs, -1),
+                    self.drone_angular_velocities.view(self.num_envs, -1),
                     
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1)
