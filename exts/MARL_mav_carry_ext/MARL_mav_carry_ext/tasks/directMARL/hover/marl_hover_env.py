@@ -107,9 +107,9 @@ class MARLHoverEnv(DirectMARLEnv):
             for key in [
                 "pos_reward",
                 "ori_reward",
-                "action_smoothness",
-                "force_penalty",
-                "downwash_reward",
+                # "action_smoothness",
+                # "force_penalty",
+                # "downwash_reward",
             ]
         }
         
@@ -350,18 +350,18 @@ class MARLHoverEnv(DirectMARLEnv):
         reward_orientation = self.cfg.ori_track_weight * torch.exp(-orientation_error * reward_distance_scale) * self.step_dt
 
         # action smoothness reward
-        current_actions = torch.cat([self.actions[agent] for agent in self.cfg.possible_agents], dim=-1)
-        action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
-        diff_action = ((current_actions - action_prev).square())/self._num_drones
-        reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-diff_action.sum(dim=-1)) * self.step_dt
+        # current_actions = torch.cat([self.actions[agent] for agent in self.cfg.possible_agents], dim=-1)
+        # action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
+        # diff_action = ((current_actions - action_prev).abs())/self._num_drones
+        # reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1)) * self.step_dt
         
         # force penalty
-        normalized_forces = self._forces[..., 2] / self.cfg.max_thrust_pp
-        effort_sum = torch.max(normalized_forces, dim=-1)[0]
-        reward_effort = self.cfg.force_penalty_weight * torch.exp(-effort_sum) * self.step_dt
+        # normalized_forces = self._forces[..., 2] / self.cfg.max_thrust_pp
+        # effort_sum = torch.max(normalized_forces, dim=-1)[0]
+        # reward_effort = self.cfg.force_penalty_weight * torch.exp(-effort_sum) * self.step_dt
         
         # downwash reward
-        reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward() * self.step_dt
+        # reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward() * self.step_dt
         
         # update metrics
         self._update_metrics()
@@ -369,9 +369,9 @@ class MARLHoverEnv(DirectMARLEnv):
         rewards = {
             "pos_reward": reward_position,
             "ori_reward": reward_orientation,
-            "action_smoothness": reward_action_smoothness,
-            "force_penalty": reward_effort,
-            "downwash_reward": reward_downwash,
+            # "action_smoothness": reward_action_smoothness,
+            # "force_penalty": reward_effort,
+            # "downwash_reward": reward_downwash,
         }
         
         shared_rewards = torch.sum(torch.stack(list(rewards.values())), dim=0)
@@ -379,7 +379,7 @@ class MARLHoverEnv(DirectMARLEnv):
         for key, value in rewards.items():
             self._episode_sums[key] += value
         
-        shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_effort + reward_downwash
+        shared_rewards = reward_position + reward_orientation# + reward_effort #reward_action_smoothness + reward_effort + reward_downwash
 
         return {agent: shared_rewards for agent in self.cfg.possible_agents}
 
@@ -471,15 +471,15 @@ class MARLHoverEnv(DirectMARLEnv):
         for metric_name, metric_value in self.metrics.items():
                 self.extras["log"][f"Metrics/pose_command/{metric_name}"] = metric_value.mean()
     
-        if self.common_step_counter > self.cfg.range_curriculum_steps:
-            self.cfg.goal_range ={
-            "pos_x": (-2.0, 2.0),
-            "pos_y": (-2.0, 2.0),
-            "pos_z": (0.5, 2.5),
-            "roll": (-math.pi/4, math.pi/4),
-            "pitch": (-math.pi/4, math.pi/4),
-            "yaw": (-math.pi, math.pi),
-        }
+        # if self.common_step_counter > self.cfg.range_curriculum_steps:
+        #     self.cfg.goal_range ={
+        #     "pos_x": (-2.0, 2.0),
+        #     "pos_y": (-2.0, 2.0),
+        #     "pos_z": (0.5, 2.5),
+        #     "roll": (-math.pi/4, math.pi/4),
+        #     "pitch": (-math.pi/4, math.pi/4),
+        #     "yaw": (-math.pi, math.pi),
+        # }
 
     def _reset_target_pose(self, env_ids):
         # reset goal rotation
