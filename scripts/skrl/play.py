@@ -147,7 +147,7 @@ def main():
 
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
-        env = multi_agent_to_single_agent(env)
+        env = multi_agent_to_single_agent(env, state_as_observation=True)
 
     # wrap around environment for skrl
     env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)  # same as: `wrap_env(env, wrapper="auto")`
@@ -163,7 +163,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
-    plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
+    # plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
 
     # reset environment
     obs, _ = env.reset()
@@ -175,8 +175,8 @@ def main():
             # agent stepping
             actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
             # env stepping
-            if env.num_envs == 1:
-                plotter.collect_data()
+            # if env.num_envs == 1:
+            #     plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
 
         timestep += 1
@@ -188,14 +188,14 @@ def main():
     # close the simulator
     env.close()
 
-    if env.num_envs == 1:
-        if args_cli.save_plots:
-            # save plots
-            plot_path = os.path.join(log_dir, "plots", "play")
-            plotter.plot(save=True, save_dir=plot_path)
-        else:
-            # show plots
-            plotter.plot(save=False)
+    # if env.num_envs == 1:
+    #     if args_cli.save_plots:
+    #         # save plots
+    #         plot_path = os.path.join(log_dir, "plots", "play")
+    #         plotter.plot(save=True, save_dir=plot_path)
+    #     else:
+    #         # show plots
+    #         plotter.plot(save=False)
 
 
 if __name__ == "__main__":
