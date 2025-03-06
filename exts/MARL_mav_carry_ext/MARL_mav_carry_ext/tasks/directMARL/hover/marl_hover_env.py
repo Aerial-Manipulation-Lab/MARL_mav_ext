@@ -48,8 +48,13 @@ class MARLHoverEnv(DirectMARLEnv):
         self._forces = torch.zeros(self.num_envs, len(self._falcon_rotor_idx), 3, device=self.device)
         self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
         self._setpoints = {}
+        self.prev_actions = {}
         for agent in self.cfg.possible_agents:
             self._setpoints[agent] = {}
+            if self._control_mode == "geometric":
+                self.prev_actions[agent] = torch.zeros(self.num_envs, 12, device=self.device)
+            elif self._control_mode == "ACCBR":
+                self.prev_actions[agent] = torch.zeros(self.num_envs, 5, device=self.device)
             
         self.drone_positions = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_orientations = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
