@@ -64,6 +64,8 @@ class MARLHoverEnv(DirectMARLEnv):
         self.drone_angular_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_linear_accelerations = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_angular_accelerations = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self._drone_jerk = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self._drone_prev_acc = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
 
         # outer loop controller
         self.geo_controllers = {}
@@ -199,10 +201,11 @@ class MARLHoverEnv(DirectMARLEnv):
                 drone_states["ang_vel"] = self.drone_angular_velocities[:, i]
                 drone_states["lin_acc"] = self.drone_linear_accelerations[:, i]
                 drone_states["ang_acc"] = self.drone_angular_accelerations[:, i]
-                # calculate current jerk and snap
-                # self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
-                # drone_states["jerk"] = self._drone_jerk[:, i]
-                # self._drone_prev_acc[:, i] = drone_states["lin_acc"]
+                # calculate current jerk
+                self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self.step_dt)
+                drone_states["jerk"] = self._drone_jerk[:, i]
+                self._drone_prev_acc[:, i] = drone_states["lin_acc"]
+    
                 alpha_cmd, acc_load, acc_cmd, q_cmd = self.geo_controllers[i].getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], self._setpoints[f"falcon{i+1}"]
                 )
