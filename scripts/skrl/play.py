@@ -44,6 +44,8 @@ parser.add_argument(
     help="The RL algorithm used for training the skrl agent.",
 )
 
+parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -62,6 +64,7 @@ import numpy as np
 import os
 import random
 import torch
+import time
 
 import skrl
 from packaging import version
@@ -71,7 +74,7 @@ from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
 # register the gym environment
 
 # check for minimum supported skrl version
-SKRL_VERSION = "1.3.0"
+SKRL_VERSION = "1.4.1"
 if version.parse(skrl.__version__) < version.parse(SKRL_VERSION):
     skrl.logger.error(
         f"Unsupported skrl version: {skrl.__version__}. "
@@ -148,6 +151,12 @@ def main():
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
         env = multi_agent_to_single_agent(env, state_as_observation=True)
+    
+    # get environment (physics) dt for real-time evaluation
+    try:
+        dt = env.physics_dt
+    except AttributeError:
+        dt = env.unwrapped.physics_dt
 
     # wrap around environment for skrl
     env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)  # same as: `wrap_env(env, wrapper="auto")`
@@ -171,6 +180,7 @@ def main():
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
+        start_time = time.time()
         with torch.inference_mode():
             # agent stepping
             actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
@@ -184,6 +194,10 @@ def main():
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
+
+        sleep_time = dt - (time.time() - start_time)
+        if args_cli.real_time and sleep_time > 0:
+            time.sleep(sleep_time)
 
     # close the simulator
     env.close()
