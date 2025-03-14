@@ -69,7 +69,7 @@ import time
 import skrl
 from packaging import version
 
-from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
+from MARL_mav_carry_ext.plotting_tools import DirectMARLPlotter
 
 # register the gym environment
 
@@ -172,7 +172,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
-    # plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
+    plotter = DirectMARLPlotter(env, control_mode=args_cli.control_mode)
 
     # reset environment
     obs, _ = env.reset()
@@ -185,8 +185,8 @@ def main():
             # agent stepping
             actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
             # env stepping
-            # if env.num_envs == 1:
-            #     plotter.collect_data()
+            if env.num_envs == 1:
+                plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
 
         timestep += 1
@@ -202,14 +202,14 @@ def main():
     # close the simulator
     env.close()
 
-    # if env.num_envs == 1:
-    #     if args_cli.save_plots:
-    #         # save plots
-    #         plot_path = os.path.join(log_dir, "plots", "play")
-    #         plotter.plot(save=True, save_dir=plot_path)
-    #     else:
-    #         # show plots
-    #         plotter.plot(save=False)
+    if env.num_envs == 1:
+        if args_cli.save_plots:
+            # save plots
+            plot_path = os.path.join(log_dir, "plots", "play")
+            plotter.plot(save=True, save_dir=plot_path)
+        else:
+            # show plots
+            plotter.plot(save=False)
 
 
 if __name__ == "__main__":
