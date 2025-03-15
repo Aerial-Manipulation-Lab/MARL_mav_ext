@@ -307,5 +307,4 @@ class TrackEnvCfg(ManagerBasedRLEnvCfg):
         # simulation settings
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation  # rendering interval has to be planner decimation
-        self.sim.disable_contact_processing = True
         self.sim.gravity = (0.0, 0.0, -9.8066)

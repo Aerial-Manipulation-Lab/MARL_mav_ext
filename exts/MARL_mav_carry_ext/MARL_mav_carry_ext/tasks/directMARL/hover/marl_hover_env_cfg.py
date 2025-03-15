@@ -110,7 +110,6 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     sim: SimulationCfg = SimulationCfg(
         dt= 0.0033333333333333335,
         render_interval=decimation,
-        disable_contact_processing=True,
         gravity = (0.0, 0.0, -9.8066),
     )
     # robot

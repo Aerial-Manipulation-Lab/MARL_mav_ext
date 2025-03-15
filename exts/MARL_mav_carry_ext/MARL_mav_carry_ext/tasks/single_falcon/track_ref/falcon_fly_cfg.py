@@ -39,7 +39,6 @@ class FalconEnvCfg(DirectRLEnvCfg):
         dt=0.005,
         gravity=(0.0, 0.0, -9.8066),
         render_interval=decimation,
-        disable_contact_processing=True,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",

@@ -242,4 +242,3 @@ class HoverEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.sim.gravity = (0.0, 0.0, -9.8066)
         self.sim.render_interval = self.decimation
-        self.sim.disable_contact_processing = True
