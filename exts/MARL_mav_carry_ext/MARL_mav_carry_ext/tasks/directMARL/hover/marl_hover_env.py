@@ -154,8 +154,10 @@ class MARLHoverEnv(DirectMARLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: dict[str, torch.Tensor]) -> None:
-        self.prev_actions = copy.deepcopy(self.actions)
-        self.actions = actions
+        for agent in self.cfg.possible_agents:
+            self.prev_actions[agent][:] = self.actions[agent]
+            self.actions[agent][:] = actions[agent]
+
         for drone, action in actions.items():
 
             if self._control_mode == "geometric":
@@ -382,7 +384,6 @@ class MARLHoverEnv(DirectMARLEnv):
             "downwash_reward": reward_downwash,
         }
         
-        shared_rewards = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
@@ -478,6 +479,11 @@ class MARLHoverEnv(DirectMARLEnv):
         # log metrics
         for metric_name, metric_value in self.metrics.items():
                 self.extras["log"][f"Metrics/pose_command/{metric_name}"] = metric_value.mean()
+
+        # reset the action history
+        for agent in self.cfg.possible_agents:
+            self.prev_actions[agent][env_ids] = 0.0
+            self.actions[agent][env_ids] = 0.0
     
         # if self.common_step_counter > self.cfg.range_curriculum_steps:
         #     self.cfg.goal_range ={
