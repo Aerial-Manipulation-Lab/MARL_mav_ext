@@ -188,7 +188,7 @@ def main():
             # - single-agent (deterministic) actions
             else:
                 actions = outputs[-1].get("mean_actions", outputs[0])
-            env stepping
+            # env stepping
             if env.num_envs == 1:
                 plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
