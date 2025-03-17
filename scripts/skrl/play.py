@@ -183,8 +183,12 @@ def main():
         start_time = time.time()
         with torch.inference_mode():
             # agent stepping
-            actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
-            # env stepping
+            if hasattr(env, "possible_agents"):
+                actions = {a: outputs[-1][a].get("mean_actions", outputs[0][a]) for a in env.possible_agents}
+            # - single-agent (deterministic) actions
+            else:
+                actions = outputs[-1].get("mean_actions", outputs[0])
+            env stepping
             if env.num_envs == 1:
                 plotter.collect_data()
             obs, _, _, _, _ = env.step(actions)
