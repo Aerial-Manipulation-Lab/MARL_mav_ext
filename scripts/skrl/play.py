@@ -183,6 +183,8 @@ def main():
         start_time = time.time()
         with torch.inference_mode():
             # agent stepping
+            outputs = runner.agent.act(obs, timestep=0, timesteps=0)
+            # - multi-agent (deterministic) actions
             if hasattr(env, "possible_agents"):
                 actions = {a: outputs[-1][a].get("mean_actions", outputs[0][a]) for a in env.possible_agents}
             # - single-agent (deterministic) actions
