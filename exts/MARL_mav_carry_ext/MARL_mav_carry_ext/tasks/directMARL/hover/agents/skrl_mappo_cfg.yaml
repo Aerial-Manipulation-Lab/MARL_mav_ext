@@ -44,12 +44,14 @@ memory:
 agent:
   class: MAPPO
   separate_actors: False
-  rollouts: 128
-  learning_epochs: 5
+  rollouts: 24 # higher better
+  learning_epochs: 5 # reduce
   mini_batches: 4
   discount_factor: 0.99
-  lambda: 0.99
-  learning_rate: 1.0e-04
+  lambda: 0.95
+  learning_rate: 1.0e-04 # if modeled is shared
+  learning_rate_actor: 5.0e-05
+  learning_rate_critic: 2.0e-04
   learning_rate_scheduler: null
   learning_rate_scheduler_kwargs: null
     # kl_threshold: 0.02
@@ -65,15 +67,15 @@ agent:
   ratio_clip: 0.1
   value_clip: 0.1
   clip_predicted_values: True
-  entropy_loss_scale: 0.005
-  value_loss_scale: 2.0
+  entropy_loss_scale: 0.001
+  value_loss_scale: 1.0
   kl_threshold: 0.0
   rewards_shaper_scale: 1.0
   time_limit_bootstrap: False
   # logging and checkpoint
   experiment:
     directory: "mappo_flycrane_hover"
-    experiment_name: "fixed_LR"
+    experiment_name: "delete_me"
     write_interval: 100
     checkpoint_interval: 2500
 
@@ -82,5 +84,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 150000
+  timesteps: 1500000
   environment_info: log
