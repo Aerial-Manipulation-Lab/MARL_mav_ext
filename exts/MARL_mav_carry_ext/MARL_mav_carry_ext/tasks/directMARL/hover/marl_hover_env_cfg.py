@@ -138,6 +138,10 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     drone_collision_threshold = 0.5
     bounding_box_threshold = 5.0
 
+    # delay parameters
+    max_delay = 4 # in number of steps, with policy = 100hz -> 40ms
+    constant_delay = 4 # in number of steps, with policy = 100hz -> 40ms
+
     # low level control
     low_level_decimation : int =  1
     max_thrust_pp = 6.25 # N
@@ -188,13 +192,3 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
 
     events = EventCfg()
 
-    # reset
-    # reset_position_noise = 0.01  # range of position at reset
-    # reset_dof_pos_noise = 0.2  # range of dof pos at reset
-    # reset_dof_vel_noise = 0.0  # range of dof vel at reset
-    # # scales and constants
-    # fall_dist = 0.24
-    # vel_obs_scale = 0.2
-    # act_moving_average = 1.0
-    # # reward-related scales
-    # dist_reward_scale = 20.0

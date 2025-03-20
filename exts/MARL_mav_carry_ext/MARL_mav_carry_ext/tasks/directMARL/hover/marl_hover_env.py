@@ -18,6 +18,7 @@ from isaaclab.markers import VisualizationMarkers
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from isaaclab.utils.math import sample_uniform, quat_from_angle_axis, quat_mul, compute_pose_error, quat_from_euler_xyz, euler_xyz_from_quat, quat_inv, quat_unique, matrix_from_quat, quat_error_magnitude, quat_rotate
 from isaaclab.sensors import ContactSensor
+from isaaclab.utils import DelayBuffer
 import copy
 
 from .marl_hover_env_cfg import MARLHoverEnvCfg
@@ -47,6 +48,11 @@ class MARLHoverEnv(DirectMARLEnv):
         # buffers
         self._forces = torch.zeros(self.num_envs, len(self._falcon_rotor_idx), 3, device=self.device)
         self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
+        self.setpoint_delay_buffers = {}
+        for agent in self.cfg.possible_agents:
+            self.setpoint_delay_buffers[agent] = DelayBuffer(cfg.max_delay, self.num_envs, device=self.device)
+            self.setpoint_delay_buffers[agent].set_time_lag(cfg.constant_delay)
+        self.delayed_action = 0 # remove
         self._setpoints = {}
         self.prev_actions = {}
         for agent in self.cfg.possible_agents:
@@ -155,8 +161,12 @@ class MARLHoverEnv(DirectMARLEnv):
 
     def _pre_physics_step(self, actions: dict[str, torch.Tensor]) -> None:
         for agent in self.cfg.possible_agents:
+            # terms used for smoothness reward, current and previously calculated actions
             self.prev_actions[agent][:] = self.actions[agent]
             self.actions[agent][:] = actions[agent]
+            
+            # introduce delay in the setpoints
+            actions[agent][:] = self.setpoint_delay_buffers[agent].compute(actions[agent])
 
         for drone, action in actions.items():
 
