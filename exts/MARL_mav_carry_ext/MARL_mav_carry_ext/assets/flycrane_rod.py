@@ -52,8 +52,8 @@ FLYCRANE_CFG = ArticulationCfg(
     actuators={
         "dummy": ImplicitActuatorCfg(
             joint_names_expr=[".*"],
-            stiffness=0.0,
-            damping=0.0,
+            stiffness=None,
+            damping=None,
         ),
     },
 )
