@@ -18,7 +18,7 @@ from isaaclab.markers import VisualizationMarkers
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from isaaclab.utils.math import sample_uniform, quat_from_angle_axis, quat_mul, compute_pose_error, quat_from_euler_xyz, euler_xyz_from_quat, quat_inv, quat_unique, matrix_from_quat, quat_error_magnitude, quat_rotate
 from isaaclab.sensors import ContactSensor
-from isaaclab.utils import DelayBuffer
+from isaaclab.utils import DelayBuffer, CircularBuffer
 import copy
 
 from .marl_hover_env_cfg import MARLHoverEnvCfg
@@ -48,11 +48,6 @@ class MARLHoverEnv(DirectMARLEnv):
         # buffers
         self._forces = torch.zeros(self.num_envs, len(self._falcon_rotor_idx), 3, device=self.device)
         self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
-        self.setpoint_delay_buffers = {}
-        for agent in self.cfg.possible_agents:
-            self.setpoint_delay_buffers[agent] = DelayBuffer(cfg.max_delay, self.num_envs, device=self.device)
-            self.setpoint_delay_buffers[agent].set_time_lag(cfg.constant_delay)
-        self.delayed_action = 0 # remove
         self._setpoints = {}
         self.prev_actions = {}
         for agent in self.cfg.possible_agents:
@@ -121,6 +116,7 @@ class MARLHoverEnv(DirectMARLEnv):
                 "pos_reward",
                 "ori_reward",
                 "action_smoothness",
+                "body_rate_penalty",
                 "force_penalty",
                 "downwash_reward",
             ]
@@ -164,9 +160,6 @@ class MARLHoverEnv(DirectMARLEnv):
             # terms used for smoothness reward, current and previously calculated actions
             self.prev_actions[agent][:] = self.actions[agent]
             self.actions[agent][:] = actions[agent]
-            
-            # introduce delay in the setpoints
-            actions[agent][:] = self.setpoint_delay_buffers[agent].compute(actions[agent])
 
         for drone, action in actions.items():
 
@@ -273,8 +266,7 @@ class MARLHoverEnv(DirectMARLEnv):
         goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
         self.difference_matrix[:] = torch.matmul(goal_load_matrix, self.current_load_matrix.transpose(1, 2))
 
-        observations = {
-            "falcon1": torch.cat(
+        obs_falcon1 = torch.cat(
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
@@ -292,8 +284,9 @@ class MARLHoverEnv(DirectMARLEnv):
                     self.difference_matrix.view(self.num_envs, -1),
                 ),
                 dim=-1,
-            ),
-            "falcon2": torch.cat(
+            )
+        
+        obs_falcon2 = torch.cat(
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
@@ -311,8 +304,9 @@ class MARLHoverEnv(DirectMARLEnv):
                     self.difference_matrix.view(self.num_envs, -1),
                 ),
                 dim=-1,
-            ),
-            "falcon3": torch.cat(
+            )
+        
+        obs_falcon3 = torch.cat(
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
@@ -327,10 +321,15 @@ class MARLHoverEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     
                     self.goal_pos_error,
-                    self.difference_matrix.view(self.num_envs, -1)
+                    self.difference_matrix.view(self.num_envs, -1),
                 ),
                 dim=-1,
-            ),
+            )
+        
+        observations = {
+            "falcon1": obs_falcon1,
+            "falcon2": obs_falcon2,
+            "falcon3": obs_falcon3,
         }
         return observations
 
@@ -375,6 +374,11 @@ class MARLHoverEnv(DirectMARLEnv):
         diff_action = ((current_actions - action_prev).abs())/self._num_drones
         reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1)) * self.step_dt
         
+        # commanded body rate reward
+        commanded_body_rates = torch.cat([self.actions[agent][:, 3:] for agent in self.cfg.possible_agents], dim=-1)
+        body_rate_penalty = torch.norm(commanded_body_rates/self._num_drones, dim=-1)
+        reward_body_rate_penalty = self.cfg.body_rate_penalty_weight * torch.exp(-body_rate_penalty) * self.step_dt
+
         # force penalty
         normalized_forces = self._forces[..., 2] / self.cfg.max_thrust_pp
         effort_sum = torch.max(normalized_forces, dim=-1)[0]
@@ -390,6 +394,7 @@ class MARLHoverEnv(DirectMARLEnv):
             "pos_reward": reward_position,
             "ori_reward": reward_orientation,
             "action_smoothness": reward_action_smoothness,
+            "body_rate_penalty": reward_body_rate_penalty,
             "force_penalty": reward_effort,
             "downwash_reward": reward_downwash,
         }
@@ -398,7 +403,7 @@ class MARLHoverEnv(DirectMARLEnv):
         for key, value in rewards.items():
             self._episode_sums[key] += value
         
-        shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_effort + reward_downwash
+        shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_body_rate_penalty + reward_effort + reward_downwash
 
         return {agent: shared_rewards for agent in self.cfg.possible_agents}
 
