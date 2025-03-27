@@ -29,6 +29,7 @@ payload_idx = [1]
 drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 
+
 def separation_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Separation reward function."""
     safe_distance = 0.44  # smallest distance where drones are just upright
@@ -58,6 +59,7 @@ def track_drone_reference(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sc
     assert reward_position.shape == (env.scene.num_envs,)
     return reward_position
 
+
 def track_payload_pos_command_linear(
     env: ManagerBasedRLEnv, bbox: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -71,13 +73,14 @@ def track_payload_pos_command_linear(
     desired_pos = env.command_manager.get_command(command_name)[..., :3]
     # compute the error
     positional_error = torch.norm(desired_pos - payload_pos_env, dim=-1)
-    max_error = torch.norm(torch.tensor([bbox, bbox, bbox/2], device=env.sim.device))
+    max_error = torch.norm(torch.tensor([bbox, bbox, bbox / 2], device=env.sim.device))
     relative_error = positional_error / max_error
-    reward_distance_scale = 1.0 
+    reward_distance_scale = 1.0
     reward_position = 1 - relative_error * reward_distance_scale
 
     assert reward_position.shape == (env.scene.num_envs,)
     return reward_position
+
 
 def track_payload_pos_command(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -214,7 +217,7 @@ def spinnage_reward_payload(
     robot = env.scene[asset_cfg.name]
     payload_angular_velocity = robot.data.body_com_state_w[:, payload_idx, 10:].squeeze(1).abs().sum(-1)
     reward_spin = torch.exp(-torch.square(payload_angular_velocity))
-    
+
     assert reward_spin.shape == (env.scene.num_envs,)
     return reward_spin
 
@@ -239,6 +242,7 @@ def swing_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     assert reward_swing.shape == (env.scene.num_envs,)
     return reward_swing
 
+
 def action_policy_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in action values."""
     action = env.action_manager.action
@@ -248,6 +252,7 @@ def action_policy_smoothness_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
 
     assert reward_action_smoothness.shape == (env.scene.num_envs,)
     return reward_action_smoothness
+
 
 def action_penalty_force(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high force values."""
@@ -285,6 +290,7 @@ def action_smoothness_force_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force
 
+
 def action_smoothness_ACCBR_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalty for high variation in force values."""
     action = env.action_manager._action
@@ -295,6 +301,7 @@ def action_smoothness_ACCBR_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
 
     assert reward_action_smoothness_force.shape == (env.scene.num_envs,)
     return reward_action_smoothness_force
+
 
 def angle_cable_load(
     env: ManagerBasedRLEnv, threshold: float = 0.261799388, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -362,13 +369,18 @@ def downwash_reward(
     line_dist = torch.norm(line_point_proj - payload_pose_env.unsqueeze(1), dim=-1)  # Shape (num_envs, num_drones)
     # Reward: penalize based on distance from the intersection point to the payload position
     scaling_factor = 3
-    reward_downwash = (1 - torch.exp(-torch.min(line_dist, dim=-1).values * scaling_factor))  # Min distance from the payload
+    reward_downwash = 1 - torch.exp(
+        -torch.min(line_dist, dim=-1).values * scaling_factor
+    )  # Min distance from the payload
 
     assert reward_downwash.shape == (env.num_envs,)
     return reward_downwash
 
+
 def obstacle_penalty(
-    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall"),
 ) -> torch.Tensor:
     """Penalty for getting close to the obstacle."""
     robot = env.scene[asset_cfg.name]
@@ -378,17 +390,23 @@ def obstacle_penalty(
     obstacle_pos = obstacle.data.body_com_state_w[:, 0, :3].unsqueeze(1) - env.scene.env_origins.unsqueeze(1)
     all_bodies_env = torch.cat((payload_pos_env, drones_pos_env), dim=1)
     rpos = torch.abs(all_bodies_env - obstacle_pos)
-    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1) # half lenghts
+    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1)  # half lenghts
     # check if any of the bodies are inside the cuboid
     cuboid_dims_world = quat_rotate(obstacle.data.body_com_state_w[:, 0, 3:7].unsqueeze(1), cuboid_dims)
-    is_inside_cuboid = torch.all(rpos <= cuboid_dims_world, dim=-1) # Shape (num_envs, num_bodies) true or false for each body
-    reward_obstacle = -torch.any(is_inside_cuboid, dim=-1).float() # Shape (num_envs,) -1 if any body is inside the cuboid, 0 otherwise
+    is_inside_cuboid = torch.all(
+        rpos <= cuboid_dims_world, dim=-1
+    )  # Shape (num_envs, num_bodies) true or false for each body
+    reward_obstacle = -torch.any(
+        is_inside_cuboid, dim=-1
+    ).float()  # Shape (num_envs,) -1 if any body is inside the cuboid, 0 otherwise
 
     assert reward_obstacle.shape == (env.scene.num_envs,)
     return reward_obstacle
 
+
 def goal_reached_reward(
-    env: ManagerBasedRLEnv, command_name: str, 
+    env: ManagerBasedRLEnv,
+    command_name: str,
 ) -> torch.Tensor:
     """Reward for reaching the goal and staying there, then terminate the episde."""
     reward_goal = env.command_manager._terms[command_name].achieved_goal

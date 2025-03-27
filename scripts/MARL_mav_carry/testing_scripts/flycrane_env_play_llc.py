@@ -40,8 +40,8 @@ import gymnasium as gym
 import math
 import matplotlib.pyplot as plt
 
-from MARL_mav_carry_ext.tasks.managerbased.hover_llc.hover_env_cfg import HoverEnvCfg_llc
 from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
+from MARL_mav_carry_ext.tasks.managerbased.hover_llc.hover_env_cfg import HoverEnvCfg_llc
 
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.utils.dict import print_dict
@@ -74,7 +74,7 @@ def main():
     payload_mass = 1.4 + 0.00001 + 0.006
     mass_left_side = 2 * falcon_mass + 2 * rope_mass + 0.5 * payload_mass
     mass_right_side = falcon_mass + rope_mass + 0.5 * payload_mass
-    
+
     stretch_position = torch.tensor(
         [
             [
@@ -136,7 +136,7 @@ def main():
     )
 
     count = 0
-        
+
     while simulation_app.is_running():
         with torch.inference_mode():
             falcon_pos = env.scene["robot"].data.body_com_state_w[:, [20, 27, 34], :3]
@@ -155,7 +155,7 @@ def main():
             # waypoint[:, :3] = falcon_pos[:, 0]
             # waypoint[:, 12:15] = falcon_pos[:, 1]
             # waypoint[:, 24:27] = falcon_pos[:, 2]
-                        
+
             # when using ACCBR
             if args_cli.control_mode == "ACCRBR":
                 waypoint[:] = ACC_BR_ref
@@ -169,7 +169,6 @@ def main():
                 if count == args_cli.video_length:
                     break
 
-
     # close the simulator
     env.close()
 
@@ -179,7 +178,7 @@ def main():
         #     plot_path = os.path.join(log_dir, "plots", "play")
         #     plotter.plot(save=True, save_dir=plot_path)
         # else:
-            # show plots
+        # show plots
         plotter.plot(save=False)
 
 

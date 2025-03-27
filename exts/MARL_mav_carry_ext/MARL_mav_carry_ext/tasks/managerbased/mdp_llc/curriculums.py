@@ -6,9 +6,10 @@ the curriculum introduced by the function.
 
 from __future__ import annotations
 
+import torch
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
-import torch
+
 import MARL_mav_carry_ext.tasks.managerbased.mdp_llc as mdp
 
 if TYPE_CHECKING:
@@ -16,15 +17,16 @@ if TYPE_CHECKING:
 
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 
+
 def modify_obstacle_position(
-        env: ManagerBasedRLEnv, 
-        env_ids: Sequence[int], 
-        command_name: str, 
-        event_name: str, 
-        displacement: float, 
-        pos_error_threshold: float,
-        ori_error_threshold: float
-        ) -> torch.Tensor:
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    command_name: str,
+    event_name: str,
+    displacement: float,
+    pos_error_threshold: float,
+    ori_error_threshold: float,
+) -> torch.Tensor:
     """Curriculum that modifies obstacle spawning position after reaching a certain performance.
 
     Args:
@@ -36,7 +38,7 @@ def modify_obstacle_position(
         error_treshold: The error threshold to be reached before applying the displacement.
     """
     # check if metric at termination has reached a certain threshold
-    # obtain resest term settings
+    # obtain reset term settings
     term_cfg = env.event_manager.get_term_cfg(event_name)
 
     if "log" in env.extras:
@@ -53,8 +55,14 @@ def modify_obstacle_position(
 
     return torch.tensor([term_cfg.params["pose_range"]["y"][1]], dtype=torch.float32)
 
-def modify_command_range(env: ManagerBasedRLEnv, env_ids: Sequence[int], term_name: str, 
-                        range: mdp.UniformPoseCommandGlobalCfg.Ranges, num_steps: int):
+
+def modify_command_range(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    term_name: str,
+    range: mdp.UniformPoseCommandGlobalCfg.Ranges,
+    num_steps: int,
+):
     """Curriculum that modifies the command range given a number of steps.
 
     Args:

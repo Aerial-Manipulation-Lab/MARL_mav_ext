@@ -38,8 +38,8 @@ import csv
 import gymnasium as gym
 import matplotlib.pyplot as plt
 
-from MARL_mav_carry_ext.tasks.directMARL.hover.marl_hover_env_cfg import MARLHoverEnvCfg
 from MARL_mav_carry_ext.tasks.directMARL.hover.marl_hover_env import MARLHoverEnv
+from MARL_mav_carry_ext.tasks.directMARL.hover.marl_hover_env_cfg import MARLHoverEnvCfg
 
 from isaaclab.envs import DirectMARLEnv
 from isaaclab.utils.dict import print_dict
@@ -83,9 +83,9 @@ def main():
         dtype=torch.float32,
     )
 
-    falcon1_geo_tensor = torch.zeros((env.num_envs, 12), device= env.device)
-    falcon2_geo_tensor = torch.zeros((env.num_envs, 12), device= env.device)
-    falcon3_geo_tensor = torch.zeros((env.num_envs, 12), device= env.device)
+    falcon1_geo_tensor = torch.zeros((env.num_envs, 12), device=env.device)
+    falcon2_geo_tensor = torch.zeros((env.num_envs, 12), device=env.device)
+    falcon3_geo_tensor = torch.zeros((env.num_envs, 12), device=env.device)
 
     while simulation_app.is_running():
         with torch.inference_mode():
@@ -95,9 +95,11 @@ def main():
             falcon1_geo_tensor[:, 0:3] = stretch_position[:, 0:3]
             falcon2_geo_tensor[:, 0:3] = stretch_position[:, 3:6]
             falcon3_geo_tensor[:, 0:3] = stretch_position[:, 6:9]
-            action = {"falcon1": falcon1_geo_tensor,
-                      "falcon2": falcon2_geo_tensor,
-                      "falcon3": falcon3_geo_tensor,}
+            action = {
+                "falcon1": falcon1_geo_tensor,
+                "falcon2": falcon2_geo_tensor,
+                "falcon3": falcon3_geo_tensor,
+            }
             obs, rew, terminated, truncated, info = env.step(action)
             terminated = list(terminated.values())[0]
             truncated = list(truncated.values())[0]

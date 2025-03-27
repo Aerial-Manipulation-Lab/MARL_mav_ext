@@ -1,5 +1,7 @@
 import torch
 
+from MARL_mav_carry_ext.controllers.utils import LowPassFilter
+
 from isaaclab.utils.math import (
     euler_xyz_from_quat,
     matrix_from_quat,
@@ -10,8 +12,6 @@ from isaaclab.utils.math import (
     quat_rotate,
     quat_rotate_inverse,
 )
-
-from MARL_mav_carry_ext.controllers.utils import LowPassFilter
 
 
 class GeometricController:
@@ -55,16 +55,28 @@ class GeometricController:
         self.kp_att_z = 5.0
 
         # low pass filters
-        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 300.0, device=self.device)   # filter frequency, same as control frequency (Hz)
-        self.filter_cutoff_frequency = torch.full((self.num_envs, 1), 6.0, device=self.device)    # accelerometer filter cut-off frequency (Hz)
-        self.filter_cutoff_frequency_bodyrate = torch.full((self.num_envs, 1), 20.0, device=self.device)  # rate control filter cut-off-freuqnecy (Hz)
+        self.filter_sampling_frequency = torch.full(
+            (self.num_envs, 1), 300.0, device=self.device
+        )  # filter frequency, same as control frequency (Hz)
+        self.filter_cutoff_frequency = torch.full(
+            (self.num_envs, 1), 6.0, device=self.device
+        )  # accelerometer filter cut-off frequency (Hz)
+        self.filter_cutoff_frequency_bodyrate = torch.full(
+            (self.num_envs, 1), 20.0, device=self.device
+        )  # rate control filter cut-off-freuqnecy (Hz)
         self.filter_init_value_acc = torch.full((self.num_envs, 3), 0.0, device=self.device)
         self.filter_init_value_mot = torch.full((self.num_envs, 3), 0.0, device=self.device)
         self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
 
-        self.filterAcc_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_acc)
-        self.filterMot_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot)
-        self.filterRate_ = LowPassFilter(self.filter_cutoff_frequency_bodyrate, self.filter_sampling_frequency, self.filter_init_value_rate)
+        self.filterAcc_ = LowPassFilter(
+            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_acc
+        )
+        self.filterMot_ = LowPassFilter(
+            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
+        )
+        self.filterRate_ = LowPassFilter(
+            self.filter_cutoff_frequency_bodyrate, self.filter_sampling_frequency, self.filter_init_value_rate
+        )
 
         # debug
         self.debug = True
@@ -92,7 +104,7 @@ class GeometricController:
         """
 
         current_collective_thrust = actions.sum(1)  # sum over all propellors
-        
+
         # update low pass filters
         acc_filtered = self.filterAcc_.add(state["lin_acc"])
         ang_vel_filtered = self.filterRate_.add(state["ang_vel"])

@@ -8,19 +8,19 @@ from MARL_mav_carry_ext.tasks.managerbased.mdp_llc.utils import import_ref_folde
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG  # isort:skip
-import isaaclab.sim as sim_utils
+
 # Define the scene configuration
 
 
@@ -52,7 +52,9 @@ class CarryingSceneCfg(InteractiveSceneCfg):
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
             collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0), emissive_color=(0.0, 1.0, 0.0), opacity=0.99),
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                diffuse_color=(0.0, 1.0, 0.0), emissive_color=(0.0, 1.0, 0.0), opacity=0.99
+            ),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 2.5)),
     )
@@ -64,7 +66,9 @@ class CarryingSceneCfg(InteractiveSceneCfg):
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
             collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0), emissive_color=(0.0, 1.0, 0.0), opacity=0.95),
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                diffuse_color=(0.0, 1.0, 0.0), emissive_color=(0.0, 1.0, 0.0), opacity=0.95
+            ),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
     )
@@ -91,6 +95,7 @@ class CommandsCfg:
             yaw=(-math.pi, math.pi),
         ),
     )
+
 
 @configclass
 class ActionsCfg:
@@ -164,9 +169,9 @@ class EventCfg:
                 "x": (2.5, 3.0),
                 "y": (-0.5, 0.5),
                 "z": (1.0, 1.5),
-                "roll":(-0.0, 0.0),
-                "pitch":(-0.0, 0.0),
-                "yaw":(-math.pi, math.pi),
+                "roll": (-0.0, 0.0),
+                "pitch": (-0.0, 0.0),
+                "yaw": (-math.pi, math.pi),
             },
             "velocity_range": {
                 "x": (-0.0, 0.0),
@@ -187,9 +192,9 @@ class EventCfg:
                 "x": (0.0, 0.0),
                 "y": (-0.0, 0.0),
                 "z": (0.0, 0.0),
-                "roll":(0.0, 0.0),
-                "pitch":(0.0, 0.0),
-                "yaw":(-0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (-0.0, 0.0),
             },
             "velocity_range": {
                 "x": (-0.0, 0.0),
@@ -199,9 +204,8 @@ class EventCfg:
                 "pitch": (-0.0, 0.0),
                 "yaw": (-0.0, 0.0),
             },
-            "asset_cfg":SceneEntityCfg("wall"),
+            "asset_cfg": SceneEntityCfg("wall"),
         },
-        
     )
 
     base_external_force_torque = EventTerm(
@@ -226,7 +230,7 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Rewards for the tracking task."""    
+    """Rewards for the tracking task."""
 
     position_reward_exp = RewTerm(
         func=mdp.track_payload_pos_command,
@@ -319,12 +323,13 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum for the hovering task."""
 
-    # wall_displacement = CurrTerm(func=mdp.modify_obstacle_position, params={"displacement": 0.5, 
-    #                                                                   "command_name": "pose_command", 
-    #                                                                   "event_name": "reset_obstacle", 
-    #                                                                   "pos_error_threshold": 1.0, 
+    # wall_displacement = CurrTerm(func=mdp.modify_obstacle_position, params={"displacement": 0.5,
+    #                                                                   "command_name": "pose_command",
+    #                                                                   "event_name": "reset_obstacle",
+    #                                                                   "pos_error_threshold": 1.0,
     #                                                                   "ori_error_threshold": 0.2})
     pass
+
 
 @configclass
 class ObstacleEnvCfg(ManagerBasedRLEnvCfg):

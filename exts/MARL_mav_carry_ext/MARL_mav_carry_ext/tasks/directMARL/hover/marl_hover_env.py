@@ -6,26 +6,38 @@
 
 from __future__ import annotations
 
+import copy
+import math
 import numpy as np
 import torch
 from collections.abc import Sequence
-import math
+
+from MARL_mav_carry_ext.controllers import GeometricController, IndiController
+from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
+from MARL_mav_carry_ext.tasks.managerbased.mdp_llc.utils import get_drone_pdist, get_drone_rpos
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.envs import DirectMARLEnv
 from isaaclab.markers import VisualizationMarkers
-from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
-from isaaclab.utils.math import sample_uniform, quat_from_angle_axis, quat_mul, compute_pose_error, quat_from_euler_xyz, euler_xyz_from_quat, quat_inv, quat_unique, matrix_from_quat, quat_error_magnitude, quat_rotate
 from isaaclab.sensors import ContactSensor
-from isaaclab.utils import DelayBuffer, CircularBuffer
-import copy
+from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
+from isaaclab.utils import CircularBuffer, DelayBuffer
+from isaaclab.utils.math import (
+    compute_pose_error,
+    euler_xyz_from_quat,
+    matrix_from_quat,
+    quat_error_magnitude,
+    quat_from_angle_axis,
+    quat_from_euler_xyz,
+    quat_inv,
+    quat_mul,
+    quat_rotate,
+    quat_unique,
+    sample_uniform,
+)
 
 from .marl_hover_env_cfg import MARLHoverEnvCfg
-from MARL_mav_carry_ext.controllers import GeometricController, IndiController
-from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
-from MARL_mav_carry_ext.tasks.managerbased.mdp_llc.utils import get_drone_pdist, get_drone_rpos
-
 
 
 class MARLHoverEnv(DirectMARLEnv):
@@ -66,7 +78,7 @@ class MARLHoverEnv(DirectMARLEnv):
                 self.prev_actions[agent] = torch.zeros(self.num_envs, 12, device=self.device)
             elif self._control_mode == "ACCBR":
                 self.prev_actions[agent] = torch.zeros(self.num_envs, 5, device=self.device)
-            
+
         self.drone_positions = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
         self.drone_orientations = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
         self.drone_orientations[..., 0] = 1.0
@@ -94,9 +106,11 @@ class MARLHoverEnv(DirectMARLEnv):
         # motor model
         # experimentally obtained
         self.motor_models = {}
-        initial_rpms = [torch.tensor([[1441.5819, 1351.1626, 1341.0111, 1428.5597]], device=self.device).repeat(self.num_envs, 1),
-                        torch.tensor([[1377.9199, 1451.8428, 1408.9022, 1329.2014]], device=self.device).repeat(self.num_envs, 1),
-                        torch.tensor([[1281.3964, 1293.0708, 1361.7539, 1347.2434]], device=self.device).repeat(self.num_envs, 1)]
+        initial_rpms = [
+            torch.tensor([[1441.5819, 1351.1626, 1341.0111, 1428.5597]], device=self.device).repeat(self.num_envs, 1),
+            torch.tensor([[1377.9199, 1451.8428, 1408.9022, 1329.2014]], device=self.device).repeat(self.num_envs, 1),
+            torch.tensor([[1281.3964, 1293.0708, 1361.7539, 1347.2434]], device=self.device).repeat(self.num_envs, 1),
+        ]
         for i in range(self._num_drones):
             self.motor_models[i] = RotorMotor(self.num_envs, initial_rpms[i])
         self.sampling_time = self.sim.get_physics_dt() * self.cfg.low_level_decimation
@@ -110,15 +124,15 @@ class MARLHoverEnv(DirectMARLEnv):
         self.load_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
         self.load_length_x = torch.tensor([[0.275, 0, 0]] * self.num_envs, device=self.device)
         self.load_length_y = torch.tensor([[0, 0.275, 0]] * self.num_envs, device=self.device)
-        
+
         # Goal terms
         # # goal buffers
         self.pose_command_w = torch.zeros(self.num_envs, 7, device=self.device)
         self.pose_command_w[:, 3] = 1.0
-        
+
         self.goal_pos_error = torch.zeros(self.num_envs, 3, device=self.device)
         self.difference_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
-        
+
         # reward logging
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -131,7 +145,7 @@ class MARLHoverEnv(DirectMARLEnv):
                 "downwash_reward",
             ]
         }
-        
+
         # # -- metrics
         self.metrics = {}
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
@@ -149,7 +163,7 @@ class MARLHoverEnv(DirectMARLEnv):
         self.time_out = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         # debug vis
-        self.set_debug_vis(cfg.debug_vis) 
+        self.set_debug_vis(cfg.debug_vis)
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg)
@@ -157,7 +171,7 @@ class MARLHoverEnv(DirectMARLEnv):
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
         # clone and replicate (no need to filter for this environment)
-        self.scene.clone_environments(copy_from_source=False) # TODO: not sure what this does
+        self.scene.clone_environments(copy_from_source=False)  # TODO: not sure what this does
         # add articulation to scene - we must register to scene to randomize with EventManager
         self.scene.articulations["robot"] = self.robot
         self.scene.sensors["contact_forces"] = contact_sensors
@@ -170,7 +184,7 @@ class MARLHoverEnv(DirectMARLEnv):
             # terms used for smoothness reward, current and previously calculated actions
             self.prev_actions[agent][:] = self.actions[agent]
             self.actions[agent][:] = actions[agent]
-            
+
             # introduce delay in the setpoints
             # actions[agent][:] = self.setpoint_delay_buffers[agent].compute(actions[agent])
 
@@ -186,7 +200,7 @@ class MARLHoverEnv(DirectMARLEnv):
 
             elif self._control_mode == "ACCBR":
                 self._setpoints[drone]["lin_acc"] = action[:, :3]
-                self._setpoints[drone]["body_rates"] = torch.cat((action[:, 3:], self._constant_yaw), dim=-1) 
+                self._setpoints[drone]["body_rates"] = torch.cat((action[:, 3:], self._constant_yaw), dim=-1)
 
             self._setpoints[drone]["yaw"] = self._constant_yaw
             self._setpoints[drone]["yaw_rate"] = self._constant_yaw
@@ -197,19 +211,31 @@ class MARLHoverEnv(DirectMARLEnv):
             all_thrusts = []
             all_moments = []
 
-            drone_positions = self.robot.data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
+            drone_positions = self.robot.data.body_com_state_w[
+                :, self._falcon_idx, :3
+            ] - self.scene.env_origins.unsqueeze(1)
             drone_orientations = self.robot.data.body_com_state_w[:, self._falcon_idx, 3:7]
             drone_linear_velocities = self.robot.data.body_com_state_w[:, self._falcon_idx, 7:10]
             drone_angular_velocities = self.robot.data.body_com_state_w[:, self._falcon_idx, 10:13]
             drone_linear_accelerations = self.robot.data.body_acc_w[:, self._falcon_idx, :3]
             drone_angular_accelerations = self.robot.data.body_acc_w[:, self._falcon_idx, 3:6]
-            
-            self.drone_positions[:] = drone_positions #+ torch.randn_like(drone_positions) * self.position_noise_std
-            self.drone_orientations[:] = drone_orientations #+ torch.randn_like(drone_orientations) * self.orientation_noise_std
-            self.drone_linear_velocities[:] = drone_linear_velocities #+ torch.randn_like(drone_linear_velocities) * self.linear_velocity_noise_std
-            self.drone_angular_velocities[:] = drone_angular_velocities #+ torch.randn_like(drone_angular_velocities) * self.angular_velocity_noise_std
-            self.drone_linear_accelerations[:] = drone_linear_accelerations #+ torch.randn_like(drone_linear_accelerations) * self.linear_acceleration_noise_std
-            self.drone_angular_accelerations[:] = drone_angular_accelerations #+ torch.randn_like(drone_angular_accelerations) * self.angular_acceleration_noise_std
+
+            self.drone_positions[:] = drone_positions  # + torch.randn_like(drone_positions) * self.position_noise_std
+            self.drone_orientations[:] = (
+                drone_orientations  # + torch.randn_like(drone_orientations) * self.orientation_noise_std
+            )
+            self.drone_linear_velocities[:] = (
+                drone_linear_velocities  # + torch.randn_like(drone_linear_velocities) * self.linear_velocity_noise_std
+            )
+            self.drone_angular_velocities[:] = (
+                drone_angular_velocities  # + torch.randn_like(drone_angular_velocities) * self.angular_velocity_noise_std
+            )
+            self.drone_linear_accelerations[:] = (
+                drone_linear_accelerations  # + torch.randn_like(drone_linear_accelerations) * self.linear_acceleration_noise_std
+            )
+            self.drone_angular_accelerations[:] = (
+                drone_angular_accelerations  # + torch.randn_like(drone_angular_accelerations) * self.angular_acceleration_noise_std
+            )
 
             for i in range(self._num_drones):
                 drone_states: dict = {}  # dict of tensors
@@ -223,11 +249,13 @@ class MARLHoverEnv(DirectMARLEnv):
                 self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self.step_dt)
                 drone_states["jerk"] = self._drone_jerk[:, i]
                 self._drone_prev_acc[:, i] = drone_states["lin_acc"]
-    
+
                 alpha_cmd, acc_load, acc_cmd, q_cmd = self.geo_controllers[i].getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], self._setpoints[f"falcon{i+1}"]
                 )
-                target_rpm = self._indi_controllers[i].getCommand(drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load)
+                target_rpm = self._indi_controllers[i].getCommand(
+                    drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load
+                )
 
                 # if self.cfg.debug_vis:
                 #     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
@@ -235,7 +263,7 @@ class MARLHoverEnv(DirectMARLEnv):
                 #         self.drone_goals_debug[:, i] = self.drone_setpoint[i]["pos"] + self._env.scene.env_origins
                 #     self.des_acc_debug[:, i] = acc_cmd
                 #     self.des_ori_debug[:, i] = q_cmd
-            
+
                 thrusts, moments = self.motor_models[i].get_motor_thrusts_moments(target_rpm, self.sampling_time)
                 all_thrusts.append(thrusts)
                 all_moments.append(moments)
@@ -248,33 +276,33 @@ class MARLHoverEnv(DirectMARLEnv):
         self._ll_counter += 1
 
         # apply torques induced by rotors to each body
-        self.robot.set_external_force_and_torque(
-            torch.zeros_like(self._moments), self._moments, self._falcon_idx
-        )
+        self.robot.set_external_force_and_torque(torch.zeros_like(self._moments), self._moments, self._falcon_idx)
         # apply forces to each rotor
-        self.robot.set_external_force_and_torque(
-            self._forces, torch.zeros_like(self._forces), self._falcon_rotor_idx
-        )
+        self.robot.set_external_force_and_torque(self._forces, torch.zeros_like(self._forces), self._falcon_rotor_idx)
 
     def _get_observations(self) -> dict[str, torch.Tensor]:
-        
-        # local observations include: 
+
+        # local observations include:
         # load state
         # ego-drone drone
         # other-drone_states
         # goal terms
 
-        self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
+        self.load_position[:] = (
+            self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
+        )
         self.current_load_matrix[:] = matrix_from_quat(self.load_orientation)
         self.load_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 7:10].squeeze(1)
         self.load_ang_vel[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 10:13].squeeze(1)
-        
-        self.drone_positions[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, :3] - self.scene.env_origins.unsqueeze(1)
+
+        self.drone_positions[:] = self.robot.data.body_com_state_w[
+            :, self._falcon_idx, :3
+        ] - self.scene.env_origins.unsqueeze(1)
         self.drone_orientations[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, 3:7]
         self.drone_rot_matrices[:] = matrix_from_quat(self.drone_orientations)
         self.drone_linear_velocities[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, 7:10]
         self.drone_angular_velocities[:] = self.robot.data.body_com_state_w[:, self._falcon_idx, 10:13]
-        
+
         self.goal_pos_error[:] = self.pose_command_w[:, :3] - self.load_position
         goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
         self.difference_matrix[:] = torch.matmul(goal_load_matrix, self.current_load_matrix.transpose(1, 2))
@@ -289,75 +317,66 @@ class MARLHoverEnv(DirectMARLEnv):
         # self.all_action_histories = torch.cat(action_histories, dim=-1)
 
         obs_falcon1 = torch.cat(
-                (
-                    self.load_position,
-                    self.current_load_matrix.view(self.num_envs, -1),
-                    self.load_vel,
-                    self.load_ang_vel,
-                    
-                     # drone terms
-                    torch.tensor([[1, 0, 0]] * self.num_envs, device=self.device), # one-hot encoding
-                    self.drone_positions.view(self.num_envs, -1),
-                    self.drone_rot_matrices.view(self.num_envs, -1),
-                    self.drone_linear_velocities.view(self.num_envs, -1),
-                    self.drone_angular_velocities.view(self.num_envs, -1),
-                    
-                    self.goal_pos_error,
-                    self.difference_matrix.view(self.num_envs, -1),
+            (
+                self.load_position,
+                self.current_load_matrix.view(self.num_envs, -1),
+                self.load_vel,
+                self.load_ang_vel,
+                # drone terms
+                torch.tensor([[1, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                self.drone_positions.view(self.num_envs, -1),
+                self.drone_rot_matrices.view(self.num_envs, -1),
+                self.drone_linear_velocities.view(self.num_envs, -1),
+                self.drone_angular_velocities.view(self.num_envs, -1),
+                self.goal_pos_error,
+                self.difference_matrix.view(self.num_envs, -1),
+                # self.all_action_histories.reshape(self.num_envs, -1),
+            ),
+            dim=-1,
+        )
 
-                    # self.all_action_histories.reshape(self.num_envs, -1),
-                ),
-                dim=-1,
-            )
-        
         # self._observation_buffers["falcon1"].append(obs_falcon1)
 
         obs_falcon2 = torch.cat(
-                (
-                    self.load_position,
-                    self.current_load_matrix.view(self.num_envs, -1),
-                    self.load_vel,
-                    self.load_ang_vel,
-                    
-                     # drone terms
-                    torch.tensor([[0, 1, 0]] * self.num_envs, device=self.device), # one-hot encoding
-                    self.drone_positions.view(self.num_envs, -1),
-                    self.drone_rot_matrices.view(self.num_envs, -1),
-                    self.drone_linear_velocities.view(self.num_envs, -1),
-                    self.drone_angular_velocities.view(self.num_envs, -1),
-                    
-                    self.goal_pos_error,
-                    self.difference_matrix.view(self.num_envs, -1),
-
-                    # self.all_action_histories.reshape(self.num_envs, -1),
-                ),
-                dim=-1,
-            )
+            (
+                self.load_position,
+                self.current_load_matrix.view(self.num_envs, -1),
+                self.load_vel,
+                self.load_ang_vel,
+                # drone terms
+                torch.tensor([[0, 1, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                self.drone_positions.view(self.num_envs, -1),
+                self.drone_rot_matrices.view(self.num_envs, -1),
+                self.drone_linear_velocities.view(self.num_envs, -1),
+                self.drone_angular_velocities.view(self.num_envs, -1),
+                self.goal_pos_error,
+                self.difference_matrix.view(self.num_envs, -1),
+                # self.all_action_histories.reshape(self.num_envs, -1),
+            ),
+            dim=-1,
+        )
 
         # self._observation_buffers["falcon2"].append(obs_falcon2)
-        
-        obs_falcon3 = torch.cat(
-                (
-                    self.load_position,
-                    self.current_load_matrix.view(self.num_envs, -1),
-                    self.load_vel,  
-                    self.load_ang_vel,
-                    
-                     # drone terms
-                    torch.tensor([[0, 0, 1]] * self.num_envs, device=self.device), # one-hot encoding
-                    self.drone_positions.view(self.num_envs, -1),
-                    self.drone_rot_matrices.view(self.num_envs, -1),
-                    self.drone_linear_velocities.view(self.num_envs, -1),
-                    self.drone_angular_velocities.view(self.num_envs, -1),
-                    
-                    self.goal_pos_error,
-                    self.difference_matrix.view(self.num_envs, -1),
 
-                    # self.all_action_histories.reshape(self.num_envs, -1),
-                ),
-                dim=-1,
-            )
-        
+        obs_falcon3 = torch.cat(
+            (
+                self.load_position,
+                self.current_load_matrix.view(self.num_envs, -1),
+                self.load_vel,
+                self.load_ang_vel,
+                # drone terms
+                torch.tensor([[0, 0, 1]] * self.num_envs, device=self.device),  # one-hot encoding
+                self.drone_positions.view(self.num_envs, -1),
+                self.drone_rot_matrices.view(self.num_envs, -1),
+                self.drone_linear_velocities.view(self.num_envs, -1),
+                self.drone_angular_velocities.view(self.num_envs, -1),
+                self.goal_pos_error,
+                self.difference_matrix.view(self.num_envs, -1),
+                # self.all_action_histories.reshape(self.num_envs, -1),
+            ),
+            dim=-1,
+        )
+
         # self._observation_buffers["falcon3"].append(obs_falcon3)
 
         # observations = {
@@ -373,7 +392,6 @@ class MARLHoverEnv(DirectMARLEnv):
         return observations
 
     def _get_states(self) -> torch.Tensor:
-        
         states = torch.cat(
             (
                 # load terms
@@ -381,17 +399,14 @@ class MARLHoverEnv(DirectMARLEnv):
                 self.current_load_matrix.view(self.num_envs, -1),
                 self.load_vel,
                 self.load_ang_vel,
-                
                 # drone terms
                 self.drone_positions.view(self.num_envs, -1),
                 self.drone_rot_matrices.view(self.num_envs, -1),
                 self.drone_linear_velocities.view(self.num_envs, -1),
                 self.drone_angular_velocities.view(self.num_envs, -1),
-                
                 # goal terms
                 self.goal_pos_error,
                 self.difference_matrix.view(self.num_envs, -1),
-
                 # self.all_action_histories.reshape(self.num_envs, -1),
             ),
             dim=-1,
@@ -406,32 +421,38 @@ class MARLHoverEnv(DirectMARLEnv):
         # pos reward
         goal_pos_error_norm = torch.norm(self.pose_command_w[:, :3] - self.load_position, dim=-1)
         reward_distance_scale = 1.5
-        reward_position = self.cfg.pos_track_weight * torch.exp(-goal_pos_error_norm * reward_distance_scale) * self.step_dt
-        
+        reward_position = (
+            self.cfg.pos_track_weight * torch.exp(-goal_pos_error_norm * reward_distance_scale) * self.step_dt
+        )
+
         # orientation reward
         orientation_error = quat_error_magnitude(self.pose_command_w[:, 3:7], self.load_orientation)
         reward_distance_scale = 1.5
-        reward_orientation = self.cfg.ori_track_weight * torch.exp(-orientation_error * reward_distance_scale) * self.step_dt
+        reward_orientation = (
+            self.cfg.ori_track_weight * torch.exp(-orientation_error * reward_distance_scale) * self.step_dt
+        )
 
         # action smoothness reward
         current_actions = torch.cat([self.actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
-        diff_action = ((current_actions - action_prev).abs())/self._num_drones
-        reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1).square()) * self.step_dt
-        
+        diff_action = ((current_actions - action_prev).abs()) / self._num_drones
+        reward_action_smoothness = (
+            self.cfg.action_smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1).square()) * self.step_dt
+        )
+
         # commanded body rate reward
         commanded_body_rates = torch.cat([self.actions[agent][:, 3:] for agent in self.cfg.possible_agents], dim=-1)
-        body_rate_penalty = torch.norm(commanded_body_rates/self._num_drones, dim=-1)
+        body_rate_penalty = torch.norm(commanded_body_rates / self._num_drones, dim=-1)
         reward_body_rate_penalty = self.cfg.body_rate_penalty_weight * torch.exp(-body_rate_penalty) * self.step_dt
 
         # force penalty
         normalized_forces = self._forces[..., 2] / self.cfg.max_thrust_pp
         effort_sum = torch.max(normalized_forces, dim=-1)[0]
         reward_effort = self.cfg.force_penalty_weight * torch.exp(-effort_sum) * self.step_dt
-        
+
         # downwash reward
         reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward() * self.step_dt
-        
+
         # update metrics
         self._update_metrics()
 
@@ -443,12 +464,19 @@ class MARLHoverEnv(DirectMARLEnv):
             "force_penalty": reward_effort,
             "downwash_reward": reward_downwash,
         }
-        
+
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
-        
-        shared_rewards = reward_position + reward_orientation + reward_action_smoothness + reward_body_rate_penalty + reward_effort + reward_downwash
+
+        shared_rewards = (
+            reward_position
+            + reward_orientation
+            + reward_action_smoothness
+            + reward_body_rate_penalty
+            + reward_effort
+            + reward_downwash
+        )
 
         return {agent: shared_rewards for agent in self.cfg.possible_agents}
 
@@ -457,18 +485,24 @@ class MARLHoverEnv(DirectMARLEnv):
         The terminations for the environment. Since all of the agents are connected by the cables,
         if 1 agent terminates, terminate all agents.
         """
-        self.load_position[:] = self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
+        self.load_position[:] = (
+            self.robot.data.body_com_state_w[:, self._payload_idx, :3].squeeze(1) - self.scene.env_origins
+        )
 
         # crashing into ground
         self.falcon_fly_low = (self.drone_positions[:, :, 2] < 0.1).any(dim=-1)
         self.payload_fly_low = self.load_position[:, 2] < 0.1
-        
+
         # illegal contact
         contact_sensor = self.scene.sensors[self.cfg.sensor_cfg.name]
         net_contact_forces = contact_sensor.data.net_forces_w_history
         # check if any contact force exceeds the threshold
-        self.illegal_contact = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.cfg.sensor_cfg.body_ids], dim=-1), dim=1)[0] > self.cfg.contact_sensor_threshold, dim=1)
-        
+        self.illegal_contact = torch.any(
+            torch.max(torch.norm(net_contact_forces[:, :, self.cfg.sensor_cfg.body_ids], dim=-1), dim=1)[0]
+            > self.cfg.contact_sensor_threshold,
+            dim=1,
+        )
+
         # angle limits
         rope_orientations_world = self.robot.data.body_com_state_w[:, self._rope_idx, 3:7].view(-1, 4)
         drone_orientation_world = self.drone_orientations.view(-1, 4)
@@ -478,8 +512,10 @@ class MARLHoverEnv(DirectMARLEnv):
         )  # cable angles relative to drones
         roll_drone, pitch_drone, _ = euler_xyz_from_quat(rope_orientations_drones)  # yaw can be whatever
         mapped_angle_drone = torch.stack((torch.cos(roll_drone), torch.cos(pitch_drone)), dim=1)
-        self.angle_limit_drone = (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, 3).any(dim=1)
-        
+        self.angle_limit_drone = (
+            (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, 3).any(dim=1)
+        )
+
         self.load_orientation[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 3:7].squeeze(1)
         payload_orientation_world = self.load_orientation.repeat(1, 3, 1).view(-1, 4)
         payload_orientation_inv = quat_inv(payload_orientation_world)
@@ -488,24 +524,39 @@ class MARLHoverEnv(DirectMARLEnv):
         )  # cable angles relative to payload
         roll_load, pitch_load, _ = euler_xyz_from_quat(rope_orientations_payload)  # yaw can be whatever
         mapped_angle_load = torch.stack((torch.cos(roll_load), torch.cos(pitch_load)), dim=1)
-        self.angle_limit_load = (mapped_angle_load < self.cfg.cable_angle_limits_payload).any(dim=1).view(-1, 3).any(dim=1)
-        
+        self.angle_limit_load = (
+            (mapped_angle_load < self.cfg.cable_angle_limits_payload).any(dim=1).view(-1, 3).any(dim=1)
+        )
+
         # cables colliding
-        self.cable_collision = self._cable_collision(self.cfg.cable_collision_threshold, self.cfg.cable_collision_num_points)
-        
+        self.cable_collision = self._cable_collision(
+            self.cfg.cable_collision_threshold, self.cfg.cable_collision_num_points
+        )
+
         # drones colliding
         rpos = get_drone_rpos(self.drone_positions)
         pdist = get_drone_pdist(rpos)
-        separation = pdist.min(dim=-1).values.min(dim=-1).values  # get the smallest distance between drones in the swarm
+        separation = (
+            pdist.min(dim=-1).values.min(dim=-1).values
+        )  # get the smallest distance between drones in the swarm
         self.drone_collision = separation < self.cfg.drone_collision_threshold
-        
+
         # bounding box
         self.body_pos_outside = (self.drone_positions.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
-        
+
         # reset when episode ends
-        terminations = self.falcon_fly_low | self.payload_fly_low | self.illegal_contact | self.angle_limit_drone | self.angle_limit_load | self.cable_collision | self.drone_collision | self.body_pos_outside
+        terminations = (
+            self.falcon_fly_low
+            | self.payload_fly_low
+            | self.illegal_contact
+            | self.angle_limit_drone
+            | self.angle_limit_load
+            | self.cable_collision
+            | self.drone_collision
+            | self.body_pos_outside
+        )
         self.time_out = self.episode_length_buf >= self.max_episode_length - 1
-        
+
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
         time_outs = {agent: self.time_out for agent in self.cfg.possible_agents}
 
@@ -518,23 +569,39 @@ class MARLHoverEnv(DirectMARLEnv):
         super()._reset_idx(env_ids)
         self._reset_target_pose(env_ids)
         # for agent in self.cfg.possible_agents:
-            # self.setpoint_delay_buffers[agent].reset(env_ids)
-            # self._observation_buffers[agent].reset(env_ids)
+        # self.setpoint_delay_buffers[agent].reset(env_ids)
+        # self._observation_buffers[agent].reset(env_ids)
         # self._state_buffer.reset(env_ids)
-        
+
         # log reward components
         if "log" not in self.extras:
             self.extras["log"] = dict()
-        self.extras["log"]["Episode_Termination/angle_drones_cable"] = torch.count_nonzero(self.angle_limit_drone[env_ids]).item()
-        self.extras["log"]["Episode_Termination/angle_load_cable"] = torch.count_nonzero(self.angle_limit_load[env_ids]).item()
-        self.extras["log"]["Episode_Termination/cables_collide"] = torch.count_nonzero(self.cable_collision[env_ids]).item()
-        self.extras["log"]["Episode_Termination/drones_collide"] = torch.count_nonzero(self.drone_collision[env_ids]).item()
-        self.extras["log"]["Episode_Termination/bounding_box"] = torch.count_nonzero(self.body_pos_outside[env_ids]).item()
-        self.extras["log"]["Episode_Termination/falcon_fly_low"] = torch.count_nonzero(self.falcon_fly_low[env_ids]).item()
-        self.extras["log"]["Episode_Termination/payload_fly_low"] = torch.count_nonzero(self.payload_fly_low[env_ids]).item()
-        self.extras["log"]["Episode_Termination/illegal_contact"] = torch.count_nonzero(self.illegal_contact[env_ids]).item()
+        self.extras["log"]["Episode_Termination/angle_drones_cable"] = torch.count_nonzero(
+            self.angle_limit_drone[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/angle_load_cable"] = torch.count_nonzero(
+            self.angle_limit_load[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/cables_collide"] = torch.count_nonzero(
+            self.cable_collision[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/drones_collide"] = torch.count_nonzero(
+            self.drone_collision[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/bounding_box"] = torch.count_nonzero(
+            self.body_pos_outside[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/falcon_fly_low"] = torch.count_nonzero(
+            self.falcon_fly_low[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/payload_fly_low"] = torch.count_nonzero(
+            self.payload_fly_low[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/illegal_contact"] = torch.count_nonzero(
+            self.illegal_contact[env_ids]
+        ).item()
         self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
-    
+
         for key in self._episode_sums.keys():
             episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
             self.extras["log"]["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
@@ -542,13 +609,13 @@ class MARLHoverEnv(DirectMARLEnv):
 
         # log metrics
         for metric_name, metric_value in self.metrics.items():
-                self.extras["log"][f"Metrics/pose_command/{metric_name}"] = metric_value.mean()
+            self.extras["log"][f"Metrics/pose_command/{metric_name}"] = metric_value.mean()
 
         # reset the action history
         for agent in self.cfg.possible_agents:
             self.prev_actions[agent][env_ids] = 0.0
             self.actions[agent][env_ids] = 0.0
-    
+
         # if self.common_step_counter > self.cfg.range_curriculum_steps:
         #     self.cfg.goal_range ={
         #     "pos_x": (-2.0, 2.0),
@@ -573,7 +640,7 @@ class MARLHoverEnv(DirectMARLEnv):
         quat = quat_from_euler_xyz(euler_angles[:, 0], euler_angles[:, 1], euler_angles[:, 2])
         # make sure the quaternion has real part as positive
         self.pose_command_w[env_ids, 3:] = quat_unique(quat) if self.cfg.make_quat_unique_command else quat
-    
+
     def _update_metrics(self):
         pos_error, rot_error = compute_pose_error(
             self.pose_command_w[:, :3],
@@ -594,7 +661,9 @@ class MARLHoverEnv(DirectMARLEnv):
         A collision is detected if the minimum Euclidean distance between any two points
         on different cables is below the threshold.
         """
-        cable_bottom_pos_env = self.robot.data.body_com_state_w[:, self._rope_idx, :3] - self.scene.env_origins.unsqueeze(1)
+        cable_bottom_pos_env = self.robot.data.body_com_state_w[
+            :, self._rope_idx, :3
+        ] - self.scene.env_origins.unsqueeze(1)
         cable_directions = self.drone_positions - cable_bottom_pos_env  # (num_envs, num_cables, 3)
 
         # Create linearly spaced points for interpolation (num_points,)
@@ -624,7 +693,9 @@ class MARLHoverEnv(DirectMARLEnv):
         cable_indices = torch.arange(num_cables, device=self.device).repeat_interleave(
             points_per_cable
         )  # (num_points_total,)
-        same_cable_mask = cable_indices.unsqueeze(0) == cable_indices.unsqueeze(1)  # (num_points_total, num_points_total)
+        same_cable_mask = cable_indices.unsqueeze(0) == cable_indices.unsqueeze(
+            1
+        )  # (num_points_total, num_points_total)
         same_cable_mask = same_cable_mask.unsqueeze(0).expand(
             self.num_envs, -1, -1
         )  # (num_envs, num_points_total, num_points_total)
@@ -640,7 +711,7 @@ class MARLHoverEnv(DirectMARLEnv):
 
         assert is_cable_collision.shape == (self.num_envs,)
         return is_cable_collision
-    
+
     def _downwash_reward(self):
         # Plane equation for the payload
         x_len_payload_env = quat_rotate(self.load_orientation, self.load_length_x)
@@ -654,7 +725,8 @@ class MARLHoverEnv(DirectMARLEnv):
 
         # Line equations for each drone's thrust direction
         thrust_directions = quat_rotate(
-            self.drone_orientations.view(-1,4), torch.tensor([[0, 0, 1.0]] * self.num_envs * self._num_drones, device=self.device)
+            self.drone_orientations.view(-1, 4),
+            torch.tensor([[0, 0, 1.0]] * self.num_envs * self._num_drones, device=self.device),
         ).view(self.num_envs, self._num_drones, 3)
 
         # Calculate intersection points with the plane
@@ -669,12 +741,16 @@ class MARLHoverEnv(DirectMARLEnv):
         line_point_proj = self.drone_positions + t * thrust_directions  # Shape (num_envs, num_drones, 3)
 
         # Calculate distance between intersection points and payload position
-        line_dist = torch.norm(line_point_proj - self.load_position.unsqueeze(1), dim=-1)  # Shape (num_envs, num_drones)
+        line_dist = torch.norm(
+            line_point_proj - self.load_position.unsqueeze(1), dim=-1
+        )  # Shape (num_envs, num_drones)
         # Reward: penalize based on distance from the intersection point to the payload position
         scaling_factor = 3
-        reward_downwash = (1 - torch.exp(-torch.min(line_dist, dim=-1).values * scaling_factor))  # Min distance from the payload    
+        reward_downwash = 1 - torch.exp(
+            -torch.min(line_dist, dim=-1).values * scaling_factor
+        )  # Min distance from the payload
         return reward_downwash
-    
+
     def _set_debug_vis_impl(self, debug_vis: bool):
         if not hasattr(self, "goal_pose_visualizer"):
             # -- goal pose
@@ -688,16 +764,19 @@ class MARLHoverEnv(DirectMARLEnv):
             if hasattr(self, "goal_pose_visualizer"):
                 self.goal_pose_visualizer.set_visibility(False)
                 self.body_pose_visualizer.set_visibility(False)
-                
+
     def _debug_vis_callback(self, event):
         if not self.robot.is_initialized:
             return
         # update the markers
         # -- goal pose
-        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3] + self.scene.env_origins, self.pose_command_w[:, 3:])
+        self.goal_pose_visualizer.visualize(
+            self.pose_command_w[:, :3] + self.scene.env_origins, self.pose_command_w[:, 3:]
+        )
 
         # -- current body pose
         self.body_pose_visualizer.visualize(self.load_position + self.scene.env_origins, self.load_orientation)
+
 
 @torch.jit.script
 def scale(x, lower, upper):

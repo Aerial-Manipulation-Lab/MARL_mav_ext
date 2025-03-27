@@ -22,6 +22,7 @@ from isaaclab.utils.math import combine_frame_transforms, compute_pose_error, qu
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
+
 class UniformPoseCommandGlobal(CommandTerm):
     """Command generator for generating pose commands uniformly.
 
@@ -62,9 +63,9 @@ class UniformPoseCommandGlobal(CommandTerm):
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
         # -- goal reached flag
-        self.time_threshold_steps = int(2/env.sim.get_physics_dt()) # 2 seconds
+        self.time_threshold_steps = int(2 / env.sim.get_physics_dt())  # 2 seconds
         self.goal_dist_counter = torch.zeros(self.num_envs, device=self.device)
-        self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device) # used in reward function
+        self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)  # used in reward function
 
     def __str__(self) -> str:
         msg = "UniformPoseCommandGlobal:\n"
@@ -121,14 +122,11 @@ class UniformPoseCommandGlobal(CommandTerm):
         within_goal_range = (self.metrics["position_error"] < 0.35) & (self.metrics["orientation_error"] < 0.2)
         # Increment counter for environments within goal distance, reset to 0 for others
         self.goal_dist_counter = torch.where(
-            within_goal_range,
-            self.goal_dist_counter + 1,
-            torch.zeros_like(self.goal_dist_counter)
+            within_goal_range, self.goal_dist_counter + 1, torch.zeros_like(self.goal_dist_counter)
         )
 
         # Set achieved goal if counter meets or exceeds the threshold
         self.achieved_goal |= self.goal_dist_counter >= self.time_threshold_steps
-        
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         # create markers if necessary for the first tome
@@ -157,7 +155,9 @@ class UniformPoseCommandGlobal(CommandTerm):
             return
         # update the markers
         # -- goal pose
-        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:])
+        self.goal_pose_visualizer.visualize(
+            self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:]
+        )
         # print("The tracking error of the position is ", self.metrics["position_error"])
         # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
 
@@ -297,7 +297,7 @@ class RefTrajectoryCommand(CommandTerm):
 
     def _resample_command(self, env_ids: Sequence[int]):
         # NOTE: Assigning new random reference trajectory and resetting to the starting point of that reference happens in the EventManager
-        # sample random sim time for resetted envs between 0 and the max time of the reference trajectory - 10 seconds
+        # sample random sim time for reset envs between 0 and the max time of the reference trajectory - 10 seconds
         if self.cfg.random_init:
             self.sim_time[env_ids] = torch.rand_like(self.sim_time[env_ids], device=self.device) * (
                 self.reference[0, -1, 0] - 10.0
@@ -459,9 +459,9 @@ class UniformTwistCommandGlobal(CommandTerm):
         self.metrics["linear_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["angular_velocity_error"] = torch.zeros(self.num_envs, device=self.device)
         # -- goal reached flag
-        self.time_threshold_steps = int(2/env.sim.get_physics_dt()) # 2 seconds
+        self.time_threshold_steps = int(2 / env.sim.get_physics_dt())  # 2 seconds
         self.goal_dist_counter = torch.zeros(self.num_envs, device=self.device)
-        self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device) # used in reward function
+        self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)  # used in reward function
 
     def __str__(self) -> str:
         msg = "UniformPoseCommandGlobal:\n"
@@ -534,14 +534,11 @@ class UniformTwistCommandGlobal(CommandTerm):
         within_goal_range = (self.metrics["position_error"] < 0.35) & (self.metrics["orientation_error"] < 0.2)
         # Increment counter for environments within goal distance, reset to 0 for others
         self.goal_dist_counter = torch.where(
-            within_goal_range,
-            self.goal_dist_counter + 1,
-            torch.zeros_like(self.goal_dist_counter)
+            within_goal_range, self.goal_dist_counter + 1, torch.zeros_like(self.goal_dist_counter)
         )
 
         # Set achieved goal if counter meets or exceeds the threshold
         self.achieved_goal |= self.goal_dist_counter >= self.time_threshold_steps
-        
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         # create markers if necessary for the first tome
@@ -570,7 +567,9 @@ class UniformTwistCommandGlobal(CommandTerm):
             return
         # update the markers
         # -- goal pose
-        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:])
+        self.goal_pose_visualizer.visualize(
+            self.pose_command_w[:, :3] + self._env.scene.env_origins, self.pose_command_w[:, 3:]
+        )
         # print("The tracking error of the position is ", self.metrics["position_error"])
         # print("The tracking error of the orientation is ", self.metrics["orientation_error"])
 

@@ -11,9 +11,7 @@ from isaaclab.utils.math import quat_rotate
 
 
 class DirectMARLPlotter:
-    def __init__(self, env: DirectMARLEnv, 
-                 control_mode: str,
-                 asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
+    def __init__(self, env: DirectMARLEnv, control_mode: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
 
         # environment
         self.control_mode = control_mode
@@ -72,7 +70,7 @@ class DirectMARLPlotter:
             self.load_data["load_ang_vel"].append(load_ang_vel.tolist())
             self.load_data["load_acc"].append(load_acc.tolist())
             self.load_data["load_ang_acc"].append(load_ang_acc.tolist())
-        
+
     def collect_drone_data(self):
         """Collect the drone data from the environment."""
         drone_pos = self.robot.data.body_com_state_w[:, self.drone_idx, :3][0]
@@ -107,7 +105,7 @@ class DirectMARLPlotter:
                 ref_acc = ref_drone[:3]
                 ref_BR = torch.cat((ref_drone[3:], torch.zeros((1), device="cuda")), dim=-1)
                 # Append the data for this drone
-                
+
                 both_drone_acc = torch.cat((ref_acc, drone_acc[drone_num]), dim=-1)
                 both_drone_BR = torch.cat((ref_BR, drone_BR[drone_num]), dim=-1)
 
@@ -269,7 +267,9 @@ class DirectMARLPlotter:
                         if "orientation" in key:
                             ax.legend(["W_ref", "X_ref", "Y_ref", "Z_ref", "W", "X", "Y", "Z"])
                         else:
-                            ax.legend(["F1", "F2", "F3", "F4", "F1_filtered", "F2_filtered", "F3_filtered", "F4_filtered"])
+                            ax.legend(
+                                ["F1", "F2", "F3", "F4", "F1_filtered", "F2_filtered", "F3_filtered", "F4_filtered"]
+                            )
                     else:
                         ref_data = [entry[:3] for entry in data]
                         actual_data = [entry[3:] for entry in data]

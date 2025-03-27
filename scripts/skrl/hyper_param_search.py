@@ -48,7 +48,9 @@ parser.add_argument("--checkpoint", type=str, default=None, help="Path to the ch
 parser.add_argument("--suggested_lr", type=float, default=None, help="Suggested learning rate from optuna.")
 parser.add_argument("--suggested_lr_actor", type=float, default=None, help="Suggested learning rate from optuna.")
 parser.add_argument("--suggested_lr_critic", type=float, default=None, help="Suggested learning rate from optuna.")
-parser.add_argument("--suggested_learning_epochs", type=int, default=None, help="Suggested learning epochs from optuna.")
+parser.add_argument(
+    "--suggested_learning_epochs", type=int, default=None, help="Suggested learning epochs from optuna."
+)
 parser.add_argument("--optuna_id", type=int, default=None, help="Optuna study id.")
 parser.add_argument("--suggested_mini_batches", type=int, default=None, help="Suggested mini-batches from optuna.")
 parser.add_argument("--suggested_lambda", type=float, default=None, help="Suggested lambda from optuna.")
@@ -96,6 +98,8 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
+from isaaclab_rl.skrl import SkrlVecEnvWrapper
+
 import MARL_mav_carry_ext.tasks  # noqa: F401
 
 import isaaclab_tasks  # noqa: F401
@@ -108,7 +112,6 @@ from isaaclab.envs import (
 )
 from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils.hydra import hydra_task_config
-from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
 # register the gym environment
 

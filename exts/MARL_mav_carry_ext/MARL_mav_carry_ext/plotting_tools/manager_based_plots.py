@@ -11,10 +11,13 @@ from isaaclab.utils.math import quat_rotate
 
 
 class ManagerBasedPlotter:
-    def __init__(self, env: ManagerBasedRLEnv, 
-                 command_name: str,
-                 control_mode: str,
-                 asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
+    def __init__(
+        self,
+        env: ManagerBasedRLEnv,
+        command_name: str,
+        control_mode: str,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    ):
 
         # environment
         self.command_name = command_name
@@ -96,19 +99,31 @@ class ManagerBasedPlotter:
         for drone_num in range(drone_pos.shape[0]):
             ref_drone = policy_ref[drone_num * int(action_space) : (drone_num + 1) * int(action_space)]
             filtered_acc = self.env.action_manager._terms["low_level_action"].geo_controllers[drone_num].filtered_acc[0]
-            filtered_rate = self.env.action_manager._terms["low_level_action"].geo_controllers[drone_num].filtered_rate[0]
-            unfiltered_thrusts_geo = self.env.action_manager._terms["low_level_action"].geo_controllers[drone_num].unfiltered_thrusts[0]
-            filtered_thrusts_geo = self.env.action_manager._terms["low_level_action"].geo_controllers[drone_num].filtered_thrusts[0]
+            filtered_rate = (
+                self.env.action_manager._terms["low_level_action"].geo_controllers[drone_num].filtered_rate[0]
+            )
+            unfiltered_thrusts_geo = (
+                self.env.action_manager._terms["low_level_action"].geo_controllers[drone_num].unfiltered_thrusts[0]
+            )
+            filtered_thrusts_geo = (
+                self.env.action_manager._terms["low_level_action"].geo_controllers[drone_num].filtered_thrusts[0]
+            )
 
-            unfiltered_mot = self.env.action_manager._terms["low_level_action"]._indi_controllers[drone_num].unfiltered_mot[0]
-            filtered_mot = self.env.action_manager._terms["low_level_action"]._indi_controllers[drone_num].filtered_mot[0]
-            filtered_ang_acc = self.env.action_manager._terms["low_level_action"]._indi_controllers[drone_num].filtered_ang_acc[0]
+            unfiltered_mot = (
+                self.env.action_manager._terms["low_level_action"]._indi_controllers[drone_num].unfiltered_mot[0]
+            )
+            filtered_mot = (
+                self.env.action_manager._terms["low_level_action"]._indi_controllers[drone_num].filtered_mot[0]
+            )
+            filtered_ang_acc = (
+                self.env.action_manager._terms["low_level_action"]._indi_controllers[drone_num].filtered_ang_acc[0]
+            )
 
             if self.control_mode == "ACCBR":
                 ref_acc = ref_drone[:3]
                 ref_BR = torch.cat((ref_drone[3:], torch.zeros((1), device="cuda")), dim=-1)
                 # Append the data for this drone
-                
+
                 both_drone_acc = torch.cat((ref_acc, drone_acc[drone_num]), dim=-1)
                 both_drone_BR = torch.cat((ref_BR, drone_BR[drone_num]), dim=-1)
 
@@ -269,7 +284,9 @@ class ManagerBasedPlotter:
                         if "orientation" in key:
                             ax.legend(["W_ref", "X_ref", "Y_ref", "Z_ref", "W", "X", "Y", "Z"])
                         else:
-                            ax.legend(["F1", "F2", "F3", "F4", "F1_filtered", "F2_filtered", "F3_filtered", "F4_filtered"])
+                            ax.legend(
+                                ["F1", "F2", "F3", "F4", "F1_filtered", "F2_filtered", "F3_filtered", "F4_filtered"]
+                            )
                     else:
                         ref_data = [entry[:3] for entry in data]
                         actual_data = [entry[3:] for entry in data]

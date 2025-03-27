@@ -44,7 +44,7 @@ The assets folder contains `$(ROBOT).py` files which have the configuration the 
 Then, in the [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/assets/data/AMR](https://github.com/Jackkert/MARL_mav_ext/tree/main/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/assets/data/AMR) folder, the robot URDF and corresponding meshes are located in the `$(ROBOT)_data` folder and the USD files can be found in the `$(ROBOT)` folder.
 
 ## Controllers
-The controllers are implemented in [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers](https://github.com/Jackkert/MARL_mav_ext/tree/feature/track_task/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers). The differential flatness based contorller (DFBC) can be found in `geometric.py`. The incremental nonlinear dynamic inversion (INDI) controller can be found in `indi.py`. 
+The controllers are implemented in [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers](https://github.com/Jackkert/MARL_mav_ext/tree/feature/track_task/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers). The differential flatness based contorller (DFBC) can be found in `geometric.py`. The incremental nonlinear dynamic inversion (INDI) controller can be found in `indi.py`.
 
 ## Plotting Tools
 The plotting tools are implemented in [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/plotting_tools](https://github.com/Jackkert/MARL_mav_ext/tree/feature/track_task/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/plotting_tools). Plotting is supported for both ManagerBasedRLEnv and DirectMARLEnv.
@@ -57,7 +57,7 @@ Moreover, tasks for a single falcon drone are implemented in [exts/MARL_mav_carr
 
 ### Environment structure
 
-The configuration class for each task can be found in their respective folder. Following the Isaac Lab structure the environment is implemented as a [`ManagerBasedRLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/isaaclab.envs.html#isaaclab.envs.ManagerBasedRLEnv). 
+The configuration class for each task can be found in their respective folder. Following the Isaac Lab structure the environment is implemented as a [`ManagerBasedRLEnv`](https://isaac-sim.github.io/IsaacLab/source/api/lab/isaaclab.envs.html#isaaclab.envs.ManagerBasedRLEnv).
 
 The manager based environment consists of multiple modules, and their configs can be found in the `$(TASK)_env_cfg.py` file:
 
@@ -96,7 +96,7 @@ The manager based environment consists of multiple modules, and their configs ca
 The `DirectMARLEnv` case implements all of these functions directly into 1 class. It can be found under [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL](https://github.com/Jackkert/MARL_mav_ext/tree/decentralized/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL).
 
 ## Training and playing
-Isaac Lab offers different wrappers for different RL libraries to make it easy to switch between libraries. The scripts for the corresponding libraries are implemented in [scripts](https://github.com/Jackkert/MARL_mav_ext/tree/main/scripts). The useable libraries are rsl_rl and skrl.
+Isaac Lab offers different wrappers for different RL libraries to make it easy to switch between libraries. The scripts for the corresponding libraries are implemented in [scripts](https://github.com/Jackkert/MARL_mav_ext/tree/main/scripts). The usable libraries are rsl_rl and skrl.
 
 ### Agents
 The agent configurations for the flycrane are in the respective task's `config/flycrane/agents`. folder The environments are registered as a gym environment and the parameters of the agents can be changed here.

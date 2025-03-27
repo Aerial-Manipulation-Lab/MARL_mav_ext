@@ -20,6 +20,7 @@ payload_idx = [1]
 drone_idx = [20, 27, 34]
 base_rope_idx = [8, 9, 10]
 
+
 def reset_root_state_ref_trajectory(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor,
@@ -76,13 +77,13 @@ def reset_root_state_ref_trajectory(
     asset.write_root_pose_to_sim(torch.cat([positions, orientations], dim=-1), env_ids=env_ids)
     asset.write_root_velocity_to_sim(velocities, env_ids=env_ids)
 
+
 def reset_root_state_uniform_collision_check(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,
     pose_range: dict[str, tuple[float, float]],
     velocity_range: dict[str, tuple[float, float]],
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-
 ):
     """Reset the asset root state to a random position and velocity uniformly within the given ranges. Resample if the
     asset collides with any other asset in the scene.
@@ -123,15 +124,21 @@ def reset_root_state_uniform_collision_check(
 
             # Compute distances between robot and rigid body positions
             distances = torch.norm(robot_pos - rigid_body_pos, dim=-1)
-            
+
             # Identify environments in collision
             in_collision = distances < collision_threshold
-            
+
             # Resample only for environments in collision
             if in_collision.any():
-                new_rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (in_collision.sum(), 6), device=asset.device)
+                new_rand_samples = math_utils.sample_uniform(
+                    ranges[:, 0], ranges[:, 1], (in_collision.sum(), 6), device=asset.device
+                )
                 rand_samples[in_collision] = new_rand_samples
-                positions[in_collision] = root_states[in_collision, 0:3] + env.scene.env_origins[env_ids][in_collision] + new_rand_samples[:, 0:3]
+                positions[in_collision] = (
+                    root_states[in_collision, 0:3]
+                    + env.scene.env_origins[env_ids][in_collision]
+                    + new_rand_samples[:, 0:3]
+                )
 
     orientations_delta = math_utils.quat_from_euler_xyz(rand_samples[:, 3], rand_samples[:, 4], rand_samples[:, 5])
     orientations = math_utils.quat_mul(root_states[:, 3:7], orientations_delta)
@@ -146,11 +153,16 @@ def reset_root_state_uniform_collision_check(
     asset.write_root_pose_to_sim(torch.cat([positions, orientations], dim=-1), env_ids=env_ids)
     asset.write_root_velocity_to_sim(velocities, env_ids=env_ids)
 
+
 def reset_spline_position_buffer(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     action_term: str = "low_level_action",
 ):
-    drone_positions = env.scene[asset_cfg.name].data.body_com_state_w[:, drone_idx, :3] - env.scene.env_origins.unsqueeze(1)
-    env.action_manager._terms[action_term].spline_positions[env_ids] = drone_positions[env_ids].unsqueeze(2).repeat(1, 1, 6, 1)
+    drone_positions = env.scene[asset_cfg.name].data.body_com_state_w[
+        :, drone_idx, :3
+    ] - env.scene.env_origins.unsqueeze(1)
+    env.action_manager._terms[action_term].spline_positions[env_ids] = (
+        drone_positions[env_ids].unsqueeze(2).repeat(1, 1, 6, 1)
+    )

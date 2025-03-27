@@ -4,22 +4,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 
+import math
+
 from MARL_mav_carry_ext.assets import FLYCRANE_CFG
 
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
-import math
 from isaaclab.assets import ArticulationCfg, RigidObjectCfg
 from isaaclab.envs import DirectMARLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.markers.config import FRAME_MARKER_CFG
-
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.sim import PhysxCfg, SimulationCfg
 from isaaclab.sim.spawners.materials.physics_materials_cfg import RigidBodyMaterialCfg
 from isaaclab.utils import configclass
-from isaaclab.sensors import ContactSensorCfg
 
 
 @configclass
@@ -91,14 +91,14 @@ class EventCfg:
 @configclass
 class MARLHoverEnvCfg(DirectMARLEnvCfg):
     # control mode
-    control_mode = "ACCBR" # ACCBR or geometric
+    control_mode = "ACCBR"  # ACCBR or geometric
     # env
     decimation = 3
     episode_length_s = 20
 
     # delay parameters
-    max_delay = 4 # in number of steps, with policy = 100hz -> 40ms
-    constant_delay = 4 # in number of steps, with policy = 100hz -> 40ms
+    max_delay = 4  # in number of steps, with policy = 100hz -> 40ms
+    constant_delay = 4  # in number of steps, with policy = 100hz -> 40ms
     # history of observations
     history_len = 4
 
@@ -107,36 +107,38 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     if control_mode == "geometric":
         action_dim_geo = 12
         action_spaces = {"falcon1": action_dim_geo, "falcon2": action_dim_geo, "falcon3": action_dim_geo}
-        obs_dim_geo = 87 #+ action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        obs_dim_geo = 87  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
         observation_spaces = {"falcon1": obs_dim_geo, "falcon2": obs_dim_geo, "falcon3": obs_dim_geo}
-        state_space = 84 #+ action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        state_space = 84  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
     elif control_mode == "ACCBR":
         action_dim_accbr = 5
         action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr}
-        obs_dim_accbr = 87 #+ action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        obs_dim_accbr = (
+            87  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        )
         observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr}
-        state_space = 84 #+ action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        state_space = 84  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
 
     # start with full observability: own state 18 + other drones 18 * 2 + payload 18 + goal terms 12 = 84 + OH vector
     # TODO: start with that the state_space is the same as the local observations, then go down
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
-        dt= 0.0033333333333333335,
+        dt=0.0033333333333333335,
         render_interval=decimation,
-        gravity = (0.0, 0.0, -9.8066),
+        gravity=(0.0, 0.0, -9.8066),
     )
     # robot
     robot_cfg: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="/World/envs/env_.*/flycrane")
     robot_cfg.spawn.activate_contact_sensors = True
-    
+
     # contact sensors
     contact_forces = ContactSensorCfg(
         prim_path="/World/envs/env_.*/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
     )
     sensor_cfg = SceneEntityCfg("contact_forces", body_names=".*")
     contact_sensor_threshold = 0.1
-    
+
     # falcon CoM names
     falcon_names = "Falcon.*_base_link_inertia"
     # rotor names
@@ -145,16 +147,16 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     payload_name = "load_odometry_sensor_link"
     # rope name and termination terms
     rope_name = "rope_.*_link"
-    cable_angle_limits_drone = 0.0 # cos(angle) limits
-    cable_angle_limits_payload = -math.sqrt(2)/2 # cos(angle) limits
+    cable_angle_limits_drone = 0.0  # cos(angle) limits
+    cable_angle_limits_payload = -math.sqrt(2) / 2  # cos(angle) limits
     cable_collision_threshold = 0.2
     cable_collision_num_points = 10
     drone_collision_threshold = 0.5
     bounding_box_threshold = 5.0
 
     # low level control
-    low_level_decimation : int =  1
-    max_thrust_pp = 6.25 # N
+    low_level_decimation: int = 1
+    max_thrust_pp = 6.25  # N
 
     # rewards
     pos_track_weight = 1.5
@@ -169,8 +171,8 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
         "pos_x": (-1.0, 1.0),
         "pos_y": (-1.0, 1.0),
         "pos_z": (0.5, 1.5),
-        "roll": (-math.pi/4, math.pi/4),
-        "pitch": (-math.pi/4, math.pi/4),
+        "roll": (-math.pi / 4, math.pi / 4),
+        "pitch": (-math.pi / 4, math.pi / 4),
         "yaw": (-math.pi, math.pi),
     }
     range_curriculum_steps = 7500
@@ -185,21 +187,19 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     #         ),
     #     },
     # )
-    
+
     # debug visualization
-    debug_vis : bool = True
+    debug_vis: bool = True
     if debug_vis:
         marker_cfg_goal = FRAME_MARKER_CFG.copy()
         marker_cfg_goal.markers["frame"].scale = (0.1, 0.1, 0.1)
         marker_cfg_goal.prim_path = "/Visuals/Command/goal_pose"
-        
+
         marker_cfg_body = FRAME_MARKER_CFG.copy()
         marker_cfg_body.markers["frame"].scale = (0.1, 0.1, 0.1)
         marker_cfg_body.prim_path = "/Visuals/Command/body_pose"
 
-    
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
 
     events = EventCfg()
-

@@ -230,7 +230,7 @@ def cable_collision(
 def payload_target_distance(
     env: ManagerBasedRLEnv, threshold: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
-    """Terminate when the payload is outisde a certain distance of the target."""
+    """Terminate when the payload is outside a certain distance of the target."""
     robot = env.scene[asset_cfg.name]
     payload_pos_world = robot.data.body_com_state_w[:, payload_idx, :3].squeeze(1)
     payload_pos_env = payload_pos_world - env.scene.env_origins
@@ -248,13 +248,16 @@ def payload_target_distance(
     assert is_target_far.shape == (env.num_envs,)
     return is_target_far
 
+
 def goal_reached_termination(
-        env: ManagerBasedRLEnv, command_name: str,
+    env: ManagerBasedRLEnv,
+    command_name: str,
 ) -> torch.Tensor:
     goal_reached = env.command_manager._terms[command_name].achieved_goal
 
     assert goal_reached.shape == (env.num_envs,)
     return goal_reached
+
 
 def sim_time_exceed(env: ManagerBasedRLEnv, command_name: str = "pose_twist_command") -> torch.Tensor:
     """Terminate when the simulation time exceeds the threshold (end of reference trajectory)."""
@@ -263,4 +266,3 @@ def sim_time_exceed(env: ManagerBasedRLEnv, command_name: str = "pose_twist_comm
 
     assert is_sim_time_exceeded.shape == (env.num_envs,)
     return is_sim_time_exceeded
-

@@ -3,7 +3,7 @@ import torch
 from isaaclab.assets import Articulation
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.utils.math import quat_conjugate, quat_inv, quat_mul, matrix_from_quat
+from isaaclab.utils.math import matrix_from_quat, quat_conjugate, quat_inv, quat_mul
 
 from .utils import get_drone_pdist, get_drone_rpos
 
@@ -94,6 +94,7 @@ def payload_orientation_error(
     orientation_error = torch.matmul(desired_rot_matrix, payload_rot_matrix.transpose(1, 2)).view(env.num_envs, -1)
 
     return orientation_error
+
 
 def payload_velocity_error(
     env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -295,9 +296,8 @@ def payload_angular_acc_error_traj(
     ang_acc_error = (desired_ang_acc - payload_ang_acc).view(env.num_envs, -1)
     return ang_acc_error
 
-def obstacle_rpos(
-    env: ManagerBasedRLEnv, obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
-) -> torch.Tensor:
+
+def obstacle_rpos(env: ManagerBasedRLEnv, obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")) -> torch.Tensor:
     """Get the relative distance to the obstacle"""
     obstacle = env.scene[obstacle_cfg.name]
     robot: Articulation = env.scene["robot"]
@@ -306,9 +306,8 @@ def obstacle_rpos(
     rpos = obstacle_pos - payload_pos_env
     return rpos.view(env.num_envs, -1)
 
-def obstacle_rpos_2(
-    env: ManagerBasedRLEnv, obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall_2")
-) -> torch.Tensor:
+
+def obstacle_rpos_2(env: ManagerBasedRLEnv, obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall_2")) -> torch.Tensor:
     """Get the relative distance to the obstacle"""
     obstacle = env.scene[obstacle_cfg.name]
     robot: Articulation = env.scene["robot"]
@@ -317,14 +316,15 @@ def obstacle_rpos_2(
     rpos = obstacle_pos - payload_pos_env
     return rpos.view(env.num_envs, -1)
 
-def obstacle_geometry(
-        env: ManagerBasedRLEnv, obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")
-) -> torch.Tensor:
+
+def obstacle_geometry(env: ManagerBasedRLEnv, obstacle_cfg: SceneEntityCfg = SceneEntityCfg("wall")) -> torch.Tensor:
     """Get the obstacle size parameters"""
-    wall_dimensions = torch.tensor([0.1, 10.0, 1.5], device=env.device).repeat(env.num_envs,1)
+    wall_dimensions = torch.tensor([0.1, 10.0, 1.5], device=env.device).repeat(env.num_envs, 1)
     return wall_dimensions
 
+
 # policy terms
+
 
 def previous_action(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Get the previous action taken by the policy."""
