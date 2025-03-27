@@ -5,6 +5,9 @@ seed: 42
 # https://skrl.readthedocs.io/en/latest/api/utils/model_instantiators.html
 models:
   separate: False
+  CTDE: False # Centralized Training with Decentralized Execution
+  separate_actors: False # separate models for each agent
+  separate_critics: False # separate models for each agent
   policy:  # see gaussian_model parameters
     class: GaussianMixin
     clip_actions: False
@@ -15,7 +18,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [1024, 1024, 512, 256, 128]
+        layers: [1024, 512, 256, 128]
         activations:
         - elu
 
@@ -26,7 +29,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [1024, 1024, 512, 256, 128]
+        layers: [1024, 512, 256, 128]
         activations: elu
     output: ONE
 
