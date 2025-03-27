@@ -44,10 +44,20 @@ class MARLHoverEnv(DirectMARLEnv):
         self._num_drones = len(self._falcon_idx)
         self._control_mode = cfg.control_mode
 
+        # # observation buffers
+        # self._observation_buffers = {}
+        # for agent in self.cfg.possible_agents:
+        #     self._observation_buffers[agent] = CircularBuffer(cfg.history_len, self.num_envs, device=self.device)
+        # self._state_buffer = CircularBuffer(cfg.history_len, self.num_envs, device=self.device)
+
         # action buffers
         # buffers
         self._forces = torch.zeros(self.num_envs, len(self._falcon_rotor_idx), 3, device=self.device)
         self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
+        # self.setpoint_delay_buffers = {}
+        # for agent in self.cfg.possible_agents:
+        #     self.setpoint_delay_buffers[agent] = DelayBuffer(cfg.max_delay, self.num_envs, device=self.device)
+        #     self.setpoint_delay_buffers[agent].set_time_lag(cfg.constant_delay)
         self._setpoints = {}
         self.prev_actions = {}
         for agent in self.cfg.possible_agents:
@@ -160,6 +170,9 @@ class MARLHoverEnv(DirectMARLEnv):
             # terms used for smoothness reward, current and previously calculated actions
             self.prev_actions[agent][:] = self.actions[agent]
             self.actions[agent][:] = actions[agent]
+            
+            # introduce delay in the setpoints
+            # actions[agent][:] = self.setpoint_delay_buffers[agent].compute(actions[agent])
 
         for drone, action in actions.items():
 
@@ -266,6 +279,15 @@ class MARLHoverEnv(DirectMARLEnv):
         goal_load_matrix = matrix_from_quat(self.pose_command_w[:, 3:7])
         self.difference_matrix[:] = torch.matmul(goal_load_matrix, self.current_load_matrix.transpose(1, 2))
 
+        # action_histories = []
+        # for agent in self.cfg.possible_agents:
+        #     if self.setpoint_delay_buffers[agent]._circular_buffer._buffer is None:
+        #         action_history = self.actions[agent].unsqueeze(1).repeat(1, self.cfg.max_delay + 1, 1)
+        #         action_histories.append(action_history)
+        #     else:
+        #         action_histories.append(self.setpoint_delay_buffers[agent]._circular_buffer.buffer)
+        # self.all_action_histories = torch.cat(action_histories, dim=-1)
+
         obs_falcon1 = torch.cat(
                 (
                     self.load_position,
@@ -282,10 +304,14 @@ class MARLHoverEnv(DirectMARLEnv):
                     
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
+
+                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
         
+        # self._observation_buffers["falcon1"].append(obs_falcon1)
+
         obs_falcon2 = torch.cat(
                 (
                     self.load_position,
@@ -302,9 +328,13 @@ class MARLHoverEnv(DirectMARLEnv):
                     
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
+
+                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
+
+        # self._observation_buffers["falcon2"].append(obs_falcon2)
         
         obs_falcon3 = torch.cat(
                 (
@@ -322,10 +352,19 @@ class MARLHoverEnv(DirectMARLEnv):
                     
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
+
+                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
         
+        # self._observation_buffers["falcon3"].append(obs_falcon3)
+
+        # observations = {
+        #     "falcon1": self._observation_buffers["falcon1"].buffer.reshape(self.num_envs, -1),
+        #     "falcon2": self._observation_buffers["falcon2"].buffer.reshape(self.num_envs, -1),
+        #     "falcon3": self._observation_buffers["falcon3"].buffer.reshape(self.num_envs, -1),
+        # }
         observations = {
             "falcon1": obs_falcon1,
             "falcon2": obs_falcon2,
@@ -352,9 +391,15 @@ class MARLHoverEnv(DirectMARLEnv):
                 # goal terms
                 self.goal_pos_error,
                 self.difference_matrix.view(self.num_envs, -1),
+
+                # self.all_action_histories.reshape(self.num_envs, -1),
             ),
             dim=-1,
         )
+
+        # self._state_buffer.append(states)
+        # return self._state_buffer.buffer.reshape(self.num_envs, -1)
+
         return states
 
     def _get_rewards(self) -> dict[str, torch.Tensor]:
@@ -372,7 +417,7 @@ class MARLHoverEnv(DirectMARLEnv):
         current_actions = torch.cat([self.actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         diff_action = ((current_actions - action_prev).abs())/self._num_drones
-        reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1)) * self.step_dt
+        reward_action_smoothness = self.cfg.action_smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1).square()) * self.step_dt
         
         # commanded body rate reward
         commanded_body_rates = torch.cat([self.actions[agent][:, 3:] for agent in self.cfg.possible_agents], dim=-1)
@@ -472,6 +517,10 @@ class MARLHoverEnv(DirectMARLEnv):
         # reset articulation and rigid body attributes
         super()._reset_idx(env_ids)
         self._reset_target_pose(env_ids)
+        # for agent in self.cfg.possible_agents:
+            # self.setpoint_delay_buffers[agent].reset(env_ids)
+            # self._observation_buffers[agent].reset(env_ids)
+        # self._state_buffer.reset(env_ids)
         
         # log reward components
         if "log" not in self.extras:
