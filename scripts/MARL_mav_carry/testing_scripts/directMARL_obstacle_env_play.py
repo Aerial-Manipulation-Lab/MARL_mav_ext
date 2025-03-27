@@ -90,7 +90,7 @@ def main():
     while simulation_app.is_running():
         with torch.inference_mode():
             # step the environment
-            if count % 10 == 0:
+            if count % 500 == 0:
                 env.reset()
             falcon1_geo_tensor[:, 0:3] = stretch_position[:, 0:3]
             falcon2_geo_tensor[:, 0:3] = stretch_position[:, 3:6]

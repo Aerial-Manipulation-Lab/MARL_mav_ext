@@ -200,6 +200,6 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
         marker_cfg_body.prim_path = "/Visuals/Command/body_pose"
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=8.0, replicate_physics=True)
 
     events = EventCfg()
