@@ -152,6 +152,8 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
         dt=0.0033333333333333335,
         render_interval=decimation,
         gravity=(0.0, 0.0, -9.8066),
+        physx=PhysxCfg(
+            gpu_max_rigid_patch_count=2**20),
     )
     # robot
     robot_cfg: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="/World/envs/env_.*/flycrane")
