@@ -1,11 +1,9 @@
 import torch
 
-from isaaclab.utils.math import (
-    quat_inv,
-    quat_rotate,
-)
-
 from MARL_mav_carry_ext.controllers.utils import LowPassFilter
+
+from isaaclab.utils.math import quat_inv, quat_rotate
+
 
 class IndiController:
     def __init__(self, num_envs: int):
@@ -37,15 +35,18 @@ class IndiController:
         )
         self.G_1_inv = torch.linalg.inv(self.G_1)
 
-        self.motor_inertia_z = 9.3575e-6 # [kgm^2]
+        self.motor_inertia_z = 9.3575e-6  # [kgm^2]
         self.G_2 = torch.zeros((4, 4), device=self.device)
-        self.G_2[3, :] = torch.tensor([self.motor_inertia_z, -self.motor_inertia_z, self.motor_inertia_z, -self.motor_inertia_z], device=self.device)
-        self.motor_omega_min = 150.0 # [rad/s]
-        self.motor_omega_max = 2800.0 # [rad/s]
+        self.G_2[3, :] = torch.tensor(
+            [self.motor_inertia_z, -self.motor_inertia_z, self.motor_inertia_z, -self.motor_inertia_z],
+            device=self.device,
+        )
+        self.motor_omega_min = 150.0  # [rad/s]
+        self.motor_omega_max = 2800.0  # [rad/s]
         self.thrust_min = 0.0
-        self.thrust_max = 6.25 # [N]
+        self.thrust_max = 6.25  # [N]
         self.thrust_min_collective = 0.0
-        self.thrust_max_collective = self.thrust_max * 4 # [N]
+        self.thrust_max_collective = self.thrust_max * 4  # [N]
         self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
 
         self.falcon_mass = 0.6017  # kg
@@ -54,13 +55,21 @@ class IndiController:
         self.p_offset = torch.tensor([[0.0, 0.0, self.rope_offset]] * self.num_envs, device=self.device)
 
         # low pass filters
-        self.filter_sampling_frequency = torch.full((self.num_envs, 1), 300.0, device=self.device)   # filter frequency, same as control frequency (Hz)
-        self.filter_cutoff_frequency = torch.full((self.num_envs, 1), 12.0, device=self.device)    # accelerometer filter cut-off frequency (Hz)
+        self.filter_sampling_frequency = torch.full(
+            (self.num_envs, 1), 300.0, device=self.device
+        )  # filter frequency, same as control frequency (Hz)
+        self.filter_cutoff_frequency = torch.full(
+            (self.num_envs, 1), 12.0, device=self.device
+        )  # accelerometer filter cut-off frequency (Hz)
         self.filter_init_value_mot = torch.full((self.num_envs, 4), 0.0, device=self.device)
         self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
 
-        self.filterMot_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot)
-        self.filterRate_ = LowPassFilter(self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_rate)
+        self.filterMot_ = LowPassFilter(
+            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
+        )
+        self.filterRate_ = LowPassFilter(
+            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_rate
+        )
 
         self.debug = True
         if self.debug:
@@ -68,14 +77,14 @@ class IndiController:
             self.unfiltered_mot = torch.zeros((self.num_envs, 4), device=self.device)
             self.filtered_mot = torch.zeros((self.num_envs, 4), device=self.device)
 
-    def getCommand(self, 
-                   state: dict,
-                   actions: torch.tensor, 
-                   alpha_cmd: torch.tensor,
-                   acc_cmd: torch.tensor,
-                   acc_load: torch.tensor,
-                   ) -> torch.tensor:
-        
+    def getCommand(
+        self,
+        state: dict,
+        actions: torch.tensor,
+        alpha_cmd: torch.tensor,
+        acc_cmd: torch.tensor,
+        acc_load: torch.tensor,
+    ) -> torch.tensor:
         forces = actions.sum(-1)
         filtered_forces = self.filterMot_.add(forces)
         self.filterRate_.add(state["ang_vel"])
@@ -86,30 +95,32 @@ class IndiController:
             self.unfiltered_mot = forces
             self.filtered_mot = filtered_forces
 
-        omega = quat_rotate(quat_inv(state["quat"]), state["ang_vel"]) # body rates # normally from IMU
-        omega_dot = quat_rotate(quat_inv(state["quat"]), state["ang_acc"]) # body accelerations # normally from derivative filtered body rate
-        tau = torch.matmul(self.G_1, forces.transpose(0, 1)).transpose(0, 1)[:, 1:] # torque commands
+        omega = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])  # body rates # normally from IMU
+        omega_dot = quat_rotate(
+            quat_inv(state["quat"]), state["ang_acc"]
+        )  # body accelerations # normally from derivative filtered body rate
+        tau = torch.matmul(self.G_1, forces.transpose(0, 1)).transpose(0, 1)[:, 1:]  # torque commands
         mu = torch.zeros((self.num_envs, 4), device=self.device)
         collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1) * self.falcon_mass
         mu[:, 0] = torch.clamp(collective_thrust_des_magntiude, self.thrust_min_collective, self.thrust_max_collective)
         mu_ndi = mu
 
         moments = self.inertia_mat.matmul(alpha_cmd.transpose(0, 1)).transpose(0, 1) + torch.linalg.cross(
-            omega, self.inertia_mat.matmul(omega.transpose(0, 1)).transpose(0, 1)) #- torch.linalg.cross(
-                #self.p_offset, quat_rotate(quat_inv(state["quat"]), acc_load * self.falcon_mass)) # M_load in body frame
+            omega, self.inertia_mat.matmul(omega.transpose(0, 1)).transpose(0, 1)
+        )  # - torch.linalg.cross(
+        # self.p_offset, quat_rotate(quat_inv(state["quat"]), acc_load * self.falcon_mass)) # M_load in body frame
 
         mu_ndi[:, 1:] = moments
-        mu[:, 1:] = tau + self.inertia_mat.matmul((alpha_cmd - omega_dot).transpose(0,1)).transpose(0, 1)
+        mu[:, 1:] = tau + self.inertia_mat.matmul((alpha_cmd - omega_dot).transpose(0, 1)).transpose(0, 1)
 
         # without heading control
         mu[:, 3] = mu_ndi[:, 3]
         thrusts = self.G_1_inv.matmul(mu.transpose(0, 1))
         thrusts = torch.clamp(thrusts, self.thrust_min, self.thrust_max)
-        
+
         rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0]).transpose(0, 1)
 
         return rotor_speeds
-
 
     def reset(self, env_ids):
         self.filterMot_.reset(env_ids)

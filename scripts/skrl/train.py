@@ -73,7 +73,7 @@ import skrl
 from packaging import version
 
 # check for minimum supported skrl version
-SKRL_VERSION = "1.3.0"
+SKRL_VERSION = "1.4.1"
 if version.parse(skrl.__version__) < version.parse(SKRL_VERSION):
     skrl.logger.error(
         f"Unsupported skrl version: {skrl.__version__}. "
@@ -85,6 +85,8 @@ if args_cli.ml_framework.startswith("torch"):
     from skrl.utils.runner.torch import Runner
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
+
+from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
 import MARL_mav_carry_ext.tasks  # noqa: F401
 
@@ -100,7 +102,6 @@ from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_pickle, dump_yaml
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
-from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
@@ -181,7 +182,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
-        env = multi_agent_to_single_agent(env)
+        env = multi_agent_to_single_agent(env, state_as_observation=True)
 
     # wrap around environment for skrl
     env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)  # same as: `wrap_env(env, wrapper="auto")`

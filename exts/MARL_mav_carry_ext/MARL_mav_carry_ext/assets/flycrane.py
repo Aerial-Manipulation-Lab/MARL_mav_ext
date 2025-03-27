@@ -20,7 +20,7 @@ usd_path = script_dir / "data/AMR/flycrane_offset/flycrane.usd"
 # Configuration
 ##
 
-FLYCRANE_CFG = ArticulationCfg(
+FLYCRANE_OLD_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Flycrane",
     spawn=sim_utils.UsdFileCfg(
         usd_path=str(usd_path.resolve()),

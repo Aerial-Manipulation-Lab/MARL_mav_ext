@@ -39,7 +39,7 @@ import gymnasium as gym
 import math
 import matplotlib.pyplot as plt
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.obstacle_avoidance import ObstacleEnvCfg
+from MARL_mav_carry_ext.tasks.managerbased.obstacle_avoidance import ObstacleEnvCfg
 
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.utils.dict import print_dict

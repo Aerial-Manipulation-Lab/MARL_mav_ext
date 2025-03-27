@@ -44,6 +44,8 @@ parser.add_argument(
     help="The RL algorithm used for training the skrl agent.",
 )
 
+parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -61,17 +63,18 @@ import gymnasium as gym
 import numpy as np
 import os
 import random
+import time
 import torch
 
 import skrl
 from packaging import version
 
-from MARL_mav_carry_ext.plotting_tools import ManagerBasedPlotter
+from MARL_mav_carry_ext.plotting_tools import DirectMARLPlotter
 
 # register the gym environment
 
 # check for minimum supported skrl version
-SKRL_VERSION = "1.3.0"
+SKRL_VERSION = "1.4.1"
 if version.parse(skrl.__version__) < version.parse(SKRL_VERSION):
     skrl.logger.error(
         f"Unsupported skrl version: {skrl.__version__}. "
@@ -84,11 +87,12 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
+from isaaclab_rl.skrl import SkrlVecEnvWrapper
+
 import isaaclab_tasks  # noqa: F401
 from isaaclab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
-from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
@@ -147,7 +151,13 @@ def main():
 
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
-        env = multi_agent_to_single_agent(env)
+        env = multi_agent_to_single_agent(env, state_as_observation=True)
+
+    # get environment (physics) dt for real-time evaluation
+    try:
+        dt = env.physics_dt
+    except AttributeError:
+        dt = env.unwrapped.physics_dt
 
     # wrap around environment for skrl
     env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)  # same as: `wrap_env(env, wrapper="auto")`
@@ -163,7 +173,7 @@ def main():
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
-    plotter = ManagerBasedPlotter(env, command_name="pose_command", control_mode=args_cli.control_mode)
+    plotter = DirectMARLPlotter(env, control_mode=args_cli.control_mode)
 
     # reset environment
     obs, _ = env.reset()
@@ -171,9 +181,16 @@ def main():
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
+        start_time = time.time()
         with torch.inference_mode():
             # agent stepping
-            actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
+            outputs = runner.agent.act(obs, timestep=0, timesteps=0)
+            # - multi-agent (deterministic) actions
+            if hasattr(env, "possible_agents"):
+                actions = {a: outputs[-1][a].get("mean_actions", outputs[0][a]) for a in env.possible_agents}
+            # - single-agent (deterministic) actions
+            else:
+                actions = outputs[-1].get("mean_actions", outputs[0])
             # env stepping
             if env.num_envs == 1:
                 plotter.collect_data()
@@ -184,6 +201,10 @@ def main():
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
+
+        sleep_time = dt - (time.time() - start_time)
+        if args_cli.real_time and sleep_time > 0:
+            time.sleep(sleep_time)
 
     # close the simulator
     env.close()

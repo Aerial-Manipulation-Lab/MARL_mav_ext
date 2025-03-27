@@ -46,6 +46,12 @@ parser.add_argument(
 parser.add_argument("--resume", action="store_true", default=False, help="Resume training from a checkpoint.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to the checkpoint to resume training.")
 parser.add_argument("--suggested_lr", type=float, default=None, help="Suggested learning rate from optuna.")
+parser.add_argument("--suggested_lr_actor", type=float, default=None, help="Suggested learning rate from optuna.")
+parser.add_argument("--suggested_lr_critic", type=float, default=None, help="Suggested learning rate from optuna.")
+parser.add_argument(
+    "--suggested_learning_epochs", type=int, default=None, help="Suggested learning epochs from optuna."
+)
+parser.add_argument("--optuna_id", type=int, default=None, help="Optuna study id.")
 parser.add_argument("--suggested_mini_batches", type=int, default=None, help="Suggested mini-batches from optuna.")
 parser.add_argument("--suggested_lambda", type=float, default=None, help="Suggested lambda from optuna.")
 # parser.add_argument("--suggested_rollouts", type=int, default=None, help="Suggested rollouts from optuna.")
@@ -92,8 +98,9 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.config.flycrane import agents
-from MARL_mav_carry_ext.tasks.MARL_mav_carry.hover_llc.hover_env_cfg import HoverEnvCfg_llc
+from isaaclab_rl.skrl import SkrlVecEnvWrapper
+
+import MARL_mav_carry_ext.tasks  # noqa: F401
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab.envs import (
@@ -105,7 +112,6 @@ from isaaclab.envs import (
 )
 from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils.hydra import hydra_task_config
-from isaaclab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper
 
 # register the gym environment
 
@@ -144,9 +150,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # optimize parameters with optuna
     # agent_cfg["agent"]["policy"]["hidden_units"] = trial.suggest_int("hidden_units", 32, 256)
     agent_cfg["trainer"]["timesteps"] = args_cli.timesteps
-    agent_cfg["agent"]["learning_rate"] = args_cli.suggested_lr
-    agent_cfg["agent"]["mini_batches"] = args_cli.suggested_mini_batches
+    # agent_cfg["agent"]["learning_rate"] = args_cli.suggested_lr
+    agent_cfg["agent"]["learning_rate_actor"] = args_cli.suggested_lr_actor
+    agent_cfg["agent"]["learning_rate_critic"] = args_cli.suggested_lr_critic
+    agent_cfg["agent"]["learning_epochs"] = args_cli.suggested_learning_epochs
+    # agent_cfg["agent"]["mini_batches"] = args_cli.suggested_mini_batches
     agent_cfg["agent"]["lambda"] = args_cli.suggested_lambda
+    agent_cfg["agent"]["experiment"]["experiment_name"] = str(args_cli.optuna_id)
     # agent_cfg["agent"]["rollouts"] = args_cli.suggested_rollouts
 
     # create isaac environment

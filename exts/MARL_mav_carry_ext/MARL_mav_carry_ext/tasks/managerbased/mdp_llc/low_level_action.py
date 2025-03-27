@@ -1,0 +1,383 @@
+from __future__ import annotations
+
+import torch
+from collections.abc import Sequence
+from dataclasses import MISSING
+
+from MARL_mav_carry_ext.controllers import GeometricController, IndiController
+from MARL_mav_carry_ext.controllers.motor_model import RotorMotor
+
+import isaaclab.utils.math as math_utils
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import ActionTerm, ActionTermCfg
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.utils import configclass
+from isaaclab.utils.math import normalize, quat_from_angle_axis
+
+from .marker_utils import ACC_MARKER_CFG, DRONE_POS_MARKER_CFG, FORCE_MARKER_Z_CFG, ORIENTATION_MARKER_CFG
+
+
+class LowLevelAction(ActionTerm):
+    """Low level action term for the hover task."""
+
+    cfg: LowLevelActionCfg
+
+    def __init__(self, cfg: LowLevelActionCfg, env: ManagerBasedRLEnv):
+        super().__init__(cfg, env)
+
+        # simulation environment
+        self._env = env
+        self._robot = env.scene[cfg.asset_name]
+        self._body_ids = self._robot.find_bodies(cfg.body_name)[0]
+        self._falcon_idx = self._robot.find_bodies("Falcon.*_base_link_inertia")[0]
+        self._sim_dt = self._env.sim.get_rendering_dt()  # TODO: rendering dt has to be the same as planner dt
+
+        # configuration
+        self.cfg = cfg
+        self._num_drones = cfg.num_drones
+        self._num_waypoints = cfg.num_waypoints
+        self._control_mode = cfg.control_mode
+        if self._control_mode == "geometric":
+            self._waypoint_dim = 12
+        elif self._control_mode == "ACCBR":
+            self._waypoint_dim = 5
+
+        # buffers
+        self._forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._prev_forces = torch.zeros(self.num_envs, len(self._body_ids), 3, device=self.device)
+        self._moments = torch.zeros(self.num_envs, len(self._falcon_idx), 3, device=self.device)
+        self._waypoints = torch.zeros(
+            env.num_envs, self._num_drones * self._waypoint_dim * self._num_waypoints, device=self.device
+        )
+        self._drone_prev_acc = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self._drone_jerk = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_setpoint = [{}, {}, {}]
+
+        self.drone_positions = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_orientations = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
+        self.drone_linear_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_angular_velocities = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_linear_accelerations = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+        self.drone_angular_accelerations = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+
+        # outer loop controller
+        self.geo_controllers = {}
+        for i in range(self._num_drones):
+            self.geo_controllers[i] = GeometricController(self.num_envs, self._control_mode)
+        self._ll_counter = 0
+        self._constant_yaw = torch.zeros([self._env.num_envs, 1], device=self.device)
+        self._zeros = torch.zeros([self._env.num_envs, 3], device=self.device)
+        self._desired_position = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+
+        # inner loop controller
+        self._indi_controllers = {}
+        for i in range(self._num_drones):
+            self._indi_controllers[i] = IndiController(self.num_envs)
+
+        # motor model
+        # experimentally obtained
+        self.motor_models = {}
+        initial_rpms = [
+            torch.tensor([[1441.5819, 1351.1626, 1341.0111, 1428.5597]], device=self.device).repeat(self.num_envs, 1),
+            torch.tensor([[1377.9199, 1451.8428, 1408.9022, 1329.2014]], device=self.device).repeat(self.num_envs, 1),
+            torch.tensor([[1281.3964, 1293.0708, 1361.7539, 1347.2434]], device=self.device).repeat(self.num_envs, 1),
+        ]
+        for i in range(self._num_drones):
+            self.motor_models[i] = RotorMotor(self.num_envs, initial_rpms[i])
+        self.sampling_time = self._env.sim.get_physics_dt() * self.cfg.low_level_decimation
+
+        # noise parameters
+        # Define standard deviations for noise
+        self.position_noise_std = 0.003  # 3 mm
+        self.orientation_noise_std = 0.01  # ~0.57 degrees in radians
+        self.linear_velocity_noise_std = 0.01  # 1 cm/s
+        self.angular_velocity_noise_std = 0.02  # 0.02 rad/s
+        self.linear_acceleration_noise_std = 0.05  # 0.05 m/s²
+        self.angular_acceleration_noise_std = 0.05  # 0.05 rad/s²
+
+        # debug
+        if cfg.debug_vis:
+            self.drone_positions_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+            self.drone_goals_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+            self.des_acc_debug = torch.zeros(self.num_envs, self._num_drones, 3, device=self.device)
+            self.des_ori_debug = torch.zeros(self.num_envs, self._num_drones, 4, device=self.device)
+
+        """
+        properties
+        """
+
+    @property
+    def action_dim(self) -> int:
+        return self._num_drones * self._waypoint_dim * self._num_waypoints
+
+    @property
+    def raw_actions(self) -> torch.Tensor:
+        return self._waypoints
+
+    @property
+    def processed_actions(self) -> torch.Tensor:
+        return self._forces
+
+    def reset(self, env_ids: Sequence[int]):
+        super().reset(env_ids)
+        for i in range(self._num_drones):
+            self.geo_controllers[i].reset(env_ids)
+            self._indi_controllers[i].reset(env_ids)
+            self.motor_models[i].reset(env_ids)
+
+    def process_actions(self, waypoints: torch.Tensor):
+        """Process the waypoints to be used by the geometric low level controller.
+        Args:
+            waypoint: The waypoints to be processed.
+        Returns:
+            The processed external forces to be applied to the rotors."""
+        self._waypoints = waypoints
+        self._prev_forces = self._forces.clone()
+        for i in range(self._num_drones):
+            start_drone_idx = i * self._waypoint_dim * self._num_waypoints
+            end_drone_idx = (i + 1) * self._waypoint_dim * self._num_waypoints
+            drone_waypoints = self._waypoints[:, start_drone_idx:end_drone_idx]
+
+            # send waypoint generated by the policy
+            if self._control_mode == "geometric":
+                self.drone_setpoint[i]["pos"] = drone_waypoints[:, :3]
+                self.drone_setpoint[i]["lin_vel"] = drone_waypoints[:, 3:6]
+                self.drone_setpoint[i]["lin_acc"] = drone_waypoints[:, 6:9]
+                self.drone_setpoint[i]["jerk"] = drone_waypoints[:, 9:12]
+
+                self._desired_position[:, i] = self.drone_setpoint[i]["pos"]
+
+            elif self._control_mode == "ACCBR":
+                self.drone_setpoint[i]["lin_acc"] = drone_waypoints[:, :3]
+                self.drone_setpoint[i]["body_rates"] = torch.cat((drone_waypoints[:, 3:], self._constant_yaw), dim=-1)
+
+            self.drone_setpoint[i]["yaw"] = self._constant_yaw
+            self.drone_setpoint[i]["yaw_rate"] = self._constant_yaw
+            self.drone_setpoint[i]["yaw_acc"] = self._constant_yaw
+
+    def apply_actions(self):
+        """Apply the processed external forces to the rotors/falcon bodies."""
+        if self._ll_counter % self.cfg.low_level_decimation == 0:
+            all_thrusts = []
+            all_moments = []
+
+            drone_positions = self._env.scene["robot"].data.body_com_state_w[
+                :, self._falcon_idx, :3
+            ] - self._env.scene.env_origins.unsqueeze(1)
+            drone_orientations = self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 3:7]
+            drone_linear_velocities = self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 7:10]
+            drone_angular_velocities = self._env.scene["robot"].data.body_com_state_w[:, self._falcon_idx, 10:13]
+            drone_linear_accelerations = self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, :3]
+            drone_angular_accelerations = self._env.scene["robot"].data.body_acc_w[:, self._falcon_idx, 3:6]
+
+            # Apply Gaussian noise with correctly sized tensors
+            self.drone_positions[:] = drone_positions  # + torch.randn_like(drone_positions) * self.position_noise_std
+            self.drone_orientations[:] = (
+                drone_orientations  # + torch.randn_like(drone_orientations) * self.orientation_noise_std
+            )
+            self.drone_linear_velocities[:] = (
+                drone_linear_velocities  # + torch.randn_like(drone_linear_velocities) * self.linear_velocity_noise_std
+            )
+            self.drone_angular_velocities[:] = (
+                drone_angular_velocities  # + torch.randn_like(drone_angular_velocities) * self.angular_velocity_noise_std
+            )
+            self.drone_linear_accelerations[:] = (
+                drone_linear_accelerations  # + torch.randn_like(drone_linear_accelerations) * self.linear_acceleration_noise_std
+            )
+            self.drone_angular_accelerations[:] = (
+                drone_angular_accelerations  # + torch.randn_like(drone_angular_accelerations) * self.angular_acceleration_noise_std
+            )
+
+            for i in range(self._num_drones):
+                drone_states: dict = {}  # dict of tensors
+                drone_states["pos"] = self.drone_positions[:, i]
+                drone_states["quat"] = self.drone_orientations[:, i]
+                drone_states["lin_vel"] = self.drone_linear_velocities[:, i]
+                drone_states["ang_vel"] = self.drone_angular_velocities[:, i]
+                drone_states["lin_acc"] = self.drone_linear_accelerations[:, i]
+                drone_states["ang_acc"] = self.drone_angular_accelerations[:, i]
+                # calculate current jerk and snap
+                self._drone_jerk[:, i] = (drone_states["lin_acc"] - self._drone_prev_acc[:, i]) / (self._sim_dt)
+                drone_states["jerk"] = self._drone_jerk[:, i]
+                self._drone_prev_acc[:, i] = drone_states["lin_acc"]
+
+                alpha_cmd, acc_load, acc_cmd, q_cmd = self.geo_controllers[i].getCommand(
+                    drone_states, self._forces[:, i * 4 : i * 4 + 4], self.drone_setpoint[i]
+                )
+                target_rpm = self._indi_controllers[i].getCommand(
+                    drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load
+                )
+
+                if self.cfg.debug_vis:
+                    self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
+                    if self._control_mode == "geometric":
+                        self.drone_goals_debug[:, i] = self.drone_setpoint[i]["pos"] + self._env.scene.env_origins
+                    self.des_acc_debug[:, i] = acc_cmd
+                    self.des_ori_debug[:, i] = q_cmd
+                thrusts, moments = self.motor_models[i].get_motor_thrusts_moments(target_rpm, self.sampling_time)
+                all_thrusts.append(thrusts)
+                all_moments.append(moments)
+
+            forces = torch.cat(all_thrusts, dim=-1)
+            torques = torch.cat(all_moments, dim=-1)
+            self._forces[..., 2] = forces
+            self._moments[..., 2] = torques.view(self.num_envs, self._num_drones, 4).sum(-1)
+            self._ll_counter = 0
+        self._ll_counter += 1
+
+        # apply torques induced by rotors to each body
+        self._env.scene["robot"].set_external_force_and_torque(
+            torch.zeros_like(self._moments), self._moments, self._falcon_idx
+        )
+        # apply forces to each rotor
+        self._env.scene["robot"].set_external_force_and_torque(
+            self._forces, torch.zeros_like(self._forces), self._body_ids
+        )
+
+    """
+    visualizations
+    """
+
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        # set visibility of markers
+        # note: parent only deals with callbacks. not their visibility
+        if debug_vis:
+            # create markers if necessary for the first tome
+            if not hasattr(self, "drone_force_z_visualizer"):
+                marker_cfg = FORCE_MARKER_Z_CFG.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_z_forces"
+                self.drone_force_z_visualizer = VisualizationMarkers(marker_cfg)
+            self.drone_force_z_visualizer.set_visibility(True)
+            if not hasattr(self, "drone_pos_marker"):
+                marker_cfg = DRONE_POS_MARKER_CFG.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_pos_markers"
+                self.drone_pos_marker = VisualizationMarkers(marker_cfg)
+            self.drone_pos_marker.set_visibility(True)
+            if not hasattr(self, "acc_marker"):
+                marker_cfg = ACC_MARKER_CFG.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_acc"
+                self.acc_marker = VisualizationMarkers(marker_cfg)
+            self.acc_marker.set_visibility(False)
+            if not hasattr(self, "drone_ori_marker"):
+                marker_cfg = ORIENTATION_MARKER_CFG.copy()
+                marker_cfg.prim_path = "/Visuals/Actions/drone_ori"
+                self.drone_ori_marker = VisualizationMarkers(marker_cfg)
+            self.drone_ori_marker.set_visibility(False)
+
+        else:
+            if hasattr(self, "drone_force_z_visualizer"):
+                self.drone_force_z_visualizer.set_visibility(False)
+            if hasattr(self, "drone_pos_marker"):
+                self.drone_pos_marker.set_visibility(False)
+            if hasattr(self, "acc_marker"):
+                self.acc_marker.set_visibility(False)
+            if hasattr(self, "drone_ori_marker"):
+                self.drone_ori_marker.set_visibility(False)
+
+    def _debug_vis_callback(self, event):
+        # check if robot is initialized
+        # note: this is needed in-case the robot is de-initialized. we can't access the data
+        if not self._robot.is_initialized:
+            return
+        # display markers
+
+        # Get drone positions and orientations
+        rotor_idx = self._body_ids
+        rotor_pos_world_frame = self._robot.data.body_com_state_w[:, rotor_idx, :3].view(-1, 3)
+        rotor_orientation = self._robot.data.body_com_state_w[:, rotor_idx, 3:7].view(-1, 4)
+
+        # marker indices for multiple envs
+        marker_indices = [0] * self.num_envs * len(rotor_idx)
+        # Rotate the arrow to point in the direction of the force
+        zeros = torch.zeros(self.num_envs, 1)
+        arrow_rotation = math_utils.quat_from_euler_xyz(
+            zeros, (-torch.pi / 2) * torch.ones(self.num_envs, 1), zeros
+        )  # rotate -90 degrees around y-axis in the world frame
+
+        # Apply the offset in the drone's local frame by multiplying with drone's orientation
+        arrow_rotation_offset = arrow_rotation.repeat(1, len(rotor_idx), 1).to(self.device).view(-1, 4)
+        arrow_orientation = math_utils.quat_mul(rotor_orientation, arrow_rotation_offset)
+
+        # scale arrows with applied force
+        forces_to_visualize = (self._forces.view(-1, 3)).clone()
+        forces_to_visualize[:, :2] += 0.5  # offset to make the forces visible
+        forces_to_visualize[:, 2] /= 10  # scale down the forces
+        forces_to_visualize[:, [0, 2]] = forces_to_visualize[
+            :, [2, 0]
+        ]  # swap around because the arrow prim is oriented in x direction
+        # drone_pos_world_frame[:,2] += forces_to_visualize[:,2]/2 # offset because cylinder is drawn from the center TODO
+        self.drone_force_z_visualizer.visualize(
+            rotor_pos_world_frame, arrow_orientation, forces_to_visualize, marker_indices
+        )
+
+        # drone positions
+        positions = torch.cat(
+            (self.drone_positions_debug, self.drone_goals_debug), dim=0
+        )  # visualize the payload positions in world frame
+        marker_idx = (
+            [0] * self.num_envs * self._num_drones + [1] * self.num_envs + [2] * self.num_envs + [3] * self.num_envs
+        )
+        self.drone_pos_marker.visualize(translations=positions.view(-1, 3), marker_indices=marker_idx)
+
+        # drone desired accelerations
+
+        # Normalize the desired direction vector (which represents the direction)
+        acc_orientation_axis = normalize(self.des_acc_debug)
+        # Define the default x-axis (the direction the arrow marker points to by default)
+        x_axis = torch.tensor([1.0, 0.0, 0.0], device=self.device).repeat(self.num_envs, self._num_drones, 1)
+        # Compute the dot product between x-axis and desired direction to check alignment
+        cos_angle = torch.sum(x_axis * acc_orientation_axis, dim=-1)
+        # Flip the desired direction if the dot product is negative (indicating opposite direction)
+        mask = (cos_angle.view(-1, 1) < 0).squeeze()
+        # acc_orientation_axis = torch.where(mask.squeeze(), -acc_orientation_axis.view(-1,3), acc_orientation_axis.view(-1,3))
+        acc_orientation_axis.view(-1, 3)[mask] = -acc_orientation_axis.view(-1, 3)[mask]
+        # Compute the axis of rotation (cross product between x-axis and desired direction)
+        rotation_axis = torch.linalg.cross(x_axis, acc_orientation_axis)
+        # Compute the angle between x-axis and desired direction using dot product
+        cos_angle = torch.sum(x_axis * acc_orientation_axis, dim=-1)
+        angle = torch.acos(cos_angle.clamp(-1.0, 1.0))  # Clamp to avoid numerical issues
+        # Handle cases where the vectors are parallel (no rotation needed)
+        rotation_axis = torch.where(
+            torch.norm(rotation_axis, dim=-1, keepdim=True) < 1e-6,  # Check if parallel
+            torch.tensor([0.0, 1.0, 0.0], device=self.device),  # Default to any orthogonal axis
+            normalize(rotation_axis),
+        )
+        # Compute the quaternion from the angle-axis representation
+        acc_orientation = quat_from_angle_axis(angle.view(-1), rotation_axis.view(-1, 3)).view(-1, 4)
+
+        # Visualize the arrow marker with the new orientation
+        self.acc_marker.visualize(
+            self.drone_positions_debug.view(-1, 3),
+            acc_orientation.view(-1, 4),
+            self.des_acc_debug.view(-1, 3) / 5,
+            marker_indices=[0] * self.num_envs * self._num_drones,
+        )
+
+        # Visualize the desired orientation of the drone
+        self.drone_ori_marker.visualize(
+            self.drone_positions_debug.view(-1, 3),
+            self.des_ori_debug.view(-1, 4),
+            marker_indices=[0] * self.num_envs * self._num_drones,
+        )
+
+
+@configclass
+class LowLevelActionCfg(ActionTermCfg):
+    """Configuration for the low level action term."""
+
+    class_type: type[ActionTerm] = LowLevelAction
+    """ Class of the action term."""
+    asset_name: str = MISSING
+    """Name of the asset in the scene for which the commands are generated."""
+    body_name: str = MISSING
+    """Name of the body in the asset on which the forces are applied: Falcon.*base_link or Falcon.*rotor*."""
+    num_drones: int = 3
+    """Number of drones."""
+    control_mode: str = MISSING
+    """Control mode for the low level controller. Either 'geometric' or 'ACCBR'."""
+    num_waypoints: int = 1
+    """Number of waypoints in the trajectory."""
+    low_level_decimation: int = 1
+    """Decimation factor for the low level action term."""
+    debug_vis: bool = False
+    """Whether to visualize debug information. Defaults to False."""

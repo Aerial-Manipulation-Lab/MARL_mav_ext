@@ -41,28 +41,19 @@ FLYCRANE_CFG = ArticulationCfg(
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.0),
         joint_pos={
-            ".*": 0.0,
+            "rope_1_sphere_joint_0_joint_x": 0.5,
+            "rope_2_sphere_joint_0_joint_x": -0.5,
+            "rope_3_sphere_joint_0_joint_y": 0.5,
         },
         joint_vel={
-            "Falcon1_rotor_0_joint": 200.0,
-            "Falcon1_rotor_1_joint": -200.0,
-            "Falcon1_rotor_2_joint": 200.0,
-            "Falcon1_rotor_3_joint": -200.0,
-            "Falcon2_rotor_0_joint": 200.0,
-            "Falcon2_rotor_1_joint": -200.0,
-            "Falcon2_rotor_2_joint": 200.0,
-            "Falcon2_rotor_3_joint": -200.0,
-            "Falcon3_rotor_0_joint": 200.0,
-            "Falcon3_rotor_1_joint": -200.0,
-            "Falcon3_rotor_2_joint": 200.0,
-            "Falcon3_rotor_3_joint": -200.0,
+            ".*": 0.0,
         },
     ),
     actuators={
         "dummy": ImplicitActuatorCfg(
             joint_names_expr=[".*"],
-            stiffness=0.0,
-            damping=0.0,
+            stiffness=None,
+            damping=None,
         ),
     },
 )
