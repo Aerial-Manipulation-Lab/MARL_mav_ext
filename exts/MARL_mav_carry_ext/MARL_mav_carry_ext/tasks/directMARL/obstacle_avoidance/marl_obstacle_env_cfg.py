@@ -36,8 +36,8 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-3.0, -2.0),
-                "y": (0.0, 0.5),
+                "x": (-2.5, -2.0),
+                "y": (0.0, 1.0),
                 "z": (1.0, 1.5),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
@@ -53,31 +53,6 @@ class EventCfg:
             },
         },
     )
-
-    reset_obstacle = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {
-                "x": (0.0, 0.0),
-                "y": (-4.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (-0.0, 0.0),
-            },
-            "velocity_range": {
-                "x": (-0.0, 0.0),
-                "y": (-0.0, 0.0),
-                "z": (-0.0, 0.0),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
-                "yaw": (-0.0, 0.0),
-            },
-            "asset_cfg": SceneEntityCfg("wall_2"),
-        },
-    )
-
 
     # reset_base = EventTerm(
     #     func=mdp.reset_root_state_uniform,
@@ -116,7 +91,7 @@ class EventCfg:
 @configclass
 class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     # control mode
-    control_mode = "ACCBR"  # ACCBR or geometric
+    control_mode = "geometric"  # ACCBR or geometric
     # env
     decimation = 3
     episode_length_s = 20
@@ -188,6 +163,12 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -0.8, 1.2)),
     )
 
+    # curriculum 
+    curriculum_dist_threshold = 1.0 # task achieved when load is within this distance
+    curriculum_dist_step = 0.1 # distance step for curriculum
+    curriculum_dist_max = 2.0
+    curriculum_dist_min = 0.0
+
     # maximum distance of field
     bbox_distance = 5.0 # m
 
@@ -228,14 +209,13 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
 
     # goal terms
     goal_range = {
-        "pos_x": (2.0, 3.0),
+        "pos_x": (2.0, 2.5),
         "pos_y": (-0.5, 0.5),
         "pos_z": (0.5, 2.5),
         "roll": (-0.0, 0.0),
         "pitch": (-0.0, 0.0),
         "yaw": (-math.pi, math.pi),
     }
-    range_curriculum_steps = 7500
 
     make_quat_unique_command = False
     # goal_object_cfg: VisualizationMarkersCfg = VisualizationMarkersCfg(

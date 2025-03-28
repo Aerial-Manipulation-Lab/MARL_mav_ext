@@ -97,6 +97,7 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.wall_size_2 = torch.zeros(self.num_envs, 3, device=self.device)
         self.wall_size_1[:] = torch.tensor(cfg.wall_1_cfg.spawn.size, device=self.device)
         self.wall_size_2[:] = torch.tensor(cfg.wall_2_cfg.spawn.size, device=self.device)
+        self.wall_curriculum = torch.full((self.num_envs,), 2.0, device=self.device)
 
         # max field size
         self.max_pos_error_norm = torch.norm(torch.tensor([cfg.bbox_distance, cfg.bbox_distance, cfg.bbox_distance / 2], device=self.device))
@@ -662,15 +663,13 @@ class MARLObstacleEnv(DirectMARLEnv):
             self.prev_actions[agent][env_ids] = 0.0
             self.actions[agent][env_ids] = 0.0
 
-        # if self.common_step_counter > self.cfg.range_curriculum_steps:
-        #     self.cfg.goal_range ={
-        #     "pos_x": (-2.0, 2.0),
-        #     "pos_y": (-2.0, 2.0),
-        #     "pos_z": (0.5, 2.5),
-        #     "roll": (-math.pi/4, math.pi/4),
-        #     "pitch": (-math.pi/4, math.pi/4),
-        #     "yaw": (-math.pi, math.pi),
-        # }
+        # curriculum, if an env succeeds to finish the episode within the threshold, level up, otherwise level down
+        level_up = self.metrics["position_error"][env_ids] < self.cfg.curriculum_dist_threshold
+        self.wall_curriculum[env_ids[level_up]] -= self.cfg.curriculum_dist_step
+        self.wall_curriculum[env_ids[~level_up]] += self.cfg.curriculum_dist_step
+        self.wall_curriculum[:] = torch.clamp(self.wall_curriculum, self.cfg.curriculum_dist_min, self.cfg.curriculum_dist_max)
+        mean_curriculum_1 = self._reset_wall_pos(env_ids, "wall_1")
+        mean_curriculum_2 = self._reset_wall_pos(env_ids, "wall_2")
 
     def _reset_target_pose(self, env_ids):
         # reset goal rotation
@@ -686,6 +685,21 @@ class MARLObstacleEnv(DirectMARLEnv):
         quat = quat_from_euler_xyz(euler_angles[:, 0], euler_angles[:, 1], euler_angles[:, 2])
         # make sure the quaternion has real part as positive
         self.pose_command_w[env_ids, 3:] = quat_unique(quat) if self.cfg.make_quat_unique_command else quat
+    
+    def _reset_wall_pos(self, env_ids, asset_name):
+        "Reset the wall position based on the curriculum"
+        wall = self.scene[asset_name]
+        root_state = wall.data.default_root_state[env_ids].clone()
+        curr_pos = torch.zeros(len(env_ids), 3, device=self.device)
+        curr_pos[:, 1] = self.wall_curriculum[env_ids]
+        if asset_name == "wall_1":
+            positions = root_state[:, :3] + self.scene.env_origins[env_ids] + curr_pos
+        else:
+            positions = root_state[:, :3] + self.scene.env_origins[env_ids] - curr_pos
+        orientation = root_state[:, 3:7]
+        target_pose = torch.cat((positions, orientation), dim=-1)
+        wall.write_root_pose_to_sim(target_pose, env_ids)
+        return self.wall_curriculum.mean()
 
     def _update_metrics(self):
         pos_error, rot_error = compute_pose_error(
