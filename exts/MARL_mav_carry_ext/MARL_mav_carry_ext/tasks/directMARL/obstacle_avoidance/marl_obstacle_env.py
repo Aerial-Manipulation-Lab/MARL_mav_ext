@@ -620,6 +620,14 @@ class MARLObstacleEnv(DirectMARLEnv):
         # self._observation_buffers[agent].reset(env_ids)
         # self._state_buffer.reset(env_ids)
 
+        # curriculum, if an env succeeds to finish the episode within the threshold, level up, otherwise level down
+        level_up = self.metrics["position_error"][env_ids] < self.cfg.curriculum_dist_threshold
+        self.wall_curriculum[env_ids[level_up]] -= self.cfg.curriculum_dist_step
+        self.wall_curriculum[env_ids[~level_up]] += self.cfg.curriculum_dist_step
+        self.wall_curriculum[:] = torch.clamp(self.wall_curriculum, self.cfg.curriculum_dist_min, self.cfg.curriculum_dist_max)
+        self._reset_wall_pos(env_ids, "wall_1")
+        self._reset_wall_pos(env_ids, "wall_2")
+        
         # log reward components
         if "log" not in self.extras:
             self.extras["log"] = dict()
@@ -649,6 +657,8 @@ class MARLObstacleEnv(DirectMARLEnv):
         ).item()
         self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
 
+        self.extras["log"]["Curriculum/wall_dist"] = self.wall_curriculum[env_ids].mean().item()
+
         for key in self._episode_sums.keys():
             episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
             self.extras["log"]["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
@@ -662,14 +672,6 @@ class MARLObstacleEnv(DirectMARLEnv):
         for agent in self.cfg.possible_agents:
             self.prev_actions[agent][env_ids] = 0.0
             self.actions[agent][env_ids] = 0.0
-
-        # curriculum, if an env succeeds to finish the episode within the threshold, level up, otherwise level down
-        level_up = self.metrics["position_error"][env_ids] < self.cfg.curriculum_dist_threshold
-        self.wall_curriculum[env_ids[level_up]] -= self.cfg.curriculum_dist_step
-        self.wall_curriculum[env_ids[~level_up]] += self.cfg.curriculum_dist_step
-        self.wall_curriculum[:] = torch.clamp(self.wall_curriculum, self.cfg.curriculum_dist_min, self.cfg.curriculum_dist_max)
-        mean_curriculum_1 = self._reset_wall_pos(env_ids, "wall_1")
-        mean_curriculum_2 = self._reset_wall_pos(env_ids, "wall_2")
 
     def _reset_target_pose(self, env_ids):
         # reset goal rotation
@@ -699,7 +701,6 @@ class MARLObstacleEnv(DirectMARLEnv):
         orientation = root_state[:, 3:7]
         target_pose = torch.cat((positions, orientation), dim=-1)
         wall.write_root_pose_to_sim(target_pose, env_ids)
-        return self.wall_curriculum.mean()
 
     def _update_metrics(self):
         pos_error, rot_error = compute_pose_error(
