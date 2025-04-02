@@ -50,15 +50,15 @@ agent:
   discount_factor: 0.99
   lambda: 0.95
   learning_rate: 1.0e-04 # if modeled is shared
-  learning_rate_actor: 1.0e-03
-  learning_rate_critic: 5.0e-03
+  learning_rate_actor: 2.0e-04
+  learning_rate_critic: 5.0e-04
   learning_rate_scheduler_actor: CosineAnnealingLR
   learning_rate_scheduler_actor_kwargs:
-    T_max: 300000
+    T_max: 8000 # timesteps divided by rollouts
     eta_min: 1.0e-6
   learning_rate_scheduler_critic: CosineAnnealingLR
   learning_rate_scheduler_critic_kwargs:
-    T_max: 300000
+    T_max: 8000 # timesteps divided by rollouts
     eta_min: 1.0e-6
   state_preprocessor: RunningStandardScaler
   state_preprocessor_kwargs: null
