@@ -193,6 +193,10 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     cable_collision_num_points = 10
     drone_collision_threshold = 0.8
     bounding_box_threshold = 5.0
+    goal_achieved_range = 0.5
+    goal_achieved_ori_range = 0.5
+    goal_time_threshold = 3 # seconds that the goal has to be achieved
+
 
     # low level control
     low_level_decimation: int = 1
@@ -206,14 +210,15 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     body_rate_penalty_weight = 0.5
     force_penalty_weight = 0.5
     downwash_rew_weight = 0.5
+    goal_achieved_bonus = 250.0
 
     # goal terms
     goal_range = {
         "pos_x": (2.0, 2.5),
         "pos_y": (-0.5, 0.5),
         "pos_z": (0.5, 2.5),
-        "roll": (-0.0, 0.0),
-        "pitch": (-0.0, 0.0),
+        "roll": (-math.pi / 4, math.pi / 4),
+        "pitch": (-math.pi / 4, math.pi / 4),
         "yaw": (-math.pi, math.pi),
     }
 

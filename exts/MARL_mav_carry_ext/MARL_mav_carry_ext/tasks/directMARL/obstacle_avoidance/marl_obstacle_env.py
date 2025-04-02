@@ -145,6 +145,9 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.goal_pos_error = torch.zeros(self.num_envs, 3, device=self.device)
         self.difference_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
 
+        self.goal_dist_counter = torch.zeros(self.num_envs, device=self.device)
+        self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)  # used in reward function
+
         # reward logging
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -156,6 +159,7 @@ class MARLObstacleEnv(DirectMARLEnv):
                 "body_rate_penalty",
                 "force_penalty",
                 "downwash_reward",
+                "goal_achieved_reward"
             ]
         }
 
@@ -498,8 +502,8 @@ class MARLObstacleEnv(DirectMARLEnv):
         # downwash reward
         reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward() * self.step_dt
 
-        # update metrics
-        self._update_metrics()
+        # goal achieved reward
+        reward_goal_achieved = self.cfg.goal_achieved_bonus * self.achieved_goal.float()
 
         rewards = {
             "pos_reward": reward_position,
@@ -509,6 +513,7 @@ class MARLObstacleEnv(DirectMARLEnv):
             "body_rate_penalty": reward_body_rate_penalty,
             "force_penalty": reward_effort,
             "downwash_reward": reward_downwash,
+            "goal_achieved_reward": reward_goal_achieved,
         }
 
         # Logging
@@ -523,6 +528,7 @@ class MARLObstacleEnv(DirectMARLEnv):
             + reward_body_rate_penalty
             + reward_effort
             + reward_downwash
+            + reward_goal_achieved
         )
 
         return {agent: shared_rewards for agent in self.cfg.possible_agents}
@@ -591,6 +597,18 @@ class MARLObstacleEnv(DirectMARLEnv):
         # bounding box
         self.body_pos_outside = (self.drone_positions.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
 
+        # update metrics
+        self._update_metrics()
+
+        # goal achieved
+        within_goal_range = (self.metrics["position_error"] < self.cfg.goal_achieved_range) & (self.metrics["orientation_error"] < self.cfg.goal_achieved_ori_range)
+        # Increment counter for environments within goal distance, reset to 0 for others
+        self.goal_dist_counter = torch.where(
+            within_goal_range, self.goal_dist_counter + 1, torch.zeros_like(self.goal_dist_counter)
+        )
+        # Set achieved goal if counter meets or exceeds the threshold
+        self.achieved_goal |= self.goal_dist_counter >= (self.cfg.goal_time_threshold / self.step_dt)
+
         # reset when episode ends
         terminations = (
             self.falcon_fly_low
@@ -604,8 +622,10 @@ class MARLObstacleEnv(DirectMARLEnv):
         )
         self.time_out = self.episode_length_buf >= self.max_episode_length - 1
 
+        timed_outs = self.time_out | self.achieved_goal
+
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
-        time_outs = {agent: self.time_out for agent in self.cfg.possible_agents}
+        time_outs = {agent: timed_outs for agent in self.cfg.possible_agents}
 
         return terminated, time_outs
 
@@ -615,18 +635,22 @@ class MARLObstacleEnv(DirectMARLEnv):
         # reset articulation and rigid body attributes
         super()._reset_idx(env_ids)
         self._reset_target_pose(env_ids)
+
         # for agent in self.cfg.possible_agents:
         # self.setpoint_delay_buffers[agent].reset(env_ids)
         # self._observation_buffers[agent].reset(env_ids)
         # self._state_buffer.reset(env_ids)
 
         # curriculum, if an env succeeds to finish the episode within the threshold, level up, otherwise level down
-        level_up = self.metrics["position_error"][env_ids] < self.cfg.curriculum_dist_threshold
-        self.wall_curriculum[env_ids[level_up]] -= self.cfg.curriculum_dist_step
-        self.wall_curriculum[env_ids[~level_up]] += self.cfg.curriculum_dist_step
+        achieved_mask = self.achieved_goal[env_ids]
+        self.wall_curriculum[env_ids] -= achieved_mask * self.cfg.curriculum_dist_step
+        self.wall_curriculum[env_ids] += (~achieved_mask) * self.cfg.curriculum_dist_step
         self.wall_curriculum[:] = torch.clamp(self.wall_curriculum, self.cfg.curriculum_dist_min, self.cfg.curriculum_dist_max)
         self._reset_wall_pos(env_ids, "wall_1")
         self._reset_wall_pos(env_ids, "wall_2")
+
+        # reset goal achieved
+        self.achieved_goal[env_ids] = False
         
         # log reward components
         if "log" not in self.extras:
