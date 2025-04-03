@@ -95,8 +95,6 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.wall_rpos_2 = torch.zeros(self.num_envs, self._num_drones + 1, 3, device=self.device)
         self.wall_size_1 = torch.zeros(self.num_envs, 3, device=self.device)
         self.wall_size_2 = torch.zeros(self.num_envs, 3, device=self.device)
-        self.wall_size_1[:] = torch.tensor(cfg.wall_1_cfg.spawn.size, device=self.device)
-        self.wall_size_2[:] = torch.tensor(cfg.wall_2_cfg.spawn.size, device=self.device)
 
         # curriculum terms
         self.vertical_curriculum = torch.full((self.num_envs,), self.cfg.curriculum_dist_max, device=self.device)
@@ -787,49 +785,56 @@ class MARLObstacleEnv(DirectMARLEnv):
         curr_pos = torch.zeros(len(env_ids), 3, device=self.device)
         
         # Create masks
-        new_vertical_envs = (self.problem_choice[env_ids] == 0)
-        new_horizontal_envs = (self.problem_choice[env_ids] == 1)
+        new_vertical_mask = (self.problem_choice[env_ids] == 0)
+        new_horizontal_mask = (self.problem_choice[env_ids] == 1)
         
         # Handle vertical environments
-        if new_vertical_envs.any():
-            vertical_ids = env_ids[new_vertical_envs]
-            curr_pos[new_vertical_envs, 1] = self.vertical_curriculum[vertical_ids]
+        if new_vertical_mask.any():
+            vertical_ids = env_ids[new_vertical_mask]
+            curr_pos[new_vertical_mask, 1] = self.vertical_curriculum[vertical_ids]
             
             if asset_name == "wall_1":
-                positions[new_vertical_envs] = (root_state[new_vertical_envs, :3] + 
+                positions[new_vertical_mask] = (root_state[new_vertical_mask, :3] + 
                                             self.scene.env_origins[vertical_ids] + 
-                                            curr_pos[new_vertical_envs])
+                                            curr_pos[new_vertical_mask])
+                self.wall_size_1[vertical_ids] = torch.tensor(self.cfg.wall_1_cfg.spawn.size, device=self.device)
             elif asset_name == "wall_2":
-                positions[new_vertical_envs] = (root_state[new_vertical_envs, :3] + 
+                positions[new_vertical_mask] = (root_state[new_vertical_mask, :3] + 
                                             self.scene.env_origins[vertical_ids] - 
-                                            curr_pos[new_vertical_envs])
+                                            curr_pos[new_vertical_mask])
+                self.wall_size_2[vertical_ids] = torch.tensor(self.cfg.wall_2_cfg.spawn.size, device=self.device)
             
-            orientations[new_vertical_envs] = root_state[new_vertical_envs, 3:7]
+            orientations[new_vertical_mask] = root_state[new_vertical_mask, 3:7]
         
         # Handle horizontal environments
-        if new_horizontal_envs.any():
-            horizontal_ids = env_ids[new_horizontal_envs]
-            curr_pos[new_horizontal_envs, 2] = self.horizontal_curriculum[horizontal_ids]
+        if new_horizontal_mask.any():
+            horizontal_ids = env_ids[new_horizontal_mask]
+            curr_pos[new_horizontal_mask, 2] = self.horizontal_curriculum[horizontal_ids]
+
+            # Create horizontal orientation quaternion (90° rotation around x-axis)
+            new_orientation = torch.zeros_like(root_state[new_horizontal_mask, 3:7])
+            new_orientation[:, 0] = 0.7071068
+            new_orientation[:, 1] = 0.7071068
+            orientations[new_horizontal_mask] = new_orientation
             
             if asset_name == "wall_1":
                 offset = torch.tensor([0.0, -1.05, 0.5], device=self.device).expand(len(horizontal_ids), 3)
-                positions[new_horizontal_envs] = (root_state[new_horizontal_envs, :3] + 
+                positions[new_horizontal_mask] = (root_state[new_horizontal_mask, :3] + 
                                             self.scene.env_origins[horizontal_ids] + 
                                             offset + 
-                                            curr_pos[new_horizontal_envs])
+                                            curr_pos[new_horizontal_mask])
+                self.wall_size_1[horizontal_ids] = torch.tensor(self.cfg.wall_1_cfg.spawn.size, device=self.device)
+                self.wall_size_1[horizontal_ids] = quat_rotate(new_orientation, self.wall_size_1[horizontal_ids]).abs()
+                
             elif asset_name == "wall_2":
                 offset = torch.tensor([0.0, 1.05, -1.5], device=self.device).expand(len(horizontal_ids), 3)
-                positions[new_horizontal_envs] = (root_state[new_horizontal_envs, :3] + 
+                positions[new_horizontal_mask] = (root_state[new_horizontal_mask, :3] + 
                                             self.scene.env_origins[horizontal_ids] + 
                                             offset - 
-                                            curr_pos[new_horizontal_envs])
-            
-            # Create horizontal orientation quaternion (90° rotation around x-axis)
-            new_orientation = torch.zeros_like(root_state[new_horizontal_envs, 3:7])
-            new_orientation[:, 0] = 0.7071068
-            new_orientation[:, 1] = 0.7071068
-            orientations[new_horizontal_envs] = new_orientation
-        
+                                            curr_pos[new_horizontal_mask])
+                self.wall_size_2[horizontal_ids] = torch.tensor(self.cfg.wall_2_cfg.spawn.size, device=self.device)
+                self.wall_size_2[horizontal_ids] = quat_rotate(new_orientation, self.wall_size_2[horizontal_ids]).abs()
+
         # Combine positions and orientations
         target_pose = torch.cat((positions, orientations), dim=-1)
         wall.write_root_pose_to_sim(target_pose, env_ids)
