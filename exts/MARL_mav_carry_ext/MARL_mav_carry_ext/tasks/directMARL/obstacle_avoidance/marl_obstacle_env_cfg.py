@@ -107,17 +107,17 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     if control_mode == "geometric":
         action_dim_geo = 12
         action_spaces = {"falcon1": action_dim_geo, "falcon2": action_dim_geo, "falcon3": action_dim_geo}
-        obs_dim_geo = 117  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        obs_dim_geo = 118  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
         observation_spaces = {"falcon1": obs_dim_geo, "falcon2": obs_dim_geo, "falcon3": obs_dim_geo}
-        state_space = 114  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        state_space = 115  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
     elif control_mode == "ACCBR":
         action_dim_accbr = 5
         action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr}
         obs_dim_accbr = (
-            117  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+            118  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
         )
         observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr}
-        state_space = 114  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        state_space = 115  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
 
     # start with full observability: own state 18 + other drones 18 * 2 + payload 18 + goal terms 12 = 84 + OH vector
     # TODO: start with that the state_space is the same as the local observations, then go down
@@ -138,7 +138,7 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     wall_1_cfg : RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/wall_1",
         spawn=sim_utils.CuboidCfg(
-            size=(0.6, 1.8, 2.4),
+            size=(0.6, 1.8, 3.6),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
             collision_props=sim_utils.CollisionPropertiesCfg(),
@@ -146,13 +146,13 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
                 diffuse_color=(0.96, 0.89, 0.70), emissive_color=(0.96, 0.89, 0.70), opacity=1.0
             ),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 1.0, 1.2)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 1.05, 1.8)),
     )
 
     wall_2_cfg : RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/wall_2",
         spawn=sim_utils.CuboidCfg(
-            size=(0.6, 1.2, 2.4),
+            size=(0.6, 1.8, 3.6),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
             collision_props=sim_utils.CollisionPropertiesCfg(),
@@ -160,7 +160,7 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
                 diffuse_color=(0.90, 0.82, 0.62)  , emissive_color=(0.90, 0.82, 0.62)  , opacity=1.0
             ),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -0.8, 1.2)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -1.05, 1.8)),
     )
 
     # curriculum 
@@ -170,7 +170,7 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     curriculum_dist_min = 0.0
 
     # maximum distance of field
-    bbox_distance = 5.0 # m
+    bbox_distance = 4.0 # m
 
     # contact sensors
     contact_forces = ContactSensorCfg(
@@ -216,7 +216,7 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     goal_range = {
         "pos_x": (2.0, 2.5),
         "pos_y": (-0.5, 0.5),
-        "pos_z": (0.5, 2.5),
+        "pos_z": (1.0, 1.5),
         "roll": (-math.pi / 4, math.pi / 4),
         "pitch": (-math.pi / 4, math.pi / 4),
         "yaw": (-math.pi, math.pi),

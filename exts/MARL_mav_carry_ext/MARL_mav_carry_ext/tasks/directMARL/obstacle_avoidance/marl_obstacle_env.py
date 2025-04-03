@@ -97,7 +97,11 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.wall_size_2 = torch.zeros(self.num_envs, 3, device=self.device)
         self.wall_size_1[:] = torch.tensor(cfg.wall_1_cfg.spawn.size, device=self.device)
         self.wall_size_2[:] = torch.tensor(cfg.wall_2_cfg.spawn.size, device=self.device)
-        self.wall_curriculum = torch.full((self.num_envs,), 2.0, device=self.device)
+
+        # curriculum terms
+        self.vertical_curriculum = torch.full((self.num_envs,), 2.0, device=self.device)
+        self.horizontal_curriculum = torch.full((self.num_envs,), 2.0, device=self.device)
+        self.problem_choice = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
         # max field size
         self.max_pos_error_norm = torch.norm(torch.tensor([cfg.bbox_distance, cfg.bbox_distance, cfg.bbox_distance / 2], device=self.device))
@@ -365,6 +369,7 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
+                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -390,6 +395,7 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
+                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -415,6 +421,7 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
+                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -454,6 +461,7 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
+                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -642,10 +650,36 @@ class MARLObstacleEnv(DirectMARLEnv):
         # self._state_buffer.reset(env_ids)
 
         # curriculum, if an env succeeds to finish the episode within the threshold, level up, otherwise level down
+        problems = self.problem_choice[env_ids]
         achieved_mask = self.achieved_goal[env_ids]
-        self.wall_curriculum[env_ids] -= achieved_mask * self.cfg.curriculum_dist_step
-        self.wall_curriculum[env_ids] += (~achieved_mask) * self.cfg.curriculum_dist_step
-        self.wall_curriculum[:] = torch.clamp(self.wall_curriculum, self.cfg.curriculum_dist_min, self.cfg.curriculum_dist_max)
+
+        vertical_envs = (problems == 0) # 0 is vertical
+        horizontal_envs = (problems == 1) # 1 is horizontal
+
+        # Update vertical curriculum (only for envs assigned to vertical problems)
+        if vertical_envs.any():  # Check if any vertical envs exist in this batch
+            self.vertical_curriculum[env_ids[vertical_envs]] -= achieved_mask[vertical_envs] * self.cfg.curriculum_dist_step
+            self.vertical_curriculum[env_ids[vertical_envs]] += (~achieved_mask[vertical_envs]) * self.cfg.curriculum_dist_step
+            self.vertical_curriculum[:] = torch.clamp(
+                self.vertical_curriculum, 
+                self.cfg.curriculum_dist_min, 
+                self.cfg.curriculum_dist_max
+            )
+
+        # Update horizontal curriculum (only for envs assigned to horizontal problems)
+        if horizontal_envs.any():  # Check if any horizontal envs exist in this batch
+            self.horizontal_curriculum[env_ids[horizontal_envs]] -= achieved_mask[horizontal_envs] * self.cfg.curriculum_dist_step
+            self.horizontal_curriculum[env_ids[horizontal_envs]] += (~achieved_mask[horizontal_envs]) * self.cfg.curriculum_dist_step
+            self.horizontal_curriculum[:] = torch.clamp(
+                self.horizontal_curriculum, 
+                self.cfg.curriculum_dist_min, 
+                self.cfg.curriculum_dist_max
+            )
+
+        # select new problem
+        self.problem_choice[env_ids.int()] = torch.randint(0, 2, size=(len(env_ids),), device=self.device, dtype=torch.int32)      
+
+        # reset wall positions
         self._reset_wall_pos(env_ids, "wall_1")
         self._reset_wall_pos(env_ids, "wall_2")
 
@@ -681,7 +715,9 @@ class MARLObstacleEnv(DirectMARLEnv):
         ).item()
         self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
 
-        self.extras["log"]["Curriculum/wall_dist"] = self.wall_curriculum[env_ids].mean().item()
+        self.extras["log"]["Curriculum/wall_dist_vertical"] = self.vertical_curriculum[env_ids].mean().item()
+
+        self.extras["log"]["Curriculum/wall_dist_horizontal"] = self.horizontal_curriculum[env_ids].mean().item()
 
         for key in self._episode_sums.keys():
             episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
@@ -713,17 +749,61 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.pose_command_w[env_ids, 3:] = quat_unique(quat) if self.cfg.make_quat_unique_command else quat
     
     def _reset_wall_pos(self, env_ids, asset_name):
-        "Reset the wall position based on the curriculum"
+        """Reset the wall position based on the curriculum"""        
         wall = self.scene[asset_name]
         root_state = wall.data.default_root_state[env_ids].clone()
+        
+        # Initialize positions and orientations
+        positions = torch.zeros_like(root_state[:, :3])
+        orientations = torch.zeros_like(root_state[:, 3:7])
         curr_pos = torch.zeros(len(env_ids), 3, device=self.device)
-        curr_pos[:, 1] = self.wall_curriculum[env_ids]
-        if asset_name == "wall_1":
-            positions = root_state[:, :3] + self.scene.env_origins[env_ids] + curr_pos
-        else:
-            positions = root_state[:, :3] + self.scene.env_origins[env_ids] - curr_pos
-        orientation = root_state[:, 3:7]
-        target_pose = torch.cat((positions, orientation), dim=-1)
+        
+        # Create masks
+        new_vertical_envs = (self.problem_choice[env_ids] == 0)
+        new_horizontal_envs = (self.problem_choice[env_ids] == 1)
+        
+        # Handle vertical environments
+        if new_vertical_envs.any():
+            vertical_ids = env_ids[new_vertical_envs]
+            curr_pos[new_vertical_envs, 1] = self.vertical_curriculum[vertical_ids]
+            
+            if asset_name == "wall_1":
+                positions[new_vertical_envs] = (root_state[new_vertical_envs, :3] + 
+                                            self.scene.env_origins[vertical_ids] + 
+                                            curr_pos[new_vertical_envs])
+            elif asset_name == "wall_2":
+                positions[new_vertical_envs] = (root_state[new_vertical_envs, :3] + 
+                                            self.scene.env_origins[vertical_ids] - 
+                                            curr_pos[new_vertical_envs])
+            
+            orientations[new_vertical_envs] = root_state[new_vertical_envs, 3:7]
+        
+        # Handle horizontal environments
+        if new_horizontal_envs.any():
+            horizontal_ids = env_ids[new_horizontal_envs]
+            curr_pos[new_horizontal_envs, 2] = self.horizontal_curriculum[horizontal_ids]
+            
+            if asset_name == "wall_1":
+                offset = torch.tensor([0.0, -1.05, 0.5], device=self.device).expand(len(horizontal_ids), 3)
+                positions[new_horizontal_envs] = (root_state[new_horizontal_envs, :3] + 
+                                            self.scene.env_origins[horizontal_ids] + 
+                                            offset + 
+                                            curr_pos[new_horizontal_envs])
+            elif asset_name == "wall_2":
+                offset = torch.tensor([0.0, 1.05, -1.5], device=self.device).expand(len(horizontal_ids), 3)
+                positions[new_horizontal_envs] = (root_state[new_horizontal_envs, :3] + 
+                                            self.scene.env_origins[horizontal_ids] + 
+                                            offset - 
+                                            curr_pos[new_horizontal_envs])
+            
+            # Create horizontal orientation quaternion (90° rotation around x-axis)
+            new_orientation = torch.zeros_like(root_state[new_horizontal_envs, 3:7])
+            new_orientation[:, 0] = 0.7071068
+            new_orientation[:, 1] = 0.7071068
+            orientations[new_horizontal_envs] = new_orientation
+        
+        # Combine positions and orientations
+        target_pose = torch.cat((positions, orientations), dim=-1)
         wall.write_root_pose_to_sim(target_pose, env_ids)
 
     def _update_metrics(self):
