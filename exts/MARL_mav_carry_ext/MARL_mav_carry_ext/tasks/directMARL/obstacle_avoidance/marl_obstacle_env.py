@@ -367,7 +367,6 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
-                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -393,7 +392,6 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
-                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -419,7 +417,6 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
-                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -459,7 +456,6 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.wall_size_1,
                 self.wall_rpos_2.view(self.num_envs, -1),
                 self.wall_size_2,
-                self.problem_choice.view(self.num_envs, -1),
             ),
             dim=-1,
         )
