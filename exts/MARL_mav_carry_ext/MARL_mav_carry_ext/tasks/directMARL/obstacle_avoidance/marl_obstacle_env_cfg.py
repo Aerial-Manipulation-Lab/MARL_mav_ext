@@ -31,52 +31,6 @@ class EventCfg:
 
     reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
 
-    reset_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {
-                "x": (-2.5, -2.0),
-                "y": (0.0, 1.0),
-                "z": (1.0, 1.5),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
-                "yaw": (-math.pi, math.pi),
-            },
-            "velocity_range": {
-                "x": (-0.0, 0.0),
-                "y": (-0.0, 0.0),
-                "z": (-0.0, 0.0),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
-                "yaw": (-0.0, 0.0),
-            },
-        },
-    )
-
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (0.0, 0.0),
-    #             "y": (0.0, 0.0),
-    #             "z": (1.5, 1.5),
-    #             "roll": (-0, 0),
-    #             "pitch": (-0, 0),
-    #             "yaw": (0.0, 0.0),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.0, 0.0),
-    #             "y": (-0.0, 0.0),
-    #             "z": (-0.0, 0.0),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #     },
-    # )
-
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="reset",
@@ -212,6 +166,16 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     downwash_rew_weight = 0.5
     goal_achieved_bonus = 250.0
 
+    # reset robot
+    robot_range = {
+        "x": (-2.5, -2.0),
+        "y": (0.0, 1.0),
+        "z": (1.0, 1.5),
+        "roll": (-0.0, 0.0),
+        "pitch": (-0.0, 0.0),
+        "yaw": (-math.pi, math.pi),
+    }
+
     # goal terms
     goal_range = {
         "pos_x": (2.0, 2.5),
@@ -245,6 +209,6 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
         marker_cfg_body.prim_path = "/Visuals/Command/body_pose"
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=8.0, replicate_physics=True)
 
     events = EventCfg()

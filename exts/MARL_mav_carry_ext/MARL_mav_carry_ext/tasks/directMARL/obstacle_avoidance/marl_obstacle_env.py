@@ -99,8 +99,8 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.wall_size_2[:] = torch.tensor(cfg.wall_2_cfg.spawn.size, device=self.device)
 
         # curriculum terms
-        self.vertical_curriculum = torch.full((self.num_envs,), 2.0, device=self.device)
-        self.horizontal_curriculum = torch.full((self.num_envs,), 2.0, device=self.device)
+        self.vertical_curriculum = torch.full((self.num_envs,), self.cfg.curriculum_dist_max, device=self.device)
+        self.horizontal_curriculum = torch.full((self.num_envs,), self.cfg.curriculum_dist_max, device=self.device)
         self.problem_choice = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
 
         # max field size
@@ -163,7 +163,7 @@ class MARLObstacleEnv(DirectMARLEnv):
                 "body_rate_penalty",
                 "force_penalty",
                 "downwash_reward",
-                "goal_achieved_reward"
+                # "goal_achieved_reward"
             ]
         }
 
@@ -511,7 +511,7 @@ class MARLObstacleEnv(DirectMARLEnv):
         reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward() * self.step_dt
 
         # goal achieved reward
-        reward_goal_achieved = self.cfg.goal_achieved_bonus * self.achieved_goal.float()
+        # reward_goal_achieved = self.cfg.goal_achieved_bonus * self.achieved_goal.float()
 
         rewards = {
             "pos_reward": reward_position,
@@ -521,7 +521,7 @@ class MARLObstacleEnv(DirectMARLEnv):
             "body_rate_penalty": reward_body_rate_penalty,
             "force_penalty": reward_effort,
             "downwash_reward": reward_downwash,
-            "goal_achieved_reward": reward_goal_achieved,
+            # "goal_achieved_reward": reward_goal_achieved,
         }
 
         # Logging
@@ -536,7 +536,7 @@ class MARLObstacleEnv(DirectMARLEnv):
             + reward_body_rate_penalty
             + reward_effort
             + reward_downwash
-            + reward_goal_achieved
+            # + reward_goal_achieved
         )
 
         return {agent: shared_rewards for agent in self.cfg.possible_agents}
@@ -630,7 +630,7 @@ class MARLObstacleEnv(DirectMARLEnv):
         )
         self.time_out = self.episode_length_buf >= self.max_episode_length - 1
 
-        timed_outs = self.time_out | self.achieved_goal
+        timed_outs = self.time_out # | self.achieved_goal
 
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
         time_outs = {agent: timed_outs for agent in self.cfg.possible_agents}
@@ -643,6 +643,7 @@ class MARLObstacleEnv(DirectMARLEnv):
         # reset articulation and rigid body attributes
         super()._reset_idx(env_ids)
         self._reset_target_pose(env_ids)
+        self._reset_robot_state_uniform(env_ids)
 
         # for agent in self.cfg.possible_agents:
         # self.setpoint_delay_buffers[agent].reset(env_ids)
@@ -747,6 +748,33 @@ class MARLObstacleEnv(DirectMARLEnv):
         quat = quat_from_euler_xyz(euler_angles[:, 0], euler_angles[:, 1], euler_angles[:, 2])
         # make sure the quaternion has real part as positive
         self.pose_command_w[env_ids, 3:] = quat_unique(quat) if self.cfg.make_quat_unique_command else quat
+
+    def _reset_robot_state_uniform(self, env_ids):
+        """Reset the robot state uniformly in the environment.
+        50% of the time the sign of the goal and the robot x position are flipped."""
+        root_states = self.robot.data.default_root_state[env_ids].clone()
+
+        # poses
+        range_list = [self.cfg.robot_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
+        ranges = torch.tensor(range_list, device=self.device)
+        rand_samples = sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=self.device)
+
+        # flip the sign of the goal and the robot x position
+        flip_sign = torch.randint(0, 2, (len(env_ids),), device=self.device, dtype=torch.int32)
+        flip_sign = flip_sign * 2 - 1
+        rand_samples[:, 0] = flip_sign * rand_samples[:, 0]
+        self.pose_command_w[env_ids, 0] = flip_sign * self.pose_command_w[env_ids, 0]
+
+        positions = root_states[:, 0:3] + self.scene.env_origins[env_ids] + rand_samples[:, 0:3]
+        orientations_delta = quat_from_euler_xyz(rand_samples[:, 3], rand_samples[:, 4], rand_samples[:, 5])
+        orientations = quat_mul(root_states[:, 3:7], orientations_delta)
+
+        # velocities, always 0
+        velocities = torch.zeros_like(root_states[:, 7:13])
+
+        # set into the physics simulation
+        self.robot.write_root_pose_to_sim(torch.cat([positions, orientations], dim=-1), env_ids=env_ids)
+        self.robot.write_root_velocity_to_sim(velocities, env_ids=env_ids)
     
     def _reset_wall_pos(self, env_ids, asset_name):
         """Reset the wall position based on the curriculum"""        
