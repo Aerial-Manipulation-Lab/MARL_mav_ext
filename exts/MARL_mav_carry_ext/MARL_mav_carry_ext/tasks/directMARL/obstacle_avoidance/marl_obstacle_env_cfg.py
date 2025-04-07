@@ -143,10 +143,10 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     rope_name = "rope_.*_link"
     cable_angle_limits_drone = 0.0  # cos(angle) limits
     cable_angle_limits_payload = -math.sqrt(2) / 2  # cos(angle) limits
-    cable_collision_threshold = 0.2
+    cable_collision_threshold = 0.2 # in centralized env this was 0.15
     cable_collision_num_points = 10
-    drone_collision_threshold = 0.8
-    bounding_box_threshold = 5.0
+    drone_collision_threshold = 0.5 # in centralized env this was 40 cm
+    bounding_box_threshold = 4.0
     goal_achieved_range = 0.5
     goal_achieved_ori_range = 0.5
     goal_time_threshold = 3 # seconds that the goal has to be achieved
@@ -157,8 +157,8 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     max_thrust_pp = 6.25  # N
 
     # rewards
-    pos_track_weight = 1.0
-    linear_pos_reward_weight = 1.0
+    pos_track_weight = 3.0
+    linear_pos_reward_weight = 3.0
     ori_track_weight = 2.0
     action_smoothness_weight = 0.5
     body_rate_penalty_weight = 0.5
