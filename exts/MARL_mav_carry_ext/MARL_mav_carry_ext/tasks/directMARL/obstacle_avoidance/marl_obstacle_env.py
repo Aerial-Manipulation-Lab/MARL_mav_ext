@@ -35,6 +35,7 @@ from isaaclab.utils.math import (
     quat_rotate,
     quat_unique,
     sample_uniform,
+    sample_gaussian,
 )
 
 from .marl_obstacle_env_cfg import MARLObstacleEnvCfg
@@ -100,6 +101,9 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.vertical_curriculum = torch.full((self.num_envs,), self.cfg.curriculum_dist_max, device=self.device)
         self.horizontal_curriculum = torch.full((self.num_envs,), self.cfg.curriculum_dist_max, device=self.device)
         self.problem_choice = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
+        self.pos_reward_weight = torch.full((self.num_envs,), self.cfg.init_pos_track_weight, device=self.device)
+        self.smoothness_weight = torch.full((self.num_envs,), self.cfg.init_smoothness_weight, device=self.device)
+        self.stalling_seconds = torch.full((self.num_envs,), self.cfg.max_stalling_s, device=self.device)
 
         # max field size
         self.max_pos_error_norm = torch.norm(torch.tensor([cfg.bbox_distance, cfg.bbox_distance, cfg.bbox_distance / 2], device=self.device))
@@ -180,6 +184,7 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.drone_collision = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.body_pos_outside = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.time_out = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.stalled = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         # debug vis
         self.set_debug_vis(cfg.debug_vis)
@@ -470,12 +475,11 @@ class MARLObstacleEnv(DirectMARLEnv):
         goal_pos_error_norm = torch.norm(self.pose_command_w[:, :3] - self.load_position, dim=-1)
         reward_distance_scale = 1.5
         reward_position = (
-            self.cfg.pos_track_weight * torch.exp(-goal_pos_error_norm * reward_distance_scale) * self.step_dt
+            self.pos_reward_weight * torch.exp(-goal_pos_error_norm * reward_distance_scale) * self.step_dt
         )
 
         relative_error = goal_pos_error_norm / self.max_pos_error_norm
-        linear_pos_reward = self.cfg.linear_pos_reward_weight * (1 - relative_error) * self.step_dt
-
+        linear_pos_reward = self.pos_reward_weight * (1 - relative_error) * self.step_dt
         # orientation reward
         orientation_error = quat_error_magnitude(self.pose_command_w[:, 3:7], self.load_orientation)
         reward_distance_scale = 1.5
@@ -488,7 +492,7 @@ class MARLObstacleEnv(DirectMARLEnv):
         action_prev = torch.cat([self.prev_actions[agent] for agent in self.cfg.possible_agents], dim=-1)
         diff_action = ((current_actions - action_prev).abs()) / self._num_drones
         reward_action_smoothness = (
-            self.cfg.action_smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1).square()) * self.step_dt
+            self.smoothness_weight * torch.exp(-torch.norm(diff_action, dim=-1).square()) * self.step_dt
         )
 
         # commanded body rate reward
@@ -611,6 +615,10 @@ class MARLObstacleEnv(DirectMARLEnv):
         # Set achieved goal if counter meets or exceeds the threshold
         self.achieved_goal |= self.goal_dist_counter >= (self.cfg.goal_time_threshold / self.step_dt)
 
+        # terminate if it is not close enough after a certain amount of time
+        stalling_time_passed = self.episode_length_buf >= (self.stalling_seconds / self.step_dt)
+        self.stalled = stalling_time_passed & (self.metrics["position_error"] > self.cfg.stalling_distance)
+
         # reset when episode ends
         terminations = (
             self.falcon_fly_low
@@ -621,6 +629,7 @@ class MARLObstacleEnv(DirectMARLEnv):
             | self.cable_collision
             | self.drone_collision
             | self.body_pos_outside
+            | self.stalled
         )
         self.time_out = self.episode_length_buf >= self.max_episode_length - 1
 
@@ -670,9 +679,14 @@ class MARLObstacleEnv(DirectMARLEnv):
                 self.cfg.curriculum_dist_min, 
                 self.cfg.curriculum_dist_max
             )
-
+        
+        # update reward weights
+        # TODO: change vertical_curriculum to average of both
+        self.pos_reward_weight[env_ids] = self.cfg.init_pos_track_weight + ((self.cfg.curriculum_dist_max - self.vertical_curriculum[env_ids])/(self.cfg.curriculum_dist_max - self.cfg.curriculum_dist_min)) * (self.cfg.max_pos_track_weight - self.cfg.init_pos_track_weight)
+        self.smoothness_weight[env_ids] = self.cfg.init_smoothness_weight + ((self.cfg.curriculum_dist_max - self.vertical_curriculum[env_ids])/(self.cfg.curriculum_dist_max - self.cfg.curriculum_dist_min)) * (self.cfg.max_smoothness_weight - self.cfg.init_smoothness_weight)
+        self.stalling_seconds[env_ids] = self.cfg.max_stalling_s + ((self.cfg.curriculum_dist_max - self.vertical_curriculum[env_ids])/(self.cfg.curriculum_dist_max - self.cfg.curriculum_dist_min)) * (self.cfg.min_stalling_s - self.cfg.max_stalling_s)
         # select new problem
-        self.problem_choice[env_ids.int()] = torch.randint(0, 2, size=(len(env_ids),), device=self.device, dtype=torch.int32)      
+        # self.problem_choice[env_ids.int()] = torch.randint(0, 2, size=(len(env_ids),), device=self.device, dtype=torch.int32)      
 
         # reset wall positions
         self._reset_wall_pos(env_ids, "wall_1")
@@ -707,6 +721,9 @@ class MARLObstacleEnv(DirectMARLEnv):
         ).item()
         self.extras["log"]["Episode_Termination/illegal_contact"] = torch.count_nonzero(
             self.illegal_contact[env_ids]
+        ).item()
+        self.extras["log"]["Episode_Termination/stalled"] = torch.count_nonzero(
+            self.stalled[env_ids]
         ).item()
         self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
 
@@ -787,7 +804,13 @@ class MARLObstacleEnv(DirectMARLEnv):
         # Handle vertical environments
         if new_vertical_mask.any():
             vertical_ids = env_ids[new_vertical_mask]
-            curr_pos[new_vertical_mask, 1] = self.vertical_curriculum[vertical_ids]
+            # gaussian distribution to sample around current curriculum
+            curr_pos[new_vertical_mask, 1] = sample_gaussian(
+                self.vertical_curriculum[vertical_ids],
+                self.vertical_curriculum[vertical_ids]/3,
+                (len(vertical_ids),),
+                device=self.device,
+            )
             
             if asset_name == "wall_1":
                 positions[new_vertical_mask] = (root_state[new_vertical_mask, :3] + 
@@ -805,7 +828,13 @@ class MARLObstacleEnv(DirectMARLEnv):
         # Handle horizontal environments
         if new_horizontal_mask.any():
             horizontal_ids = env_ids[new_horizontal_mask]
-            curr_pos[new_horizontal_mask, 2] = self.horizontal_curriculum[horizontal_ids]
+            # gaussian distribution to sample around current curriculum
+            curr_pos[new_horizontal_mask, 2] = sample_gaussian(
+                self.horizontal_curriculum[horizontal_ids],
+                self.horizontal_curriculum[horizontal_ids]/3,
+                (len(horizontal_ids),),
+                device=self.device,
+            )
 
             # Create horizontal orientation quaternion (90° rotation around x-axis)
             new_orientation = torch.zeros_like(root_state[new_horizontal_mask, 3:7])

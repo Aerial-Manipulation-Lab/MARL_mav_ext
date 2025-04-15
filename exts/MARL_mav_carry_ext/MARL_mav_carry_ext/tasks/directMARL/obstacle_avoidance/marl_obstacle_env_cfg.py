@@ -118,9 +118,8 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     )
 
     # curriculum 
-    curriculum_dist_threshold = 1.0 # task achieved when load is within this distance
     curriculum_dist_step = 0.1 # distance step for curriculum
-    curriculum_dist_max = 2.0
+    curriculum_dist_max = 1.5
     curriculum_dist_min = 0.0
 
     # maximum distance of field
@@ -150,6 +149,9 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     goal_achieved_range = 0.5
     goal_achieved_ori_range = 0.5
     goal_time_threshold = 3 # seconds that the goal has to be achieved
+    stalling_distance = 2 # m, the distance to the goal required after half time, otherwise episode is terminated
+    min_stalling_s = 4.0 # seconds
+    max_stalling_s = 10.0 # seconds
 
 
     # low level control
@@ -157,19 +159,21 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     max_thrust_pp = 6.25  # N
 
     # rewards
-    pos_track_weight = 3.0
-    linear_pos_reward_weight = 3.0
+    # positional weights are doubled - for linear and exp positional reward
+    init_pos_track_weight = 1.0
+    max_pos_track_weight = 2.0
     ori_track_weight = 2.0
-    action_smoothness_weight = 0.5
+    init_smoothness_weight = 0.5
+    max_smoothness_weight = 2.5
     body_rate_penalty_weight = 0.5
     force_penalty_weight = 0.5
     downwash_rew_weight = 0.5
-    goal_achieved_bonus = 250.0
+    goal_achieved_bonus = 0.0
 
     # reset robot
     robot_range = {
         "x": (-2.5, -2.0),
-        "y": (0.0, 1.0),
+        "y": (-1.0, 1.0),
         "z": (1.0, 1.5),
         "roll": (-0.0, 0.0),
         "pitch": (-0.0, 0.0),
