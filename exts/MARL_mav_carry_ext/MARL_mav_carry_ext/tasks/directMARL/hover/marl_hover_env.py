@@ -134,7 +134,6 @@ class MARLHoverEnv(DirectMARLEnv):
         self.difference_matrix = torch.zeros(self.num_envs, 3, 3, device=self.device)
 
         self.goal_dist_counter = torch.zeros(self.num_envs, device=self.device)
-        self.achieved_goal = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)  # used in reward function
 
         # reward logging
         self._episode_sums = {
@@ -146,7 +145,6 @@ class MARLHoverEnv(DirectMARLEnv):
                 "body_rate_penalty",
                 "force_penalty",
                 "downwash_reward",
-                "goal_achieved_reward"
             ]
         }
 
@@ -457,9 +455,6 @@ class MARLHoverEnv(DirectMARLEnv):
         # downwash reward
         reward_downwash = self.cfg.downwash_rew_weight * self._downwash_reward() * self.step_dt
 
-        # goal achieved reward
-        reward_goal_achieved = self.cfg.goal_achieved_bonus * self.achieved_goal.float()
-
         rewards = {
             "pos_reward": reward_position,
             "ori_reward": reward_orientation,
@@ -467,7 +462,6 @@ class MARLHoverEnv(DirectMARLEnv):
             "body_rate_penalty": reward_body_rate_penalty,
             "force_penalty": reward_effort,
             "downwash_reward": reward_downwash,
-            "goal_achieved_reward": reward_goal_achieved,
         }
 
         # Logging
@@ -481,7 +475,6 @@ class MARLHoverEnv(DirectMARLEnv):
             + reward_body_rate_penalty
             + reward_effort
             + reward_downwash
-            + reward_goal_achieved
         )
 
         return {agent: shared_rewards for agent in self.cfg.possible_agents}
@@ -553,15 +546,6 @@ class MARLHoverEnv(DirectMARLEnv):
         # update metrics
         self._update_metrics()
 
-        # goal achieved
-        within_goal_range = (self.metrics["position_error"] < self.cfg.goal_achieved_range) & (self.metrics["orientation_error"] < self.cfg.goal_achieved_ori_range)
-        # Increment counter for environments within goal distance, reset to 0 for others
-        self.goal_dist_counter = torch.where(
-            within_goal_range, self.goal_dist_counter + 1, torch.zeros_like(self.goal_dist_counter)
-        )
-        # Set achieved goal if counter meets or exceeds the threshold
-        self.achieved_goal |= self.goal_dist_counter >= (self.cfg.goal_time_threshold / self.step_dt)
-
         # reset when episode ends
         terminations = (
             self.falcon_fly_low
@@ -575,7 +559,7 @@ class MARLHoverEnv(DirectMARLEnv):
         )
         self.time_out = self.episode_length_buf >= self.max_episode_length - 1
 
-        timed_outs = self.time_out | self.achieved_goal
+        timed_outs = self.time_out
 
         terminated = {agent: terminations for agent in self.cfg.possible_agents}
         time_outs = {agent: timed_outs for agent in self.cfg.possible_agents}
@@ -589,8 +573,6 @@ class MARLHoverEnv(DirectMARLEnv):
         super()._reset_idx(env_ids)
         self._reset_target_pose(env_ids)
 
-        # reset goal achieved
-        self.achieved_goal[env_ids] = False
         # for agent in self.cfg.possible_agents:
         # self.setpoint_delay_buffers[agent].reset(env_ids)
         # self._observation_buffers[agent].reset(env_ids)
