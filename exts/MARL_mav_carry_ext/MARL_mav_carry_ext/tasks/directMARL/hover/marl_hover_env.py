@@ -202,6 +202,8 @@ class MARLHoverEnv(DirectMARLEnv):
             elif self._control_mode == "ACCBR":
                 self._setpoints[drone]["lin_acc"] = action[:, :3]
                 self._setpoints[drone]["body_rates"] = torch.cat((action[:, 3:], self._constant_yaw), dim=-1)
+                # self._setpoints[drone]["cthrust"] = action[:, 0]
+                # self._setpoints[drone]["body_rates"] = torch.cat((action[:, 1:], self._constant_yaw), dim=-1)
 
             self._setpoints[drone]["yaw"] = self._constant_yaw
             self._setpoints[drone]["yaw_rate"] = self._constant_yaw
@@ -254,10 +256,18 @@ class MARLHoverEnv(DirectMARLEnv):
                 alpha_cmd, acc_load, acc_cmd, q_cmd = self.geo_controllers[i].getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], self._setpoints[f"falcon{i+1}"]
                 )
+
+                # alpha_cmd, acc_load, acc_cmd, q_cmd, target_rpm = self.geo_controllers[i].getCommand(
+                #     drone_states, self._forces[:, i * 4 : i * 4 + 4], self._setpoints[f"falcon{i+1}"]
+                # )
+                
                 target_rpm = self._indi_controllers[i].getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load
                 )
 
+                # target_rpm = self._indi_controllers[i].getCommand(
+                #     drone_states, self._forces[:, i * 4 : i * 4 + 4], self._setpoints[f"falcon{i+1}"])
+                
                 # if self.cfg.debug_vis:
                 #     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
                 #     if self._control_mode == "geometric":
