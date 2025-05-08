@@ -202,8 +202,6 @@ class MARLHoverEnv(DirectMARLEnv):
             elif self._control_mode == "ACCBR":
                 self._setpoints[drone]["lin_acc"] = action[:, :3]
                 self._setpoints[drone]["body_rates"] = torch.cat((action[:, 3:], self._constant_yaw), dim=-1)
-                # self._setpoints[drone]["cthrust"] = action[:, 0]
-                # self._setpoints[drone]["body_rates"] = torch.cat((action[:, 1:], self._constant_yaw), dim=-1)
 
             self._setpoints[drone]["yaw"] = self._constant_yaw
             self._setpoints[drone]["yaw_rate"] = self._constant_yaw
