@@ -87,18 +87,33 @@ def main():
     falcon2_geo_tensor = torch.zeros((env.num_envs, 12), device=env.device)
     falcon3_geo_tensor = torch.zeros((env.num_envs, 12), device=env.device)
 
+    falcon1_acc_tensor = torch.zeros((env.num_envs, 3), device=env.device)
+    falcon2_acc_tensor = torch.zeros((env.num_envs, 3), device=env.device)
+    falcon3_acc_tensor = torch.zeros((env.num_envs, 3), device=env.device)
+
     while simulation_app.is_running():
         with torch.inference_mode():
             # step the environment
             if count % 500 == 0:
                 env.reset()
-            falcon1_geo_tensor[:, 0:3] = stretch_position[:, 0:3]
-            falcon2_geo_tensor[:, 0:3] = stretch_position[:, 3:6]
-            falcon3_geo_tensor[:, 0:3] = stretch_position[:, 6:9]
+            # falcon1_geo_tensor[:, 0:3] = stretch_position[:, 0:3]
+            # falcon2_geo_tensor[:, 0:3] = stretch_position[:, 3:6]
+            # falcon3_geo_tensor[:, 0:3] = stretch_position[:, 6:9]
+            # action = {
+            #     "falcon1": falcon1_geo_tensor,
+            #     "falcon2": falcon2_geo_tensor,
+            #     "falcon3": falcon3_geo_tensor,
+            # }
+            falcon1_acc_tensor[:, 0] = 20
+            falcon2_acc_tensor[:, 0] = 20
+            falcon3_acc_tensor[:, 0] = 20
+            falcon1_acc_tensor[:, 2] = 5
+            falcon2_acc_tensor[:, 2] = 5
+            falcon3_acc_tensor[:, 2] = 5
             action = {
-                "falcon1": falcon1_geo_tensor,
-                "falcon2": falcon2_geo_tensor,
-                "falcon3": falcon3_geo_tensor,
+                "falcon1": falcon1_acc_tensor,
+                "falcon2": falcon2_acc_tensor,
+                "falcon3": falcon3_acc_tensor,
             }
             obs, rew, terminated, truncated, info = env.step(action)
             terminated = list(terminated.values())[0]
