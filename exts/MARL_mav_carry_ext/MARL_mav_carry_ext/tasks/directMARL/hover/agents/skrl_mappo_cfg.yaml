@@ -44,22 +44,26 @@ memory:
 agent:
   class: MAPPO
   separate_actors: False
-  rollouts: 24 # higher better
+  rollouts: 128 # higher better
   learning_epochs: 5 # reduce
   mini_batches: 4
   discount_factor: 0.99
   lambda: 0.95
   learning_rate: 1.0e-04 # if modeled is shared
-  learning_rate_actor: 2.0e-04
-  learning_rate_critic: 5.0e-04
-  learning_rate_scheduler_actor: CosineAnnealingLR
-  learning_rate_scheduler_actor_kwargs:
-    T_max: 8000 # timesteps divided by rollouts
-    eta_min: 1.0e-6
-  learning_rate_scheduler_critic: CosineAnnealingLR
-  learning_rate_scheduler_critic_kwargs:
-    T_max: 8000 # timesteps divided by rollouts
-    eta_min: 1.0e-6
+  learning_rate_actor: 5.0e-05
+  learning_rate_critic: 1.0e-04
+  learning_rate_scheduler_actor: null
+  learning_rate_scheduler_actor_kwargs: null
+  learning_rate_scheduler_critic: null
+  learning_rate_scheduler_critic_kwargs: null
+  # learning_rate_scheduler_actor: CosineAnnealingLR
+  # learning_rate_scheduler_actor_kwargs:
+  #   T_max: 40000 # timesteps divided by rollouts times learning_epochs
+  #   eta_min: 1.0e-6
+  # learning_rate_scheduler_critic: CosineAnnealingLR
+  # learning_rate_scheduler_critic_kwargs:
+  #   T_max: 40000 # timesteps divided by rollouts times learning_epochs
+  #   eta_min: 1.0e-6
   state_preprocessor: RunningStandardScaler
   state_preprocessor_kwargs: null
   shared_state_preprocessor: RunningStandardScaler
