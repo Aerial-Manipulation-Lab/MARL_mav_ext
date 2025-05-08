@@ -258,14 +258,14 @@ class MARLHoverEnv(DirectMARLEnv):
                 # alpha_cmd, acc_load, acc_cmd, q_cmd, target_rpm = self.geo_controllers[i].getCommand(
                 #     drone_states, self._forces[:, i * 4 : i * 4 + 4], self._setpoints[f"falcon{i+1}"]
                 # )
-                
+
                 target_rpm = self._indi_controllers[i].getCommand(
                     drone_states, self._forces[:, i * 4 : i * 4 + 4], alpha_cmd, acc_cmd, acc_load
                 )
 
                 # target_rpm = self._indi_controllers[i].getCommand(
                 #     drone_states, self._forces[:, i * 4 : i * 4 + 4], self._setpoints[f"falcon{i+1}"])
-                
+
                 # if self.cfg.debug_vis:
                 #     self.drone_positions_debug[:, i] = drone_states["pos"] + self._env.scene.env_origins
                 #     if self._control_mode == "geometric":
@@ -392,7 +392,7 @@ class MARLHoverEnv(DirectMARLEnv):
             obs_falcon1 = self._observation_buffers["falcon1"].buffer.reshape(self.num_envs, -1)
             obs_falcon2 = self._observation_buffers["falcon2"].buffer.reshape(self.num_envs, -1)
             obs_falcon3 = self._observation_buffers["falcon3"].buffer.reshape(self.num_envs, -1)
-        else: 
+        else:
             obs_falcon1 = torch.cat(
                 (
                     self.load_position,

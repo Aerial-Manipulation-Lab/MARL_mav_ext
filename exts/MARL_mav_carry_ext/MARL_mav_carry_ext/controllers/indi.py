@@ -54,7 +54,7 @@ class IndiController:
         self.rope_offset = -0.03
         self.p_offset = torch.tensor([[0.0, 0.0, self.rope_offset]] * self.num_envs, device=self.device)
 
-        #TODO REMOVE
+        # TODO REMOVE
         # self.kp = torch.tensor([100.0, 100.0, 10.0], device=self.device)
 
         # low pass filters

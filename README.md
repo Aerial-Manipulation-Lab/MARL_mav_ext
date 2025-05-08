@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/dba039ce-b1ed-41af-ac63-9f42288d08d8
 https://github.com/user-attachments/assets/4a6c7199-bb8e-47fc-9a44-2122519ffc60
 
 ## Overview
-This repository is an NVIDIA Isaac Lab extension that contains the environment and algorithms to control a multi-drone transport system (flycrane). 
+This repository is an NVIDIA Isaac Lab extension that contains the environment and algorithms to control a multi-drone transport system (flycrane).
 
 Using DirectMARLEnv, only the `hover` task has been implemented. The `partial_obs` flag allows to train the policies with only local observations (own state and ID, load pose and goal pose). DirectMARLEnvs allow to for decentralized agents such as MAPPO, but can also be wrapped to allow for centralized training using PPO. This environment has been used to train the agents for the CoRL paper.
 
@@ -31,7 +31,7 @@ Using ManagerBasedRLEnv, these task have been implemented (although deprecated),
 
 **I recommend not further developing the ManagerBasedRLEnvs, since centralized control can also be achieved by wrapping DirectMARLEnvs. They can be used for inspiration however.**
 
-Moreover, a test environment (without agent) for a single drone is also avaible in `single_falcon`.
+Moreover, a test environment (without agent) for a single drone is also available in `single_falcon`.
 
 ### Installation
 
@@ -52,7 +52,7 @@ The assets folder contains `$(ROBOT).py` files which have the configuration the 
 Then, in the [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/assets/data/AMR](https://github.com/Jackkert/MARL_mav_ext/tree/main/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/assets/data/AMR) folder, the robot URDF and corresponding meshes are located in the `$(ROBOT)_data` folder and the USD files can be found in the `$(ROBOT)` folder.
 
 ## Controllers
-The controllers are implemented in [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers](https://github.com/Jackkert/MARL_mav_ext/tree/feature/track_task/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers). The differential flatness based contorller (DFBC) can be found in `geometric.py`. The incremental nonlinear dynamic inversion (INDI) controller can be found in `indi.py`.
+The controllers are implemented in [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers](https://github.com/Jackkert/MARL_mav_ext/tree/feature/track_task/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/controllers). The differential flatness based controller (DFBC) can be found in `geometric.py`. The incremental nonlinear dynamic inversion (INDI) controller can be found in `indi.py`.
 
 ## Plotting Tools
 The plotting tools are implemented in [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/plotting_tools](https://github.com/Jackkert/MARL_mav_ext/tree/feature/track_task/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/plotting_tools). Plotting is supported for both ManagerBasedRLEnv and DirectMARLEnv.
@@ -101,7 +101,7 @@ The manager based environment consists of multiple modules, and their configs ca
 
 - `CurriculumManager` Manager of different learning tasks in order to increase difficulty of the task over time (curriculum learning). This is not implemented.
 
-The `DirectMARLEnv` case implements all of these functions directly into 1 class, and is more efficient. The functionality of the funtions is the same for the most part. It can be found under [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL](https://github.com/Jackkert/MARL_mav_ext/tree/decentralized/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL).
+The `DirectMARLEnv` case implements all of these functions directly into 1 class, and is more efficient. The functionality of the functions is the same for the most part. It can be found under [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL](https://github.com/Jackkert/MARL_mav_ext/tree/decentralized/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL).
 
 ## Training and playing
 Isaac Lab offers different wrappers for different RL libraries to make it easy to switch between libraries. The scripts for the corresponding libraries are implemented in [scripts](https://github.com/Jackkert/MARL_mav_ext/tree/main/scripts). The usable libraries are rsl_rl and skrl.

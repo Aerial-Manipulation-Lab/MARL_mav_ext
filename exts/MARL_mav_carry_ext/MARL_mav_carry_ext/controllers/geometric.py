@@ -54,7 +54,7 @@ class GeometricController:
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
 
-        #TODO REMOVE
+        # TODO REMOVE
         # self.kappa = 0.022
         # self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
         # self.l = 0.10606601717798213
@@ -231,7 +231,7 @@ class GeometricController:
 
         # rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0]).transpose(0, 1)
 
-        return alpha_b_des, acc_load, acc_cmd, q_cmd#, rotor_speeds
+        return alpha_b_des, acc_load, acc_cmd, q_cmd  # , rotor_speeds
 
     def reset(self, env_ids):
         # self.filterAcc_.reset(env_ids)
