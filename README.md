@@ -1,4 +1,4 @@
-# Multi-Agent reinforcement learning for multi-drone transport system
+# Decentralized Aerial Manipulation of a Cable-Suspended Load using Multi-Agent Reinforcement Learning
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
 [![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.0.2-silver)](https://isaac-sim.github.io/IsaacLab)
@@ -10,12 +10,18 @@
 
 Author - [Jack Zeng](https://github.com/Jackkert)
 
-https://github.com/user-attachments/assets/60a7d0ad-d294-4039-a6ad-df66795bbd31
+https://github.com/user-attachments/assets/1528b863-b8f0-4388-bf7c-b2ef38446e11
 
-https://github.com/user-attachments/assets/3d6d4698-90ec-46e8-8f35-58d5e9d59d81
+https://github.com/user-attachments/assets/dba039ce-b1ed-41af-ac63-9f42288d08d8
+
+https://github.com/user-attachments/assets/4a6c7199-bb8e-47fc-9a44-2122519ffc60
 
 ## Overview
-This repository is an NVIDIA Isaac Lab extension that contains the environment and algorithm to control a multi-drone transport system (flycrane). As of now for the centralized case, these task have been implemented:
+This repository is an NVIDIA Isaac Lab extension that contains the environment and algorithms to control a multi-drone transport system (flycrane). 
+
+Using DirectMARLEnv, only the `hover` task has been implemented. The `partial_obs` flag allows to train the policies with only local observations (own state and ID, load pose and goal pose). DirectMARLEnvs allow to for decentralized agents such as MAPPO, but can also be wrapped to allow for centralized training using PPO. This environment has been used to train the agents for the CoRL paper.
+
+Using ManagerBasedRLEnv, these task have been implemented (although deprecated), allowing for centralized control:
 
 - `hover_llc`/`hover` The flycrane gets a reference pose for the payload where it should hover. This is done with a differential based flatness controller (DFBC), or end-to-end, which, in this project, is from the simulation states to the forces and torques on the quadrotors. All tasks hereafter include the DFBC to minimize the sim2real gap.
 
@@ -23,7 +29,9 @@ This repository is an NVIDIA Isaac Lab extension that contains the environment a
 
 - `FlyThrough` Make the payload fly through a gap/between 2 walls, avoiding collisions.
 
-For the decentralized case, only the `hover` task has been implemented. In the decentralized case, the local policies assume full observability of the system. That is, the local observations include the full states of the load and other agents.
+**I recommend not further developing the ManagerBasedRLEnvs, since centralized control can also be achieved by wrapping DirectMARLEnvs. They can be used for inspiration however.**
+
+Moreover, a test environment (without agent) for a single drone is also avaible in `single_falcon`.
 
 ### Installation
 
@@ -93,7 +101,7 @@ The manager based environment consists of multiple modules, and their configs ca
 
 - `CurriculumManager` Manager of different learning tasks in order to increase difficulty of the task over time (curriculum learning). This is not implemented.
 
-The `DirectMARLEnv` case implements all of these functions directly into 1 class. It can be found under [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL](https://github.com/Jackkert/MARL_mav_ext/tree/decentralized/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL).
+The `DirectMARLEnv` case implements all of these functions directly into 1 class, and is more efficient. The functionality of the funtions is the same for the most part. It can be found under [exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL](https://github.com/Jackkert/MARL_mav_ext/tree/decentralized/exts/MARL_mav_carry_ext/MARL_mav_carry_ext/tasks/directMARL).
 
 ## Training and playing
 Isaac Lab offers different wrappers for different RL libraries to make it easy to switch between libraries. The scripts for the corresponding libraries are implemented in [scripts](https://github.com/Jackkert/MARL_mav_ext/tree/main/scripts). The usable libraries are rsl_rl and skrl.
@@ -104,15 +112,15 @@ The agent configurations for the flycrane are in the respective task's `config/f
 ### Training
 To train the agent, for example using skrl. You can run the following command from the command line:
 
-`python3 scripts/skrl/train.py --task=Isaac-flycrane-payload-track-v0 --headless --num_envs=4096 --seed=-1`
+`python3 scripts/skrl/train.py --task=Isaac-flycrane-payload-decentralized-hovering-v0 --headless --num_envs=4096 --seed=-1 --algorithm="MAPPO"`
 
-This will start the training for the hover task with the configured settings in the agent configuration file. For more command line interface arguments, check the respective `train.py` file under `scripts/`.
+This will start the training for the hover task with the configured settings in the agent configuration file. For more command line interface arguments, check the respective `train.py` file under `scripts/`. To wrap the environment and allow for centralized training, simply change the algorithm to 'PPO'.
 
 
 ### Playing
 To play with the learned agent, you can run the `play.py` script. This will load the latest checkpoint from the `logs` that have been accumulated during training. For this, execute (for example):
 
-`python3 scripts/skrl/play.py --task=Isaac-flycrane-payload-track-v0 --headless --video --video_length=800 --save_plots --checkpoint=$(PATH_TO_PT_FILE)`
+`python3 scripts/skrl/play.py --task=Isaac-flycrane-payload-decentralized-hovering-v0 --headless --video --video_length=2000 --algorithm="MAPPO" --control_mode="ACCBR" --save_plots --checkpoint=$(PATH_TO_PT_FILE)`
 
 To gather data and plot results of the played episode, add the `--save_plots` flag, this will plot several statistics against time such as metrics (for each task), payload and drone states over time.
 
