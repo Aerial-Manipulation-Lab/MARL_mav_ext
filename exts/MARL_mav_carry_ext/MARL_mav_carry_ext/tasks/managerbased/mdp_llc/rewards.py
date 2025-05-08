@@ -390,7 +390,7 @@ def obstacle_penalty(
     obstacle_pos = obstacle.data.body_com_state_w[:, 0, :3].unsqueeze(1) - env.scene.env_origins.unsqueeze(1)
     all_bodies_env = torch.cat((payload_pos_env, drones_pos_env), dim=1)
     rpos = torch.abs(all_bodies_env - obstacle_pos)
-    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1)  # half lenghts
+    cuboid_dims = torch.tensor([[1.0, 1.75, 2.5]] * env.num_envs, device=env.sim.device).unsqueeze(1)  # half lengths
     # check if any of the bodies are inside the cuboid
     cuboid_dims_world = quat_rotate(obstacle.data.body_com_state_w[:, 0, 3:7].unsqueeze(1), cuboid_dims)
     is_inside_cuboid = torch.all(

@@ -100,7 +100,8 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     max_delay = 4  # in number of steps, with policy = 100hz -> 40ms
     constant_delay = 4  # in number of steps, with policy = 100hz -> 40ms
     # history of observations
-    history_len = 4
+    partial_obs = True  # if only local observations are used
+    history_len = 3
 
     possible_agents = ["falcon1", "falcon2", "falcon3"]
     num_drones = len(possible_agents)
@@ -113,9 +114,12 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     elif control_mode == "ACCBR":
         action_dim_accbr = 5
         action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr}
-        obs_dim_accbr = (
-            87  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
-        )
+        if partial_obs:
+            obs_dim_accbr = 45 * history_len
+        else:
+            obs_dim_accbr = (
+                87  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+            )
         observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr}
         state_space = 84  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
 
@@ -151,8 +155,11 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     cable_angle_limits_payload = -math.sqrt(2) / 2  # cos(angle) limits
     cable_collision_threshold = 0.2
     cable_collision_num_points = 10
-    drone_collision_threshold = 0.5
+    drone_collision_threshold = 0.8
     bounding_box_threshold = 5.0
+    goal_achieved_range = 0.3
+    goal_achieved_ori_range = 0.4
+    goal_time_threshold = 3  # seconds that the goal has to be achieved
 
     # low level control
     low_level_decimation: int = 1
@@ -165,6 +172,7 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     body_rate_penalty_weight = 0.5
     force_penalty_weight = 0.5
     downwash_rew_weight = 0.5
+    goal_achieved_bonus = 200.0
 
     # goal terms
     goal_range = {

@@ -60,7 +60,6 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
-import numpy as np
 import os
 import random
 import time
@@ -155,9 +154,9 @@ def main():
 
     # get environment (physics) dt for real-time evaluation
     try:
-        dt = env.physics_dt
+        dt = env.step_dt
     except AttributeError:
-        dt = env.unwrapped.physics_dt
+        dt = env.unwrapped.step_dt
 
     # wrap around environment for skrl
     env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)  # same as: `wrap_env(env, wrapper="auto")`

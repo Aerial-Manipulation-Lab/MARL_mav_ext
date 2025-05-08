@@ -54,28 +54,31 @@ class IndiController:
         self.rope_offset = -0.03
         self.p_offset = torch.tensor([[0.0, 0.0, self.rope_offset]] * self.num_envs, device=self.device)
 
+        # TODO REMOVE
+        # self.kp = torch.tensor([100.0, 100.0, 10.0], device=self.device)
+
         # low pass filters
-        self.filter_sampling_frequency = torch.full(
-            (self.num_envs, 1), 300.0, device=self.device
-        )  # filter frequency, same as control frequency (Hz)
-        self.filter_cutoff_frequency = torch.full(
-            (self.num_envs, 1), 12.0, device=self.device
-        )  # accelerometer filter cut-off frequency (Hz)
-        self.filter_init_value_mot = torch.full((self.num_envs, 4), 0.0, device=self.device)
-        self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        # self.filter_sampling_frequency = torch.full(
+        #     (self.num_envs, 1), 300.0, device=self.device
+        # )  # filter frequency, same as control frequency (Hz)
+        # self.filter_cutoff_frequency = torch.full(
+        #     (self.num_envs, 1), 12.0, device=self.device
+        # )  # accelerometer filter cut-off frequency (Hz)
+        # self.filter_init_value_mot = torch.full((self.num_envs, 4), 0.0, device=self.device)
+        # self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
 
-        self.filterMot_ = LowPassFilter(
-            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
-        )
-        self.filterRate_ = LowPassFilter(
-            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_rate
-        )
+        # self.filterMot_ = LowPassFilter(
+        #     self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
+        # )
+        # self.filterRate_ = LowPassFilter(
+        #     self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_rate
+        # )
 
-        self.debug = True
-        if self.debug:
-            self.filtered_ang_acc = torch.zeros((self.num_envs, 3), device=self.device)
-            self.unfiltered_mot = torch.zeros((self.num_envs, 4), device=self.device)
-            self.filtered_mot = torch.zeros((self.num_envs, 4), device=self.device)
+        # self.debug = True
+        # if self.debug:
+        #     self.filtered_ang_acc = torch.zeros((self.num_envs, 3), device=self.device)
+        #     self.unfiltered_mot = torch.zeros((self.num_envs, 4), device=self.device)
+        #     self.filtered_mot = torch.zeros((self.num_envs, 4), device=self.device)
 
     def getCommand(
         self,
@@ -86,14 +89,14 @@ class IndiController:
         acc_load: torch.tensor,
     ) -> torch.tensor:
         forces = actions.sum(-1)
-        filtered_forces = self.filterMot_.add(forces)
-        self.filterRate_.add(state["ang_vel"])
-        ang_acc_filtered = self.filterRate_.derivative()
+        # filtered_forces = self.filterMot_.add(forces)
+        # self.filterRate_.add(state["ang_vel"])
+        # ang_acc_filtered = self.filterRate_.derivative()
 
-        if self.debug:
-            self.filtered_ang_acc = ang_acc_filtered
-            self.unfiltered_mot = forces
-            self.filtered_mot = filtered_forces
+        # if self.debug:
+        #     self.filtered_ang_acc = ang_acc_filtered
+        #     self.unfiltered_mot = forces
+        #     self.filtered_mot = filtered_forces
 
         omega = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])  # body rates # normally from IMU
         omega_dot = quat_rotate(
@@ -122,6 +125,53 @@ class IndiController:
 
         return rotor_speeds
 
+    # def getCommand(
+    #     self,
+    #     state: dict,
+    #     actions: torch.tensor,
+    #     setpoint: dict,
+    # ) -> torch.tensor:
+    #     forces = actions.sum(-1)
+    #     # filtered_forces = self.filterMot_.add(forces)
+    #     # self.filterRate_.add(state["ang_vel"])
+    #     # ang_acc_filtered = self.filterRate_.derivative()
+
+    #     # if self.debug:
+    #     #     self.filtered_ang_acc = ang_acc_filtered
+    #     #     self.unfiltered_mot = forces
+    #     #     self.filtered_mot = filtered_forces
+
+    #     omega = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])  # body rates # normally from IMU
+    #     alpha_cmd = self.kp * (setpoint["body_rates"] - omega)
+    #     acc_cmd = setpoint["cthrust"]
+    #     omega_dot = quat_rotate(
+    #         quat_inv(state["quat"]), state["ang_acc"]
+    #     )  # body accelerations # normally from derivative filtered body rate
+    #     tau = torch.matmul(self.G_1, forces.transpose(0, 1)).transpose(0, 1)[:, 1:]  # torque commands
+    #     mu = torch.zeros((self.num_envs, 4), device=self.device)
+    #     # collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1) * self.falcon_mass
+    #     collective_thrust_des_magntiude = acc_cmd * self.falcon_mass
+    #     mu[:, 0] = torch.clamp(collective_thrust_des_magntiude, self.thrust_min_collective, self.thrust_max_collective)
+    #     mu_ndi = mu
+
+    #     moments = self.inertia_mat.matmul(alpha_cmd.transpose(0, 1)).transpose(0, 1) + torch.linalg.cross(
+    #         omega, self.inertia_mat.matmul(omega.transpose(0, 1)).transpose(0, 1)
+    #     )  # - torch.linalg.cross(
+    #     # self.p_offset, quat_rotate(quat_inv(state["quat"]), acc_load * self.falcon_mass)) # M_load in body frame
+
+    #     mu_ndi[:, 1:] = moments
+    #     mu[:, 1:] = tau + self.inertia_mat.matmul((alpha_cmd - omega_dot).transpose(0, 1)).transpose(0, 1)
+
+    #     # without heading control
+    #     mu[:, 3] = mu_ndi[:, 3]
+    #     thrusts = self.G_1_inv.matmul(mu.transpose(0, 1))
+    #     thrusts = torch.clamp(thrusts, self.thrust_min, self.thrust_max)
+
+    #     rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0]).transpose(0, 1)
+
+    #     return rotor_speeds
+
     def reset(self, env_ids):
-        self.filterMot_.reset(env_ids)
-        self.filterRate_.reset(env_ids)
+        # self.filterMot_.reset(env_ids)
+        # self.filterRate_.reset(env_ids)
+        pass

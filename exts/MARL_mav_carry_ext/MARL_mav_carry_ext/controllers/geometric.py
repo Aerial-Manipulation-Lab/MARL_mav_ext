@@ -54,37 +54,68 @@ class GeometricController:
         self.kp_att_xy = 150.0
         self.kp_att_z = 5.0
 
-        # low pass filters
-        self.filter_sampling_frequency = torch.full(
-            (self.num_envs, 1), 300.0, device=self.device
-        )  # filter frequency, same as control frequency (Hz)
-        self.filter_cutoff_frequency = torch.full(
-            (self.num_envs, 1), 6.0, device=self.device
-        )  # accelerometer filter cut-off frequency (Hz)
-        self.filter_cutoff_frequency_bodyrate = torch.full(
-            (self.num_envs, 1), 20.0, device=self.device
-        )  # rate control filter cut-off-freuqnecy (Hz)
-        self.filter_init_value_acc = torch.full((self.num_envs, 3), 0.0, device=self.device)
-        self.filter_init_value_mot = torch.full((self.num_envs, 3), 0.0, device=self.device)
-        self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        # TODO REMOVE
+        # self.kappa = 0.022
+        # self.beta = torch.deg2rad(torch.tensor([45], device=self.device))
+        # self.l = 0.10606601717798213
+        # self.G_1 = torch.tensor(
+        #     [
+        #         [1, 1, 1, 1],
+        #         [
+        #             self.l * torch.sin(self.beta),
+        #             -self.l * torch.sin(self.beta),
+        #             -self.l * torch.sin(self.beta),
+        #             self.l * torch.sin(self.beta),
+        #         ],
+        #         [
+        #             -self.l * torch.cos(self.beta),
+        #             -self.l * torch.cos(self.beta),
+        #             self.l * torch.cos(self.beta),
+        #             self.l * torch.cos(self.beta),
+        #         ],
+        #         [self.kappa, -self.kappa, self.kappa, -self.kappa],
+        #     ],
+        #     device=self.device,
+        # )
+        # self.G_1_inv = torch.linalg.inv(self.G_1)
+        # self.thrust_min_collective = 0.0
+        # self.thrust_max_collective = 6.25 * 4  # [N]
+        # self.inertia_mat = torch.diag(torch.tensor([0.00164, 0.00184, 0.0030], device=self.device))
+        # self.thrust_min = 0.0
+        # self.thrust_max = 6.25  # [N]
+        # self.thrust_map = torch.tensor([1.562522e-06, 0.0, 0.0], device=self.device)
 
-        self.filterAcc_ = LowPassFilter(
-            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_acc
-        )
-        self.filterMot_ = LowPassFilter(
-            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
-        )
-        self.filterRate_ = LowPassFilter(
-            self.filter_cutoff_frequency_bodyrate, self.filter_sampling_frequency, self.filter_init_value_rate
-        )
+        # low pass filters
+        # self.filter_sampling_frequency = torch.full(
+        #     (self.num_envs, 1), 300.0, device=self.device
+        # )  # filter frequency, same as control frequency (Hz)
+        # self.filter_cutoff_frequency = torch.full(
+        #     (self.num_envs, 1), 6.0, device=self.device
+        # )  # accelerometer filter cut-off frequency (Hz)
+        # self.filter_cutoff_frequency_bodyrate = torch.full(
+        #     (self.num_envs, 1), 20.0, device=self.device
+        # )  # rate control filter cut-off-freuqnecy (Hz)
+        # self.filter_init_value_acc = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        # self.filter_init_value_mot = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        # self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
+
+        # self.filterAcc_ = LowPassFilter(
+        #     self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_acc
+        # )
+        # self.filterMot_ = LowPassFilter(
+        #     self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
+        # )
+        # self.filterRate_ = LowPassFilter(
+        #     self.filter_cutoff_frequency_bodyrate, self.filter_sampling_frequency, self.filter_init_value_rate
+        # )
 
         # debug
-        self.debug = True
-        if self.debug:
-            self.filtered_acc = torch.zeros((self.num_envs, 3), device=self.device)
-            self.filtered_rate = torch.zeros((self.num_envs, 3), device=self.device)
-            self.unfiltered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
-            self.filtered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
+        # self.debug = True
+        # if self.debug:
+        #     self.filtered_acc = torch.zeros((self.num_envs, 3), device=self.device)
+        #     self.filtered_rate = torch.zeros((self.num_envs, 3), device=self.device)
+        #     self.unfiltered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
+        #     self.filtered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
 
     # function to overwrite parameters from yaml file
     # function to check if all parameters are valid
@@ -106,15 +137,15 @@ class GeometricController:
         current_collective_thrust = actions.sum(1)  # sum over all propellors
 
         # update low pass filters
-        acc_filtered = self.filterAcc_.add(state["lin_acc"])
-        ang_vel_filtered = self.filterRate_.add(state["ang_vel"])
-        actions_filtered = self.filterMot_.add(current_collective_thrust)
+        # acc_filtered = self.filterAcc_.add(state["lin_acc"])
+        # ang_vel_filtered = self.filterRate_.add(state["ang_vel"])
+        # actions_filtered = self.filterMot_.add(current_collective_thrust)
 
-        if self.debug:
-            self.filtered_acc = acc_filtered
-            self.filtered_rate = ang_vel_filtered
-            self.unfiltered_thrusts = current_collective_thrust
-            self.filtered_thrusts = actions_filtered
+        # if self.debug:
+        #     self.filtered_acc = acc_filtered
+        #     self.filtered_rate = ang_vel_filtered
+        #     self.unfiltered_thrusts = current_collective_thrust
+        #     self.filtered_thrusts = actions_filtered
 
         # acceleration command
         if self.control_mode == "geometric":
@@ -184,9 +215,26 @@ class GeometricController:
             + self.kp_rate * (omega_b_ref - ang_vel_body)
         )
 
-        return alpha_b_des, acc_load, acc_cmd, q_cmd
+        # omega = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])  # body rates # normally from IMU
+        # mu_ndi = torch.zeros((self.num_envs, 4), device=self.device)
+        # collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1) * self.falcon_mass
+        # mu_ndi[:, 0] = torch.clamp(collective_thrust_des_magntiude, self.thrust_min_collective, self.thrust_max_collective)
+
+        # moments = self.inertia_mat.matmul(alpha_b_des.transpose(0, 1)).transpose(0, 1) + torch.linalg.cross(
+        #     omega, self.inertia_mat.matmul(omega.transpose(0, 1)).transpose(0, 1)
+        # ) - torch.linalg.cross(
+        # self.p_offset, quat_rotate(quat_inv(state["quat"]), acc_load * self.falcon_mass)) # M_load in body frame
+
+        # mu_ndi[:, 1:] = moments
+        # thrusts = self.G_1_inv.matmul(mu_ndi.transpose(0, 1))
+        # thrusts = torch.clamp(thrusts, self.thrust_min, self.thrust_max)
+
+        # rotor_speeds = torch.sqrt(thrusts / self.thrust_map[0]).transpose(0, 1)
+
+        return alpha_b_des, acc_load, acc_cmd, q_cmd  # , rotor_speeds
 
     def reset(self, env_ids):
-        self.filterAcc_.reset(env_ids)
-        self.filterMot_.reset(env_ids)
-        self.filterRate_.reset(env_ids)
+        # self.filterAcc_.reset(env_ids)
+        # self.filterMot_.reset(env_ids)
+        # self.filterRate_.reset(env_ids)
+        pass
