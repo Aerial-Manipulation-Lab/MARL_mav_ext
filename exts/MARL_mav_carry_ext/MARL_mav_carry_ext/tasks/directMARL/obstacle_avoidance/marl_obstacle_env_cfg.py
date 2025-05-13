@@ -54,7 +54,8 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     max_delay = 4  # in number of steps, with policy = 100hz -> 40ms
     constant_delay = 4  # in number of steps, with policy = 100hz -> 40ms
     # history of observations
-    history_len = 4
+    history_len = 3
+    partial_obs = True
 
     possible_agents = ["falcon1", "falcon2", "falcon3"]
     num_drones = len(possible_agents)
@@ -67,9 +68,10 @@ class MARLObstacleEnvCfg(DirectMARLEnvCfg):
     elif control_mode == "ACCBR":
         action_dim_accbr = 5
         action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr}
-        obs_dim_accbr = (
-            117  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
-        )
+        if partial_obs:
+            obs_dim_accbr = 63 * history_len
+        else:
+            obs_dim_accbr = 117  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
         observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr}
         state_space = 114  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
 

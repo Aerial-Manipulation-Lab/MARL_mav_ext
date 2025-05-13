@@ -58,10 +58,9 @@ class MARLObstacleEnv(DirectMARLEnv):
         self._control_mode = cfg.control_mode
 
         # # observation buffers
-        # self._observation_buffers = {}
-        # for agent in self.cfg.possible_agents:
-        #     self._observation_buffers[agent] = CircularBuffer(cfg.history_len, self.num_envs, device=self.device)
-        # self._state_buffer = CircularBuffer(cfg.history_len, self.num_envs, device=self.device)
+        self._observation_buffers = {}
+        for agent in self.cfg.possible_agents:
+            self._observation_buffers[agent] = CircularBuffer(cfg.history_len, self.num_envs, device=self.device)
 
         # action buffers
         # buffers
@@ -352,92 +351,169 @@ class MARLObstacleEnv(DirectMARLEnv):
         #     else:
         #         action_histories.append(self.setpoint_delay_buffers[agent]._circular_buffer.buffer)
         # self.all_action_histories = torch.cat(action_histories, dim=-1)
+        
+        if self.cfg.partial_obs:
+            obs_falcon1_t = torch.cat(
+                (
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    # drone terms
+                    torch.tensor([[1, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    self.drone_positions[:, 0].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
+                    self.drone_linear_velocities[:, 0].view(self.num_envs, -1),
+                    self.drone_angular_velocities[:, 0].view(self.num_envs, -1),
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
+                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    self.wall_rpos_1[:, 0].view(self.num_envs, -1),
+                    self.wall_rpos_1[:, 1].view(self.num_envs, -1),
+                    self.wall_size_1,
+                    self.wall_rpos_2[:, 0].view(self.num_envs, -1),
+                    self.wall_rpos_2[:, 1].view(self.num_envs, -1),
+                    self.wall_size_2,
+                ),
+                dim=-1,
+            )
 
-        obs_falcon1 = torch.cat(
-            (
-                self.load_position,
-                self.current_load_matrix.view(self.num_envs, -1),
-                self.load_vel,
-                self.load_ang_vel,
-                # drone terms
-                torch.tensor([[1, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
-                self.drone_positions.view(self.num_envs, -1),
-                self.drone_rot_matrices.view(self.num_envs, -1),
-                self.drone_linear_velocities.view(self.num_envs, -1),
-                self.drone_angular_velocities.view(self.num_envs, -1),
-                self.goal_pos_error,
-                self.difference_matrix.view(self.num_envs, -1),
-                # self.all_action_histories.reshape(self.num_envs, -1),
-                self.wall_rpos_1.view(self.num_envs, -1),
-                self.wall_size_1,
-                self.wall_rpos_2.view(self.num_envs, -1),
-                self.wall_size_2,
-            ),
-            dim=-1,
-        )
+            self._observation_buffers["falcon1"].append(obs_falcon1_t)
 
-        # self._observation_buffers["falcon1"].append(obs_falcon1)
+            obs_falcon2_t = torch.cat(
+                (
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    # drone terms
+                    torch.tensor([[0, 1, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    self.drone_positions[:, 1].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
+                    self.drone_linear_velocities[:, 1].view(self.num_envs, -1),
+                    self.drone_angular_velocities[:, 1].view(self.num_envs, -1),
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
+                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    self.wall_rpos_1[:, 0].view(self.num_envs, -1),
+                    self.wall_rpos_1[:, 2].view(self.num_envs, -1),
+                    self.wall_size_1,
+                    self.wall_rpos_2[:, 0].view(self.num_envs, -1),
+                    self.wall_rpos_2[:, 2].view(self.num_envs, -1),
+                    self.wall_size_2,
+                ),
+                dim=-1,
+            )
 
-        obs_falcon2 = torch.cat(
-            (
-                self.load_position,
-                self.current_load_matrix.view(self.num_envs, -1),
-                self.load_vel,
-                self.load_ang_vel,
-                # drone terms
-                torch.tensor([[0, 1, 0]] * self.num_envs, device=self.device),  # one-hot encoding
-                self.drone_positions.view(self.num_envs, -1),
-                self.drone_rot_matrices.view(self.num_envs, -1),
-                self.drone_linear_velocities.view(self.num_envs, -1),
-                self.drone_angular_velocities.view(self.num_envs, -1),
-                self.goal_pos_error,
-                self.difference_matrix.view(self.num_envs, -1),
-                # self.all_action_histories.reshape(self.num_envs, -1),
-                self.wall_rpos_1.view(self.num_envs, -1),
-                self.wall_size_1,
-                self.wall_rpos_2.view(self.num_envs, -1),
-                self.wall_size_2,
-            ),
-            dim=-1,
-        )
+            self._observation_buffers["falcon2"].append(obs_falcon2_t)
 
-        # self._observation_buffers["falcon2"].append(obs_falcon2)
+            obs_falcon3_t = torch.cat(
+                (
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    # drone terms
+                    torch.tensor([[0, 0, 1]] * self.num_envs, device=self.device),  # one-hot encoding
+                    self.drone_positions[:, 2].view(self.num_envs, -1),
+                    self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
+                    self.drone_linear_velocities[:, 2].view(self.num_envs, -1),
+                    self.drone_angular_velocities[:, 2].view(self.num_envs, -1),
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
+                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    self.wall_rpos_1[:, 0].view(self.num_envs, -1),
+                    self.wall_rpos_1[:, 3].view(self.num_envs, -1),
+                    self.wall_size_1,
+                    self.wall_rpos_2[:, 0].view(self.num_envs, -1),
+                    self.wall_rpos_2[:, 3].view(self.num_envs, -1),
+                    self.wall_size_2,
+                ),
+                dim=-1,
+            )
+            
+            self._observation_buffers["falcon3"].append(obs_falcon3_t)
 
-        obs_falcon3 = torch.cat(
-            (
-                self.load_position,
-                self.current_load_matrix.view(self.num_envs, -1),
-                self.load_vel,
-                self.load_ang_vel,
-                # drone terms
-                torch.tensor([[0, 0, 1]] * self.num_envs, device=self.device),  # one-hot encoding
-                self.drone_positions.view(self.num_envs, -1),
-                self.drone_rot_matrices.view(self.num_envs, -1),
-                self.drone_linear_velocities.view(self.num_envs, -1),
-                self.drone_angular_velocities.view(self.num_envs, -1),
-                self.goal_pos_error,
-                self.difference_matrix.view(self.num_envs, -1),
-                # self.all_action_histories.reshape(self.num_envs, -1),
-                self.wall_rpos_1.view(self.num_envs, -1),
-                self.wall_size_1,
-                self.wall_rpos_2.view(self.num_envs, -1),
-                self.wall_size_2,
-            ),
-            dim=-1,
-        )
+            observations = {
+                "falcon1": self._observation_buffers["falcon1"].buffer.reshape(self.num_envs, -1),
+                "falcon2": self._observation_buffers["falcon2"].buffer.reshape(self.num_envs, -1),
+                "falcon3": self._observation_buffers["falcon3"].buffer.reshape(self.num_envs, -1),
+            }
 
-        # self._observation_buffers["falcon3"].append(obs_falcon3)
+        else:
+            obs_falcon1 = torch.cat(
+                (
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    self.load_vel,
+                    self.load_ang_vel,
+                    # drone terms
+                    torch.tensor([[1, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    self.drone_positions.view(self.num_envs, -1),
+                    self.drone_rot_matrices.view(self.num_envs, -1),
+                    self.drone_linear_velocities.view(self.num_envs, -1),
+                    self.drone_angular_velocities.view(self.num_envs, -1),
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
+                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    self.wall_rpos_1.view(self.num_envs, -1),
+                    self.wall_size_1,
+                    self.wall_rpos_2.view(self.num_envs, -1),
+                    self.wall_size_2,
+                ),
+                dim=-1,
+            )
 
-        # observations = {
-        #     "falcon1": self._observation_buffers["falcon1"].buffer.reshape(self.num_envs, -1),
-        #     "falcon2": self._observation_buffers["falcon2"].buffer.reshape(self.num_envs, -1),
-        #     "falcon3": self._observation_buffers["falcon3"].buffer.reshape(self.num_envs, -1),
-        # }
-        observations = {
-            "falcon1": obs_falcon1,
-            "falcon2": obs_falcon2,
-            "falcon3": obs_falcon3,
-        }
+            # self._observation_buffers["falcon1"].append(obs_falcon1)
+
+            obs_falcon2 = torch.cat(
+                (
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    self.load_vel,
+                    self.load_ang_vel,
+                    # drone terms
+                    torch.tensor([[0, 1, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    self.drone_positions.view(self.num_envs, -1),
+                    self.drone_rot_matrices.view(self.num_envs, -1),
+                    self.drone_linear_velocities.view(self.num_envs, -1),
+                    self.drone_angular_velocities.view(self.num_envs, -1),
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
+                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    self.wall_rpos_1.view(self.num_envs, -1),
+                    self.wall_size_1,
+                    self.wall_rpos_2.view(self.num_envs, -1),
+                    self.wall_size_2,
+                ),
+                dim=-1,
+            )
+
+            # self._observation_buffers["falcon2"].append(obs_falcon2)
+
+            obs_falcon3 = torch.cat(
+                (
+                    self.load_position,
+                    self.current_load_matrix.view(self.num_envs, -1),
+                    self.load_vel,
+                    self.load_ang_vel,
+                    # drone terms
+                    torch.tensor([[0, 0, 1]] * self.num_envs, device=self.device),  # one-hot encoding
+                    self.drone_positions.view(self.num_envs, -1),
+                    self.drone_rot_matrices.view(self.num_envs, -1),
+                    self.drone_linear_velocities.view(self.num_envs, -1),
+                    self.drone_angular_velocities.view(self.num_envs, -1),
+                    self.goal_pos_error,
+                    self.difference_matrix.view(self.num_envs, -1),
+                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    self.wall_rpos_1.view(self.num_envs, -1),
+                    self.wall_size_1,
+                    self.wall_rpos_2.view(self.num_envs, -1),
+                    self.wall_size_2,
+                ),
+                dim=-1,
+            )
+
+            observations = {
+                "falcon1": obs_falcon1,
+                "falcon2": obs_falcon2,
+                "falcon3": obs_falcon3,
+            }
+
         return observations
 
     def _get_states(self) -> torch.Tensor:
@@ -686,7 +762,7 @@ class MARLObstacleEnv(DirectMARLEnv):
         self.smoothness_weight[env_ids] = self.cfg.init_smoothness_weight + ((self.cfg.curriculum_dist_max - self.vertical_curriculum[env_ids])/(self.cfg.curriculum_dist_max - self.cfg.curriculum_dist_min)) * (self.cfg.max_smoothness_weight - self.cfg.init_smoothness_weight)
         self.stalling_seconds[env_ids] = self.cfg.max_stalling_s + ((self.cfg.curriculum_dist_max - self.vertical_curriculum[env_ids])/(self.cfg.curriculum_dist_max - self.cfg.curriculum_dist_min)) * (self.cfg.min_stalling_s - self.cfg.max_stalling_s)
         # select new problem
-        # self.problem_choice[env_ids.int()] = torch.randint(0, 2, size=(len(env_ids),), device=self.device, dtype=torch.int32)      
+        self.problem_choice[env_ids.int()] = torch.randint(0, 2, size=(len(env_ids),), device=self.device, dtype=torch.int32)      
 
         # reset wall positions
         self._reset_wall_pos(env_ids, "wall_1")
