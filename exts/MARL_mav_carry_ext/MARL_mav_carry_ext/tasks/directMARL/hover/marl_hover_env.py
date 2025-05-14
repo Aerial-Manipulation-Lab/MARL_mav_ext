@@ -573,11 +573,11 @@ class MARLHoverEnv(DirectMARLEnv):
         roll_drone, pitch_drone, _ = euler_xyz_from_quat(rope_orientations_drones)  # yaw can be whatever
         mapped_angle_drone = torch.stack((torch.cos(roll_drone), torch.cos(pitch_drone)), dim=1)
         self.angle_limit_drone = (
-            (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, 3).any(dim=1)
+            (mapped_angle_drone < self.cfg.cable_angle_limits_drone).any(dim=1).view(-1, self._num_drones).any(dim=1)
         )
 
         self.load_orientation[:] = self.robot.data.body_com_state_w[:, self._payload_idx, 3:7].squeeze(1)
-        payload_orientation_world = self.load_orientation.repeat(1, 3, 1).view(-1, 4)
+        payload_orientation_world = self.load_orientation.repeat(1, self._num_drones, 1).view(-1, 4)
         payload_orientation_inv = quat_inv(payload_orientation_world)
         rope_orientations_payload = quat_mul(
             payload_orientation_inv, rope_orientations_world
@@ -585,7 +585,7 @@ class MARLHoverEnv(DirectMARLEnv):
         roll_load, pitch_load, _ = euler_xyz_from_quat(rope_orientations_payload)  # yaw can be whatever
         mapped_angle_load = torch.stack((torch.cos(roll_load), torch.cos(pitch_load)), dim=1)
         self.angle_limit_load = (
-            (mapped_angle_load < self.cfg.cable_angle_limits_payload).any(dim=1).view(-1, 3).any(dim=1)
+            (mapped_angle_load < self.cfg.cable_angle_limits_payload).any(dim=1).view(-1, self._num_drones).any(dim=1)
         )
 
         # cables colliding
