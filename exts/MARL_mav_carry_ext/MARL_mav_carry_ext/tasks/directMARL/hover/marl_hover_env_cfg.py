@@ -155,7 +155,7 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     cable_angle_limits_payload = -math.sqrt(2) / 2  # cos(angle) limits
     cable_collision_threshold = 0.2
     cable_collision_num_points = 10
-    drone_collision_threshold = 0.8
+    drone_collision_threshold = 0.6
     bounding_box_threshold = 5.0
     goal_achieved_range = 0.3
     goal_achieved_ori_range = 0.4
