@@ -1,0 +1,1888 @@
+<?xml version="1.0" ?>
+<robot name="flypent">
+  <link name="Falcon1/base_link"/>
+  <joint name="Falcon1/base_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <parent link="Falcon1/base_link"/>
+    <child link="Falcon1/base_link_inertia"/>
+  </joint>
+  <link name="Falcon1/base_link_inertia">
+    <inertial>
+      <mass value="0.6"/>
+      <!-- [kg] -->
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.00164" ixy="0.0" ixz="0.0" iyy="0.00184" iyz="0.0" izz="0.0030"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="falcon_without_rotors.dae" scale="1.0 1.0 1.0"  />
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Falcon1/rotor_0_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon1/base_link"/>
+    <child link="Falcon1/rotor_0"/>
+  </joint>
+  <link name="Falcon1/rotor_0">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Falcon1/rotor_1_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon1/base_link"/>
+    <child link="Falcon1/rotor_1"/>
+  </joint>
+  <link name="Falcon1/rotor_1">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Falcon1/rotor_2_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon1/base_link"/>
+    <child link="Falcon1/rotor_2"/>
+  </joint>
+  <link name="Falcon1/rotor_2">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Falcon1/rotor_3_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon1/base_link"/>
+    <child link="Falcon1/rotor_3"/>
+  </joint>
+  <link name="Falcon1/rotor_3">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <!-- IMU link -->
+  <link name="Falcon1/imu_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </inertial>
+  </link>
+  <!-- IMU joint -->
+  <joint name="Falcon1/imu_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.025"/>
+    <parent link="Falcon1/base_link"/>
+    <child link="Falcon1/imu_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+
+  <!-- odometry link -->
+  <link name="Falcon1/odometry_sensor_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+    </inertial>
+  </link>
+  <!-- odometry joint -->
+  <joint name="Falcon1/odometry_sensor_joint" type="revolute">
+    <parent link="Falcon1/base_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+    <child link="Falcon1/odometry_sensor_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  <!-- =============================================================== -->
+  <!-- ==================== ROS INTERFACE MACRO ====================== -->
+  <!-- =============================================================== -->
+  <!-- <xacro:macro
+  		name="ros_interface_plugin_macro"
+  		params="namespace">
+    <gazebo>
+      <plugin name="ros_interface_plugin" filename="librotors_gazebo_ros_interface_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+      </plugin>
+    </gazebo>
+  </xacro:macro>-->
+  <link name="Falcon2/base_link"/>
+  <joint name="Falcon2/base_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <parent link="Falcon2/base_link"/>
+    <child link="Falcon2/base_link_inertia"/>
+  </joint>
+  <link name="Falcon2/base_link_inertia">
+    <inertial>
+      <mass value="0.6"/>
+      <!-- [kg] -->
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.00164" ixy="0.0" ixz="0.0" iyy="0.00184" iyz="0.0" izz="0.0030"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="falcon_without_rotors.dae" scale="1.0 1.0 1.0"  />
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <!-- attach multirotor_base_plugin to the base_link -->
+  <joint name="Falcon2/rotor_0_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon2/base_link"/>
+    <child link="Falcon2/rotor_0"/>
+  </joint>
+  <link name="Falcon2/rotor_0">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon2/rotor_1_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon2/base_link"/>
+    <child link="Falcon2/rotor_1"/>
+  </joint>
+  <link name="Falcon2/rotor_1">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon2/rotor_2_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon2/base_link"/>
+    <child link="Falcon2/rotor_2"/>
+  </joint>
+  <link name="Falcon2/rotor_2">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon2/rotor_3_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon2/base_link"/>
+    <child link="Falcon2/rotor_3"/>
+  </joint>
+  <link name="Falcon2/rotor_3">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+
+  <!-- IMU link -->
+  <link name="Falcon2/imu_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </inertial>
+  </link>
+  <!-- IMU joint -->
+  <joint name="Falcon2/imu_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.025"/>
+    <parent link="Falcon2/base_link"/>
+    <child link="Falcon2/imu_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+
+  <!-- odometry link -->
+  <link name="Falcon2/odometry_sensor_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+    </inertial>
+  </link>
+  <!-- odometry joint -->
+  <joint name="Falcon2/odometry_sensor_joint" type="revolute">
+    <parent link="Falcon2/base_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+    <child link="Falcon2/odometry_sensor_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+
+  <!-- =============================================================== -->
+  <!-- ==================== ROS INTERFACE MACRO ====================== -->
+  <!-- =============================================================== -->
+  <!-- <xacro:macro
+  		name="ros_interface_plugin_macro"
+  		params="namespace">
+    <gazebo>
+      <plugin name="ros_interface_plugin" filename="librotors_gazebo_ros_interface_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+      </plugin>
+    </gazebo>
+  </xacro:macro>-->
+  <link name="Falcon3/base_link"/>
+  <joint name="Falcon3/base_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <parent link="Falcon3/base_link"/>
+    <child link="Falcon3/base_link_inertia"/>
+  </joint>
+  <link name="Falcon3/base_link_inertia">
+    <inertial>
+      <mass value="0.6"/>
+      <!-- [kg] -->
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.00164" ixy="0.0" ixz="0.0" iyy="0.00184" iyz="0.0" izz="0.0030"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="falcon_without_rotors.dae" scale="1.0 1.0 1.0"  />
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <!-- attach multirotor_base_plugin to the base_link -->
+
+  <joint name="Falcon3/rotor_0_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon3/base_link"/>
+    <child link="Falcon3/rotor_0"/>
+  </joint>
+  <link name="Falcon3/rotor_0">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon3/rotor_1_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon3/base_link"/>
+    <child link="Falcon3/rotor_1"/>
+  </joint>
+  <link name="Falcon3/rotor_1">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon3/rotor_2_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon3/base_link"/>
+    <child link="Falcon3/rotor_2"/>
+  </joint>
+  <link name="Falcon3/rotor_2">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon3/rotor_3_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon3/base_link"/>
+    <child link="Falcon3/rotor_3"/>
+  </joint>
+  <link name="Falcon3/rotor_3">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+
+  <!-- IMU link -->
+  <link name="Falcon3/imu_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </inertial>
+  </link>
+  <!-- IMU joint -->
+  <joint name="Falcon3/imu_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.025"/>
+    <parent link="Falcon3/base_link"/>
+    <child link="Falcon3/imu_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  <!-- odometry link -->
+  <link name="Falcon3/odometry_sensor_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+    </inertial>
+  </link>
+  <!-- odometry joint -->
+  <joint name="Falcon3/odometry_sensor_joint" type="revolute">
+    <parent link="Falcon3/base_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+    <child link="Falcon3/odometry_sensor_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+
+  <link name="Falcon4/base_link"/>
+  <joint name="Falcon4/base_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <parent link="Falcon4/base_link"/>
+    <child link="Falcon4/base_link_inertia"/>
+  </joint>
+  <link name="Falcon4/base_link_inertia">
+    <inertial>
+      <mass value="0.6"/>
+      <!-- [kg] -->
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.00164" ixy="0.0" ixz="0.0" iyy="0.00184" iyz="0.0" izz="0.0030"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="falcon_without_rotors.dae" scale="1.0 1.0 1.0"  />
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <!-- attach multirotor_base_plugin to the base_link -->
+
+  <joint name="Falcon4/rotor_0_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon4/base_link"/>
+    <child link="Falcon4/rotor_0"/>
+  </joint>
+  <link name="Falcon4/rotor_0">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon4/rotor_1_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon4/base_link"/>
+    <child link="Falcon4/rotor_1"/>
+  </joint>
+  <link name="Falcon4/rotor_1">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon4/rotor_2_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon4/base_link"/>
+    <child link="Falcon4/rotor_2"/>
+  </joint>
+  <link name="Falcon4/rotor_2">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon4/rotor_3_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon4/base_link"/>
+    <child link="Falcon4/rotor_3"/>
+  </joint>
+  <link name="Falcon4/rotor_3">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+
+  <!-- IMU link -->
+  <link name="Falcon4/imu_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </inertial>
+  </link>
+  <!-- IMU joint -->
+  <joint name="Falcon4/imu_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.025"/>
+    <parent link="Falcon4/base_link"/>
+    <child link="Falcon4/imu_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  <!-- odometry link -->
+  <link name="Falcon4/odometry_sensor_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+    </inertial>
+  </link>
+  <!-- odometry joint -->
+  <joint name="Falcon4/odometry_sensor_joint" type="revolute">
+    <parent link="Falcon4/base_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+    <child link="Falcon4/odometry_sensor_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+
+  <link name="Falcon5/base_link"/>
+  <joint name="Falcon5/base_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.03"/>
+    <parent link="Falcon5/base_link"/>
+    <child link="Falcon5/base_link_inertia"/>
+  </joint>
+  <link name="Falcon5/base_link_inertia">
+    <inertial>
+      <mass value="0.6"/>
+      <!-- [kg] -->
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.00164" ixy="0.0" ixz="0.0" iyy="0.00184" iyz="0.0" izz="0.0030"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="falcon_without_rotors.dae" scale="1.0 1.0 1.0"  />
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.05"/>
+        <!-- [m] [m] [m] -->
+      </geometry>
+    </collision>
+  </link>
+  <!-- attach multirotor_base_plugin to the base_link -->
+
+  <joint name="Falcon5/rotor_0_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon5/base_link"/>
+    <child link="Falcon5/rotor_0"/>
+  </joint>
+  <link name="Falcon5/rotor_0">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon5/rotor_1_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon5/base_link"/>
+    <child link="Falcon5/rotor_1"/>
+  </joint>
+  <link name="Falcon5/rotor_1">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon5/rotor_2_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon5/base_link"/>
+    <child link="Falcon5/rotor_2"/>
+  </joint>
+  <link name="Falcon5/rotor_2">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="Falcon5/rotor_3_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0.05"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+    <parent link="Falcon5/base_link"/>
+    <child link="Falcon5/rotor_3"/>
+  </joint>
+  <link name="Falcon5/rotor_3">
+    <inertial>
+      <mass value="0.0042"/>
+      <!-- [kg] -->
+      <inertia ixx="8.189996723999999e-07" ixy="0.0" ixz="0.0" iyy="5.648297740679999e-05" iyz="0.0" izz="5.72389771044e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="Falcon_PropellerCCW.dae" scale="1.0 1.0 1.0"/>
+        <!-- The propeller meshes have a radius of 1m -->
+        <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.005" radius="0.127"/>
+        <!-- [m] -->
+      </geometry>
+    </collision>
+  </link>
+
+
+
+  <!-- IMU link -->
+  <link name="Falcon5/imu_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </inertial>
+  </link>
+  <!-- IMU joint -->
+  <joint name="Falcon5/imu_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.025"/>
+    <parent link="Falcon5/base_link"/>
+    <child link="Falcon5/imu_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  <!-- odometry link -->
+  <link name="Falcon5/odometry_sensor_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+    </inertial>
+  </link>
+  <!-- odometry joint -->
+  <joint name="Falcon5/odometry_sensor_joint" type="revolute">
+    <parent link="Falcon5/base_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+    <child link="Falcon5/odometry_sensor_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  
+  <!-- <xacro:property name="mesh_path" value="model://mdcm/meshes/basket.dae"/> -->
+  <link name="load_link">
+    <visual name="visual">
+      <geometry>
+        <mesh filename="basket.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <material>
+      <color rgba="0.5 0.5 0.5 0.5"/>
+    </material>
+    <collision name="collision">
+      <geometry>
+        <mesh filename="basket.dae" scale="1 1 1"/>
+        <!-- <box size="0.55 0.45 0.15"/> -->
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.4"/>
+      <origin rpy="0 0 0" xyz="0 0 0.06"/>
+      <inertia ixx="0.02625" ixy="0" ixz="0" iyy="0.03791666666666667" iyz="0" izz="0.05891666666666667"/>
+    </inertial>
+  </link>
+  <!-- odometry link -->
+  <link name="load/odometry_sensor_link">
+    <inertial>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      <mass value="1e-05"/>
+      <!-- [kg] -->
+    </inertial>
+  </link>
+  <!-- odometry joint -->
+  <joint name="load/odometry_sensor_joint" type="revolute">
+    <parent link="load_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.08"/>
+    <child link="load/odometry_sensor_link"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  <link name="rope_1_link_0">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_1_link_1">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_1_link_2">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_2_link_0">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_2_link_1">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_2_link_2">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_3_link_0">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_3_link_1">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_3_link_2">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_4_link_0">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_4_link_1">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_4_link_2">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_5_link_0">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_5_link_1">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_5_link_2">
+    <visual>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.166666667"/>
+      <geometry>
+        <cylinder length="0.333333333" radius="0.0025"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- Set the origin to the start of the cylinder -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.007861603750000001"/>
+      <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+    </inertial>
+  </link>
+  <link name="rope_1_sphere_joint_0_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_1_sphere_joint_0_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_1_sphere_joint_0_joint_x" type="continuous">
+    <parent link="load_link"/>
+    <child link="rope_1_sphere_joint_0_link_1"/>
+    <origin rpy="-0.5 0.5 0" xyz="0.27 0.22 0.14"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_0_joint_y" type="continuous">
+    <parent link="rope_1_sphere_joint_0_link_1"/>
+    <child link="rope_1_sphere_joint_0_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_0_joint_z" type="continuous">
+    <parent link="rope_1_sphere_joint_0_link_2"/>
+    <child link="rope_1_link_0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_1_sphere_joint_1_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_1_sphere_joint_1_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_1_sphere_joint_1_joint_x" type="continuous">
+    <parent link="rope_1_link_0"/>
+    <child link="rope_1_sphere_joint_1_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_1_joint_y" type="continuous">
+    <parent link="rope_1_sphere_joint_1_link_1"/>
+    <child link="rope_1_sphere_joint_1_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_1_joint_z" type="continuous">
+    <parent link="rope_1_sphere_joint_1_link_2"/>
+    <child link="rope_1_link_1"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_1_sphere_joint_2_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_1_sphere_joint_2_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_1_sphere_joint_2_joint_x" type="continuous">
+    <parent link="rope_1_link_1"/>
+    <child link="rope_1_sphere_joint_2_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_2_joint_y" type="continuous">
+    <parent link="rope_1_sphere_joint_2_link_1"/>
+    <child link="rope_1_sphere_joint_2_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_2_joint_z" type="continuous">
+    <parent link="rope_1_sphere_joint_2_link_2"/>
+    <child link="rope_1_link_2"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_2_sphere_joint_0_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_2_sphere_joint_0_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_2_sphere_joint_0_joint_x" type="continuous">
+    <parent link="load_link"/>
+    <child link="rope_2_sphere_joint_0_link_1"/>
+    <origin rpy="0.5 0.5 0" xyz="0.27 -0.22 0.14"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_0_joint_y" type="continuous">
+    <parent link="rope_2_sphere_joint_0_link_1"/>
+    <child link="rope_2_sphere_joint_0_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_0_joint_z" type="continuous">
+    <parent link="rope_2_sphere_joint_0_link_2"/>
+    <child link="rope_2_link_0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_2_sphere_joint_1_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_2_sphere_joint_1_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_2_sphere_joint_1_joint_x" type="continuous">
+    <parent link="rope_2_link_0"/>
+    <child link="rope_2_sphere_joint_1_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_1_joint_y" type="continuous">
+    <parent link="rope_2_sphere_joint_1_link_1"/>
+    <child link="rope_2_sphere_joint_1_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_1_joint_z" type="continuous">
+    <parent link="rope_2_sphere_joint_1_link_2"/>
+    <child link="rope_2_link_1"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_2_sphere_joint_2_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_2_sphere_joint_2_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_2_sphere_joint_2_joint_x" type="continuous">
+    <parent link="rope_2_link_1"/>
+    <child link="rope_2_sphere_joint_2_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_2_joint_y" type="continuous">
+    <parent link="rope_2_sphere_joint_2_link_1"/>
+    <child link="rope_2_sphere_joint_2_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_2_joint_z" type="continuous">
+    <parent link="rope_2_sphere_joint_2_link_2"/>
+    <child link="rope_2_link_2"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_3_sphere_joint_0_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_3_sphere_joint_0_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_3_sphere_joint_0_joint_x" type="continuous">
+    <parent link="load_link"/>
+    <child link="rope_3_sphere_joint_0_link_1"/>
+    <origin rpy="-0.5 0 0" xyz="-0.10 0.22 0.14"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_0_joint_y" type="continuous">
+    <parent link="rope_3_sphere_joint_0_link_1"/>
+    <child link="rope_3_sphere_joint_0_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_0_joint_z" type="continuous">
+    <parent link="rope_3_sphere_joint_0_link_2"/>
+    <child link="rope_3_link_0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_3_sphere_joint_1_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_3_sphere_joint_1_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_3_sphere_joint_1_joint_x" type="continuous">
+    <parent link="rope_3_link_0"/>
+    <child link="rope_3_sphere_joint_1_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_1_joint_y" type="continuous">
+    <parent link="rope_3_sphere_joint_1_link_1"/>
+    <child link="rope_3_sphere_joint_1_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_1_joint_z" type="continuous">
+    <parent link="rope_3_sphere_joint_1_link_2"/>
+    <child link="rope_3_link_1"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_3_sphere_joint_2_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_3_sphere_joint_2_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_3_sphere_joint_2_joint_x" type="continuous">
+    <parent link="rope_3_link_1"/>
+    <child link="rope_3_sphere_joint_2_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_2_joint_y" type="continuous">
+    <parent link="rope_3_sphere_joint_2_link_1"/>
+    <child link="rope_3_sphere_joint_2_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_2_joint_z" type="continuous">
+    <parent link="rope_3_sphere_joint_2_link_2"/>
+    <child link="rope_3_link_2"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_4_sphere_joint_0_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_4_sphere_joint_0_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_4_sphere_joint_0_joint_x" type="continuous">
+    <parent link="load_link"/>
+    <child link="rope_4_sphere_joint_0_link_1"/>
+    <origin rpy="0.5 0.0 0" xyz="-0.10 -0.22 0.14"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_0_joint_y" type="continuous">
+    <parent link="rope_4_sphere_joint_0_link_1"/>
+    <child link="rope_4_sphere_joint_0_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_0_joint_z" type="continuous">
+    <parent link="rope_4_sphere_joint_0_link_2"/>
+    <child link="rope_4_link_0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_4_sphere_joint_1_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_4_sphere_joint_1_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_4_sphere_joint_1_joint_x" type="continuous">
+    <parent link="rope_4_link_0"/>
+    <child link="rope_4_sphere_joint_1_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_1_joint_y" type="continuous">
+    <parent link="rope_4_sphere_joint_1_link_1"/>
+    <child link="rope_4_sphere_joint_1_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_1_joint_z" type="continuous">
+    <parent link="rope_4_sphere_joint_1_link_2"/>
+    <child link="rope_4_link_1"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_4_sphere_joint_2_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_4_sphere_joint_2_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_4_sphere_joint_2_joint_x" type="continuous">
+    <parent link="rope_4_link_1"/>
+    <child link="rope_4_sphere_joint_2_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_2_joint_y" type="continuous">
+    <parent link="rope_4_sphere_joint_2_link_1"/>
+    <child link="rope_4_sphere_joint_2_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_2_joint_z" type="continuous">
+    <parent link="rope_4_sphere_joint_2_link_2"/>
+    <child link="rope_4_link_2"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_5_sphere_joint_0_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_5_sphere_joint_0_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_5_sphere_joint_0_joint_x" type="continuous">
+    <parent link="load_link"/>
+    <child link="rope_5_sphere_joint_0_link_1"/>
+    <origin rpy="0 -0.5 0" xyz="-0.27 0 0.14"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_0_joint_y" type="continuous">
+    <parent link="rope_5_sphere_joint_0_link_1"/>
+    <child link="rope_5_sphere_joint_0_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_0_joint_z" type="continuous">
+    <parent link="rope_5_sphere_joint_0_link_2"/>
+    <child link="rope_5_link_0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_5_sphere_joint_1_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_5_sphere_joint_1_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_5_sphere_joint_1_joint_x" type="continuous">
+    <parent link="rope_5_link_0"/>
+    <child link="rope_5_sphere_joint_1_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_1_joint_y" type="continuous">
+    <parent link="rope_5_sphere_joint_1_link_1"/>
+    <child link="rope_5_sphere_joint_1_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_1_joint_z" type="continuous">
+    <parent link="rope_5_sphere_joint_1_link_2"/>
+    <child link="rope_5_link_1"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_5_sphere_joint_2_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_5_sphere_joint_2_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_5_sphere_joint_2_joint_x" type="continuous">
+    <parent link="rope_5_link_1"/>
+    <child link="rope_5_sphere_joint_2_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_2_joint_y" type="continuous">
+    <parent link="rope_5_sphere_joint_2_link_1"/>
+    <child link="rope_5_sphere_joint_2_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_2_joint_z" type="continuous">
+    <parent link="rope_5_sphere_joint_2_link_2"/>
+    <child link="rope_5_link_2"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_1_sphere_joint_7_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_1_sphere_joint_7_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_1_sphere_joint_7_joint_x" type="continuous">
+    <parent link="rope_1_link_2"/>
+    <child link="rope_1_sphere_joint_7_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.3333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_7_joint_y" type="continuous">
+    <parent link="rope_1_sphere_joint_7_link_1"/>
+    <child link="rope_1_sphere_joint_7_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_1_sphere_joint_7_joint_z" type="continuous">
+    <parent link="rope_1_sphere_joint_7_link_2"/>
+    <child link="Falcon1/base_link"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_2_sphere_joint_7_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_2_sphere_joint_7_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_2_sphere_joint_7_joint_x" type="continuous">
+    <parent link="rope_2_link_2"/>
+    <child link="rope_2_sphere_joint_7_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.3333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_7_joint_y" type="continuous">
+    <parent link="rope_2_sphere_joint_7_link_1"/>
+    <child link="rope_2_sphere_joint_7_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_2_sphere_joint_7_joint_z" type="continuous">
+    <parent link="rope_2_sphere_joint_7_link_2"/>
+    <child link="Falcon2/base_link"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_3_sphere_joint_7_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_3_sphere_joint_7_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_3_sphere_joint_7_joint_x" type="continuous">
+    <parent link="rope_3_link_2"/>
+    <child link="rope_3_sphere_joint_7_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.3333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_7_joint_y" type="continuous">
+    <parent link="rope_3_sphere_joint_7_link_1"/>
+    <child link="rope_3_sphere_joint_7_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_3_sphere_joint_7_joint_z" type="continuous">
+    <parent link="rope_3_sphere_joint_7_link_2"/>
+    <child link="Falcon3/base_link"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_4_sphere_joint_7_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_4_sphere_joint_7_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_4_sphere_joint_7_joint_x" type="continuous">
+    <parent link="rope_4_link_2"/>
+    <child link="rope_4_sphere_joint_7_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.3333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_7_joint_y" type="continuous">
+    <parent link="rope_4_sphere_joint_7_link_1"/>
+    <child link="rope_4_sphere_joint_7_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_4_sphere_joint_7_joint_z" type="continuous">
+    <parent link="rope_4_sphere_joint_7_link_2"/>
+    <child link="Falcon4/base_link"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <link name="rope_5_sphere_joint_7_link_1">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <link name="rope_5_sphere_joint_7_link_2">
+    <inertial>
+      <mass value="0.002333333"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+  <joint name="rope_5_sphere_joint_7_joint_x" type="continuous">
+    <parent link="rope_5_link_2"/>
+    <child link="rope_5_sphere_joint_7_link_1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.3333333333"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_7_joint_y" type="continuous">
+    <parent link="rope_5_sphere_joint_7_link_1"/>
+    <child link="rope_5_sphere_joint_7_link_2"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.005"/>
+  </joint>
+  <joint name="rope_5_sphere_joint_7_joint_z" type="continuous">
+    <parent link="rope_5_sphere_joint_7_link_2"/>
+    <child link="Falcon5/base_link"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.005"/>
+  </joint>
+</robot>
