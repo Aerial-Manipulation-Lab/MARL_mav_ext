@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<robot name="flycrane">
+<robot name="flycart">
   <link name="Falcon1/base_link"/>
   <joint name="Falcon1/base_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0.03"/>
