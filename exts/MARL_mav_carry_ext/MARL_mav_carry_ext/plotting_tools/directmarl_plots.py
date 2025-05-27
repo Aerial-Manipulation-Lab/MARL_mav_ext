@@ -96,6 +96,7 @@ class DirectMARLPlotter:
             filtered_rate = self.env.geo_controllers[drone_num].filtered_rate[0]
             unfiltered_thrusts_geo = self.env.geo_controllers[drone_num].unfiltered_thrusts[0]
             filtered_thrusts_geo = self.env.geo_controllers[drone_num].filtered_thrusts[0]
+            acc_load = self.env.geo_controllers[drone_num].acc_load_debug[0]
 
             unfiltered_mot = self.env._indi_controllers[drone_num].unfiltered_mot[0]
             filtered_mot = self.env._indi_controllers[drone_num].filtered_mot[0]
@@ -132,6 +133,7 @@ class DirectMARLPlotter:
                         "both_filter_cthrust_geo": both_filter_cthrust.unsqueeze(0).tolist(),
                         "both_filter_mot_indi": both_filter_mot.unsqueeze(0).tolist(),
                         "rotor_forces": rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].unsqueeze(0).tolist(),
+                        "acc_load": acc_load.unsqueeze(0).tolist(),
                     }
                 else:
                     # Append the data for this drone
@@ -150,6 +152,7 @@ class DirectMARLPlotter:
                     self.drone_data_by_id[drone_num]["rotor_forces"].append(
                         rotor_forces[(drone_num * 4) : (drone_num * 4) + 4].tolist()
                     )
+                    self.drone_data_by_id[drone_num]["acc_load"].append(acc_load.tolist())
 
             elif self.control_mode == "geometric":
                 ref_pos = ref_drone[:3]

@@ -109,13 +109,14 @@ class GeometricController:
         #     self.filter_cutoff_frequency_bodyrate, self.filter_sampling_frequency, self.filter_init_value_rate
         # )
 
-        # debug
+        # # debug
         # self.debug = True
         # if self.debug:
         #     self.filtered_acc = torch.zeros((self.num_envs, 3), device=self.device)
         #     self.filtered_rate = torch.zeros((self.num_envs, 3), device=self.device)
         #     self.unfiltered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
         #     self.filtered_thrusts = torch.zeros((self.num_envs, 3), device=self.device)
+        #     self.acc_load_debug = torch.zeros((self.num_envs, 3), device=self.device)
 
     # function to overwrite parameters from yaml file
     # function to check if all parameters are valid
@@ -161,6 +162,10 @@ class GeometricController:
         acc_load = (
             state["lin_acc"] - self.gravity - quat_rotate(state["quat"], current_collective_thrust / self.falcon_mass)
         )
+
+        # if self.debug:
+        #     self.acc_load_debug = acc_load
+
         acc_cmd = des_acc - self.gravity - acc_load
         z_b_des = normalize(acc_cmd)  # desired new thrust direction
         collective_thrust_des_magntiude = torch.norm(acc_cmd, dim=1, keepdim=True) * self.falcon_mass
