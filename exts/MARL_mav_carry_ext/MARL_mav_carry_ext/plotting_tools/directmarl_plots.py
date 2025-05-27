@@ -84,7 +84,7 @@ class DirectMARLPlotter:
         rotor_forces = self.env._forces[0][..., 2]  # 3 * 4 rotors
         policy_refs = self.env.actions
         policy_ref = torch.cat([action[0] for drone_num, action in policy_refs.items()])
-        action_space = policy_ref.shape[-1] / 3  # 3 drones and every output has 3 dimensions
+        action_space = policy_ref.shape[-1] / drone_pos.shape[0]  # 3 drones and every output has 3 dimensions
         # Initialize a dictionary to store data for each drone
         if not hasattr(self, "drone_data_by_id"):
             self.drone_data_by_id = {}
@@ -262,7 +262,6 @@ class DirectMARLPlotter:
                         actual_data = [entry[4:] for entry in data]
                         colors = ["red", "green", "blue", "purple"]
                         plot_entries(ax, time_data, ref_data, colors, linestyle="--")
-                        print("key", key)
                         plot_entries(ax, time_data, actual_data, colors, linestyle="-")
                         if "orientation" in key:
                             ax.legend(["W_ref", "X_ref", "Y_ref", "Z_ref", "W", "X", "Y", "Z"])
