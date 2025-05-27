@@ -115,7 +115,7 @@ class MARLHoverFlycartEnvCfg(DirectMARLEnvCfg):
         action_dim_accbr = 5
         action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr, "falcon4": action_dim_accbr}
         if partial_obs:
-            obs_dim_accbr = 55 * history_len
+            obs_dim_accbr = 46 * history_len
         else:
             obs_dim_accbr = (
                 106  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
