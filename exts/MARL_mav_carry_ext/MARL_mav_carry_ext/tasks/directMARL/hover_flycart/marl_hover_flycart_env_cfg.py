@@ -54,6 +54,16 @@ class EventCfg:
         },
     )
 
+    randomize_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=["load_link"]),
+            "mass_distribution_params": (4.0, 5.0),  # range of mass to randomize,
+            "operation": "abs",
+        },
+    )
+
     # reset_base = EventTerm(
     #     func=mdp.reset_root_state_uniform,
     #     mode="reset",
