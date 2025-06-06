@@ -106,9 +106,6 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     decimation = 3
     episode_length_s = 20
 
-    # delay parameters
-    max_delay = 4  # in number of steps, with policy = 100hz -> 40ms
-    constant_delay = 4  # in number of steps, with policy = 100hz -> 40ms
     # history of observations
     partial_obs = True  # if only local observations are used
     history_len = 3
@@ -118,9 +115,9 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     if control_mode == "geometric":
         action_dim_geo = 12
         action_spaces = {"falcon1": action_dim_geo, "falcon2": action_dim_geo, "falcon3": action_dim_geo}
-        obs_dim_geo = 87  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        obs_dim_geo = 87
         observation_spaces = {"falcon1": obs_dim_geo, "falcon2": obs_dim_geo, "falcon3": obs_dim_geo}
-        state_space = 84  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        state_space = 84
     elif control_mode == "ACCBR":
         action_dim_accbr = 5
         action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr}
@@ -128,13 +125,10 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
             obs_dim_accbr = 46 * history_len
         else:
             obs_dim_accbr = (
-                87  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+                87
             )
         observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr}
-        state_space = 84  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
-
-    # start with full observability: own state 18 + other drones 18 * 2 + payload 18 + goal terms 12 = 84 + OH vector
-    # TODO: start with that the state_space is the same as the local observations, then go down
+        state_space = 84
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
