@@ -333,7 +333,8 @@ class MARLHoverEnv(DirectMARLEnv):
                     # self.load_vel,
                     # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[1, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[3]] * self.num_envs, device=self.device),
+                    torch.tensor([[0.27, 0.22, 0.14]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 0].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 0].view(self.num_envs, -1),
@@ -354,7 +355,8 @@ class MARLHoverEnv(DirectMARLEnv):
                     # self.load_vel,
                     # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[0, 1, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[3]] * self.num_envs, device=self.device),
+                    torch.tensor([[0.27, -0.22, 0.14]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 1].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 1].view(self.num_envs, -1),
@@ -375,7 +377,8 @@ class MARLHoverEnv(DirectMARLEnv):
                     # self.load_vel,
                     # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[0, 0, 1]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[3]] * self.num_envs, device=self.device),
+                    torch.tensor([[-0.27, 0.0, 0.14]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 2].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 2].view(self.num_envs, -1),

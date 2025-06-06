@@ -54,6 +54,16 @@ class EventCfg:
         },
     )
 
+    randomize_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=["load_link"]),
+            "mass_distribution_params": (1.0, 1.8),  # range of mass to randomize,
+            "operation": "abs",
+        },
+    )
+
     # reset_base = EventTerm(
     #     func=mdp.reset_root_state_uniform,
     #     mode="reset",
@@ -115,7 +125,7 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
         action_dim_accbr = 5
         action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr}
         if partial_obs:
-            obs_dim_accbr = 45 * history_len
+            obs_dim_accbr = 46 * history_len
         else:
             obs_dim_accbr = (
                 87  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
