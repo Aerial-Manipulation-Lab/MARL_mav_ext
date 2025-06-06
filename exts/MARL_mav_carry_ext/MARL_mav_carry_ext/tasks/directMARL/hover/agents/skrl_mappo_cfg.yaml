@@ -80,13 +80,13 @@ agent:
   value_loss_scale: 1.0
   kl_threshold: 0.0
   rewards_shaper_scale: 1.0
-  time_limit_bootstrap: False
+  time_limit_bootstrap: True
   # logging and checkpoint
   experiment:
     directory: "mappo_flycrane_hover"
     experiment_name: "delete_me"
     write_interval: 100
-    checkpoint_interval: 2500
+    checkpoint_interval: 5000
 
 
 # Sequential trainer
