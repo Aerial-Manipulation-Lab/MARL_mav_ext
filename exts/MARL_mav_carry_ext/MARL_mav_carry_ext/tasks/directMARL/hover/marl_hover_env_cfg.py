@@ -169,7 +169,6 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     bounding_box_threshold = 5.0
     goal_achieved_range = 0.3
     goal_achieved_ori_range = 0.4
-    goal_time_threshold = 3  # seconds that the goal has to be achieved
 
     # low level control
     low_level_decimation: int = 1
@@ -182,7 +181,6 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     body_rate_penalty_weight = 0.5
     force_penalty_weight = 0.5
     downwash_rew_weight = 0.5
-    goal_achieved_bonus = 200.0
 
     # goal terms
     goal_range = {
