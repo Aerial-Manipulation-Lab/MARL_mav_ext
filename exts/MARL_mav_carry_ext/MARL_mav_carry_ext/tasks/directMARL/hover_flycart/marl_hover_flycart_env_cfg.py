@@ -59,7 +59,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["load_link"]),
-            "mass_distribution_params": (4.0, 5.0),  # range of mass to randomize,
+            "mass_distribution_params": (1.0, 1.8),  # range of mass to randomize,
             "operation": "abs",
         },
     )
@@ -168,7 +168,7 @@ class MARLHoverFlycartEnvCfg(DirectMARLEnvCfg):
     bounding_box_threshold = 5.0
     goal_achieved_range = 0.3
     goal_achieved_ori_range = 0.4
-    goal_time_threshold = 3  # seconds that the goal has to be achieved
+    rope_tension_threshold = 2.0 # N
 
     # low level control
     low_level_decimation: int = 1
@@ -181,7 +181,6 @@ class MARLHoverFlycartEnvCfg(DirectMARLEnvCfg):
     body_rate_penalty_weight = 0.5
     force_penalty_weight = 0.5
     downwash_rew_weight = 0.5
-    goal_achieved_bonus = 200.0
 
     # goal terms
     goal_range = {

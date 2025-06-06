@@ -57,6 +57,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
         # configuration
         self._num_drones = len(self._falcon_idx)
         self._control_mode = cfg.control_mode
+        self.drone_mass = 0.6 # kg
 
         # # observation buffers
         self._observation_buffers = {}
@@ -126,6 +127,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
         self.load_ang_vel = torch.zeros(self.num_envs, 3, device=self.device)
         self.load_length_x = torch.tensor([[0.275, 0, 0]] * self.num_envs, device=self.device)
         self.load_length_y = torch.tensor([[0, 0.275, 0]] * self.num_envs, device=self.device)
+        self.rope_tensions = torch.zeros(self.num_envs, self._num_drones, device=self.device)
 
         # Goal terms
         # # goal buffers
@@ -165,6 +167,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
         self.drone_collision = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.body_pos_outside = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.time_out = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.rope_tensions_termination = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
 
         # debug vis
         self.set_debug_vis(cfg.debug_vis)
@@ -279,6 +282,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                 thrusts, moments = self.motor_models[i].get_motor_thrusts_moments(target_rpm, self.sampling_time)
                 all_thrusts.append(thrusts)
                 all_moments.append(moments)
+                self.rope_tensions[:, i] = torch.linalg.norm(acc_load, dim=-1) * self.drone_mass
 
             forces = torch.cat(all_thrusts, dim=-1)
             torques = torch.cat(all_moments, dim=-1)
@@ -651,6 +655,9 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
         # bounding box
         self.body_pos_outside = (self.drone_positions.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
 
+        # rope tensions
+        self.rope_tensions_termination = torch.min(self.rope_tensions, dim=-1)[0] < self.cfg.rope_tension_threshold
+
         # update metrics
         self._update_metrics()
 
@@ -664,6 +671,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
             | self.cable_collision
             | self.drone_collision
             | self.body_pos_outside
+            | self.rope_tensions_termination
         )
         self.time_out = self.episode_length_buf >= self.max_episode_length - 1
 
@@ -713,6 +721,9 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
             self.illegal_contact[env_ids]
         ).item()
         self.extras["log"]["Episode_Termination/time_out"] = torch.count_nonzero(self.time_out[env_ids]).item()
+        self.extras["log"]["Episode_Termination/rope_tension"] = torch.count_nonzero(
+            self.rope_tensions_termination[env_ids]
+        ).item()
 
         for key in self._episode_sums.keys():
             episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
