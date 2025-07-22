@@ -8,6 +8,7 @@ models:
   CTDE: True # Centralized Training with Decentralized Execution
   separate_actors: False # separate models for each agent
   separate_critics: False # separate models for each agent
+  local_critics: False # use local critics for each agent
   policy:  # see gaussian_model parameters
     class: GaussianMixin
     clip_actions: False
@@ -44,6 +45,7 @@ memory:
 agent:
   class: MAPPO
   separate_actors: False
+  use_state_space: True
   rollouts: 128 # higher better
   learning_epochs: 5 # reduce
   mini_batches: 4
