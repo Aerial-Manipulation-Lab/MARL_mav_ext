@@ -169,7 +169,7 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
         self.body_pos_outside = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.time_out = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.rope_tensions_termination = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
-
+        self.rope_tension_threshold = self.cfg.rope_tension_threshold
         # debug vis
         self.set_debug_vis(cfg.debug_vis)
 
@@ -338,17 +338,14 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[1, 0, 0, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[1, 0, 0, 0, 0]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 0].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 0].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 0].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
@@ -359,17 +356,14 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[0, 1, 0, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[0, 1, 0, 0, 0]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 1].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 1].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 1].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
@@ -380,17 +374,14 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[0, 0, 1, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[0, 0, 1, 0, 0]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 2].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 2].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 2].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
@@ -401,17 +392,14 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[0, 0, 0, 1, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[0, 0, 0, 1, 0]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 3].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 3].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 3].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 3].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
@@ -422,17 +410,14 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[0, 0, 0, 0, 1]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[0, 0, 0, 0, 1]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 4].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 4].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 4].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 4].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
@@ -461,7 +446,6 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
                 ),
                 dim=-1,
             )
@@ -480,7 +464,7 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -499,7 +483,7 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -518,7 +502,7 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -537,7 +521,7 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -567,7 +551,6 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                 # goal terms
                 self.goal_pos_error,
                 self.difference_matrix.view(self.num_envs, -1),
-                # self.all_action_histories.reshape(self.num_envs, -1),
             ),
             dim=-1,
         )
@@ -700,7 +683,7 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
         self.body_pos_outside = (self.drone_positions.abs() > self.cfg.bounding_box_threshold).any(dim=-1).any(dim=-1)
 
         # rope tensions
-        self.rope_tensions_termination = torch.min(self.rope_tensions, dim=-1)[0] < self.cfg.rope_tension_threshold
+        self.rope_tensions_termination = torch.min(self.rope_tensions, dim=-1)[0] < self.rope_tension_threshold
 
         # update metrics
         self._update_metrics()

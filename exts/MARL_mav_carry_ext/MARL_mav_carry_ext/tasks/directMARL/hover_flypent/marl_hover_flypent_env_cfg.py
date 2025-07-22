@@ -131,7 +131,7 @@ class MARLHoverFlypentEnvCfg(DirectMARLEnvCfg):
                 125  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
             )
         observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr, "falcon4": obs_dim_accbr, "falcon5": obs_dim_accbr}
-        state_space = 120  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        state_space = 120
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -164,7 +164,7 @@ class MARLHoverFlypentEnvCfg(DirectMARLEnvCfg):
     cable_angle_limits_payload = -math.sqrt(2) / 2  # cos(angle) limits
     cable_collision_threshold = 0.2
     cable_collision_num_points = 5
-    drone_collision_threshold = 0.3
+    drone_collision_threshold = 0.7
     bounding_box_threshold = 5.0
     goal_achieved_range = 0.3
     goal_achieved_ori_range = 0.4

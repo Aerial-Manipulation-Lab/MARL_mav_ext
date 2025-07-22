@@ -337,17 +337,15 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
                     # drone terms
-                    torch.tensor([[1, 0, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[1, 0, 0, 0]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 0].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 0].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 0].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 0].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -358,17 +356,17 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
+                    
+                    
                     # drone terms
-                    torch.tensor([[0, 1, 0, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[0, 1, 0, 0]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 1].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 1].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 1].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 1].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -379,17 +377,17 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
+                    
+                    
                     # drone terms
-                    torch.tensor([[0, 0, 1, 0]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[0, 0, 1, 0]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 2].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 2].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 2].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 2].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -400,17 +398,17 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                 (
                     self.load_position,
                     self.current_load_matrix.view(self.num_envs, -1),
-                    # self.load_vel,
-                    # self.load_ang_vel,
+                    
+                    
                     # drone terms
-                    torch.tensor([[0, 0, 0, 1]] * self.num_envs, device=self.device),  # one-hot encoding
+                    torch.tensor([[0, 0, 0, 1]] * self.num_envs, device=self.device),
                     self.drone_positions[:, 3].view(self.num_envs, -1),
                     self.drone_rot_matrices[:, 3].view(self.num_envs, -1),
                     self.drone_linear_velocities[:, 3].view(self.num_envs, -1),
                     self.drone_angular_velocities[:, 3].view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -437,7 +435,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -456,7 +454,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -475,7 +473,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -494,7 +492,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    # self.all_action_histories.reshape(self.num_envs, -1),
+                    
                 ),
                 dim=-1,
             )
@@ -523,7 +521,7 @@ class MARLHoverFlycartEnv(DirectMARLEnv):
                 # goal terms
                 self.goal_pos_error,
                 self.difference_matrix.view(self.num_envs, -1),
-                # self.all_action_histories.reshape(self.num_envs, -1),
+                
             ),
             dim=-1,
         )
