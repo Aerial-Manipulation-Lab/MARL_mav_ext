@@ -732,7 +732,7 @@
     <child link="Falcon4/odometry_sensor_link"/>
     <limit effort="0" lower="0" upper="0" velocity="0"/>
   </joint>
-  
+
   <!-- <xacro:property name="mesh_path" value="model://mdcm/meshes/basket.dae"/> -->
   <link name="load_link">
     <visual name="visual">

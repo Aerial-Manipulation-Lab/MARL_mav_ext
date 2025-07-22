@@ -57,7 +57,7 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
         # configuration
         self._num_drones = len(self._falcon_idx)
         self._control_mode = cfg.control_mode
-        self.drone_mass = 0.6 # kg
+        self.drone_mass = 0.6  # kg
 
         # # observation buffers
         self._observation_buffers = {}
@@ -424,7 +424,6 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
 
             self._observation_buffers["falcon5"].append(obs_falcon_5_t)
 
-
             obs_falcon1 = self._observation_buffers["falcon1"].buffer.reshape(self.num_envs, -1)
             obs_falcon2 = self._observation_buffers["falcon2"].buffer.reshape(self.num_envs, -1)
             obs_falcon3 = self._observation_buffers["falcon3"].buffer.reshape(self.num_envs, -1)
@@ -464,7 +463,6 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    
                 ),
                 dim=-1,
             )
@@ -483,7 +481,6 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    
                 ),
                 dim=-1,
             )
@@ -502,7 +499,6 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    
                 ),
                 dim=-1,
             )
@@ -521,7 +517,6 @@ class MARLHoverFlypentEnv(DirectMARLEnv):
                     self.drone_angular_velocities.view(self.num_envs, -1),
                     self.goal_pos_error,
                     self.difference_matrix.view(self.num_envs, -1),
-                    
                 ),
                 dim=-1,
             )

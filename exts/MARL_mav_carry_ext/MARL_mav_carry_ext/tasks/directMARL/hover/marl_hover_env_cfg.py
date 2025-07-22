@@ -124,9 +124,7 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
         if partial_obs:
             obs_dim_accbr = 45 * history_len
         else:
-            obs_dim_accbr = (
-                87
-            )
+            obs_dim_accbr = 87
         observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr}
         state_space = 84
 

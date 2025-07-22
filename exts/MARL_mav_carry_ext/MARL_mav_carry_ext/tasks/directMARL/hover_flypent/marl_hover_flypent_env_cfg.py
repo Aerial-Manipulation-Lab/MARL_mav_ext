@@ -117,20 +117,44 @@ class MARLHoverFlypentEnvCfg(DirectMARLEnvCfg):
     num_drones = len(possible_agents)
     if control_mode == "geometric":
         action_dim_geo = 12
-        action_spaces = {"falcon1": action_dim_geo, "falcon2": action_dim_geo, "falcon3": action_dim_geo, "falcon4": action_dim_geo, "falcon5": action_dim_geo}
+        action_spaces = {
+            "falcon1": action_dim_geo,
+            "falcon2": action_dim_geo,
+            "falcon3": action_dim_geo,
+            "falcon4": action_dim_geo,
+            "falcon5": action_dim_geo,
+        }
         obs_dim_geo = 87  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
-        observation_spaces = {"falcon1": obs_dim_geo, "falcon2": obs_dim_geo, "falcon3": obs_dim_geo, "falcon4": obs_dim_geo, "falcon5": obs_dim_geo}
+        observation_spaces = {
+            "falcon1": obs_dim_geo,
+            "falcon2": obs_dim_geo,
+            "falcon3": obs_dim_geo,
+            "falcon4": obs_dim_geo,
+            "falcon5": obs_dim_geo,
+        }
         state_space = 84  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
     elif control_mode == "ACCBR":
         action_dim_accbr = 5
-        action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr, "falcon4": action_dim_accbr, "falcon5": action_dim_accbr}
+        action_spaces = {
+            "falcon1": action_dim_accbr,
+            "falcon2": action_dim_accbr,
+            "falcon3": action_dim_accbr,
+            "falcon4": action_dim_accbr,
+            "falcon5": action_dim_accbr,
+        }
         if partial_obs:
             obs_dim_accbr = 47 * history_len
         else:
             obs_dim_accbr = (
                 125  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
             )
-        observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr, "falcon4": obs_dim_accbr, "falcon5": obs_dim_accbr}
+        observation_spaces = {
+            "falcon1": obs_dim_accbr,
+            "falcon2": obs_dim_accbr,
+            "falcon3": obs_dim_accbr,
+            "falcon4": obs_dim_accbr,
+            "falcon5": obs_dim_accbr,
+        }
         state_space = 120
 
     # simulation
@@ -168,7 +192,7 @@ class MARLHoverFlypentEnvCfg(DirectMARLEnvCfg):
     bounding_box_threshold = 5.0
     goal_achieved_range = 0.3
     goal_achieved_ori_range = 0.4
-    rope_tension_threshold = 1.6 # N
+    rope_tension_threshold = 1.6  # N
 
     # low level control
     low_level_decimation: int = 1

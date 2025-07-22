@@ -53,25 +53,21 @@ FLYCART_CFG = ArticulationCfg(
             stiffness=None,
             damping=None,
         ),
-
         "falcon_IMU_joints": ImplicitActuatorCfg(
             joint_names_expr=["Falcon.*_imu_joint"],
             stiffness=None,
             damping=None,
         ),
-
         "falcon_odom_joints": ImplicitActuatorCfg(
             joint_names_expr=["Falcon.*_odometry_sensor_joint"],
             stiffness=None,
             damping=None,
         ),
-
         "facon_rotor_joints": ImplicitActuatorCfg(
             joint_names_expr=["Falcon.*_rotor_.*_joint"],
             stiffness=None,
             damping=None,
         ),
-
         "rope_joints": ImplicitActuatorCfg(
             joint_names_expr=["rope_.*_sphere_joint_.*_joint_.*"],
             stiffness=None,
