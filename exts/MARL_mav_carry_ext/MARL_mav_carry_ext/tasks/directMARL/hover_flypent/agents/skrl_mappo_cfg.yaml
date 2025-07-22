@@ -85,7 +85,7 @@ agent:
   time_limit_bootstrap: True
   # logging and checkpoint
   experiment:
-    directory: "mappo_flycrane_hover"
+    directory: "mappo_flypent_hover"
     experiment_name: "delete_me"
     write_interval: 100
     checkpoint_interval: 5000
@@ -95,5 +95,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 1500000
+  timesteps: 15000000
   environment_info: log

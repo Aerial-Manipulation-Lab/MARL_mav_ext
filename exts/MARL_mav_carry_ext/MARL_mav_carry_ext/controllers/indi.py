@@ -58,27 +58,27 @@ class IndiController:
         # self.kp = torch.tensor([100.0, 100.0, 10.0], device=self.device)
 
         # low pass filters
-        # self.filter_sampling_frequency = torch.full(
-        #     (self.num_envs, 1), 300.0, device=self.device
-        # )  # filter frequency, same as control frequency (Hz)
-        # self.filter_cutoff_frequency = torch.full(
-        #     (self.num_envs, 1), 12.0, device=self.device
-        # )  # accelerometer filter cut-off frequency (Hz)
-        # self.filter_init_value_mot = torch.full((self.num_envs, 4), 0.0, device=self.device)
-        # self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
+        self.filter_sampling_frequency = torch.full(
+            (self.num_envs, 1), 300.0, device=self.device
+        )  # filter frequency, same as control frequency (Hz)
+        self.filter_cutoff_frequency = torch.full(
+            (self.num_envs, 1), 12.0, device=self.device
+        )  # accelerometer filter cut-off frequency (Hz)
+        self.filter_init_value_mot = torch.full((self.num_envs, 4), 0.0, device=self.device)
+        self.filter_init_value_rate = torch.full((self.num_envs, 3), 0.0, device=self.device)
 
-        # self.filterMot_ = LowPassFilter(
-        #     self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
-        # )
-        # self.filterRate_ = LowPassFilter(
-        #     self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_rate
-        # )
+        self.filterMot_ = LowPassFilter(
+            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_mot
+        )
+        self.filterRate_ = LowPassFilter(
+            self.filter_cutoff_frequency, self.filter_sampling_frequency, self.filter_init_value_rate
+        )
 
-        # self.debug = True
-        # if self.debug:
-        #     self.filtered_ang_acc = torch.zeros((self.num_envs, 3), device=self.device)
-        #     self.unfiltered_mot = torch.zeros((self.num_envs, 4), device=self.device)
-        #     self.filtered_mot = torch.zeros((self.num_envs, 4), device=self.device)
+        self.debug = True
+        if self.debug:
+            self.filtered_ang_acc = torch.zeros((self.num_envs, 3), device=self.device)
+            self.unfiltered_mot = torch.zeros((self.num_envs, 4), device=self.device)
+            self.filtered_mot = torch.zeros((self.num_envs, 4), device=self.device)
 
     def getCommand(
         self,
@@ -89,14 +89,14 @@ class IndiController:
         acc_load: torch.tensor,
     ) -> torch.tensor:
         forces = actions.sum(-1)
-        # filtered_forces = self.filterMot_.add(forces)
-        # self.filterRate_.add(state["ang_vel"])
-        # ang_acc_filtered = self.filterRate_.derivative()
+        filtered_forces = self.filterMot_.add(forces)
+        self.filterRate_.add(state["ang_vel"])
+        ang_acc_filtered = self.filterRate_.derivative()
 
-        # if self.debug:
-        #     self.filtered_ang_acc = ang_acc_filtered
-        #     self.unfiltered_mot = forces
-        #     self.filtered_mot = filtered_forces
+        if self.debug:
+            self.filtered_ang_acc = ang_acc_filtered
+            self.unfiltered_mot = forces
+            self.filtered_mot = filtered_forces
 
         omega = quat_rotate(quat_inv(state["quat"]), state["ang_vel"])  # body rates # normally from IMU
         omega_dot = quat_rotate(
@@ -172,6 +172,6 @@ class IndiController:
     #     return rotor_speeds
 
     def reset(self, env_ids):
-        # self.filterMot_.reset(env_ids)
-        # self.filterRate_.reset(env_ids)
-        pass
+        self.filterMot_.reset(env_ids)
+        self.filterRate_.reset(env_ids)
+        # pass

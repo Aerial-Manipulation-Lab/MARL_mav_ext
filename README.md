@@ -8,13 +8,13 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/license/mit)
 
-Author - [Jack Zeng](https://github.com/Jackkert)
+Author - [Jack Zeng](https://jackzeng-robotics.github.io/)
 
 https://github.com/user-attachments/assets/1528b863-b8f0-4388-bf7c-b2ef38446e11
 
 https://github.com/user-attachments/assets/dba039ce-b1ed-41af-ac63-9f42288d08d8
 
-https://github.com/user-attachments/assets/4a6c7199-bb8e-47fc-9a44-2122519ffc60
+https://github.com/user-attachments/assets/70661c81-8724-4a5f-adab-9d26a2bdfe75
 
 ## Overview
 This repository is an NVIDIA Isaac Lab extension that contains the environment and algorithms to control a multi-drone transport system (flycrane).

@@ -75,12 +75,8 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
-import numpy as np
-import os
 import random
-from datetime import datetime
 
-import optuna
 import skrl
 from packaging import version
 
@@ -110,7 +106,6 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
     multi_agent_to_single_agent,
 )
-from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # register the gym environment

@@ -6,7 +6,7 @@
 
 import math
 
-from MARL_mav_carry_ext.assets import FLYCRANE_CFG
+from MARL_mav_carry_ext.assets import FLYPENT_CFG
 
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
@@ -59,7 +59,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["load_link"]),
-            "mass_distribution_params": (1.4, 1.4),  # range of mass to randomize,
+            "mass_distribution_params": (1.0, 1.8),  # range of mass to randomize,
             "operation": "abs",
         },
     )
@@ -99,34 +99,63 @@ class EventCfg:
 
 
 @configclass
-class MARLHoverEnvCfg(DirectMARLEnvCfg):
+class MARLHoverFlypentEnvCfg(DirectMARLEnvCfg):
     # control mode
     control_mode = "ACCBR"  # ACCBR or geometric
     # env
     decimation = 3
     episode_length_s = 20
 
+    # delay parameters
+    max_delay = 4  # in number of steps, with policy = 100hz -> 40ms
+    constant_delay = 4  # in number of steps, with policy = 100hz -> 40ms
     # history of observations
     partial_obs = True  # if only local observations are used
     history_len = 3
 
-    possible_agents = ["falcon1", "falcon2", "falcon3"]
+    possible_agents = ["falcon1", "falcon2", "falcon3", "falcon4", "falcon5"]
     num_drones = len(possible_agents)
     if control_mode == "geometric":
         action_dim_geo = 12
-        action_spaces = {"falcon1": action_dim_geo, "falcon2": action_dim_geo, "falcon3": action_dim_geo}
-        obs_dim_geo = 87
-        observation_spaces = {"falcon1": obs_dim_geo, "falcon2": obs_dim_geo, "falcon3": obs_dim_geo}
-        state_space = 84
+        action_spaces = {
+            "falcon1": action_dim_geo,
+            "falcon2": action_dim_geo,
+            "falcon3": action_dim_geo,
+            "falcon4": action_dim_geo,
+            "falcon5": action_dim_geo,
+        }
+        obs_dim_geo = 87  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+        observation_spaces = {
+            "falcon1": obs_dim_geo,
+            "falcon2": obs_dim_geo,
+            "falcon3": obs_dim_geo,
+            "falcon4": obs_dim_geo,
+            "falcon5": obs_dim_geo,
+        }
+        state_space = 84  # + action_dim_geo * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
     elif control_mode == "ACCBR":
         action_dim_accbr = 5
-        action_spaces = {"falcon1": action_dim_accbr, "falcon2": action_dim_accbr, "falcon3": action_dim_accbr}
+        action_spaces = {
+            "falcon1": action_dim_accbr,
+            "falcon2": action_dim_accbr,
+            "falcon3": action_dim_accbr,
+            "falcon4": action_dim_accbr,
+            "falcon5": action_dim_accbr,
+        }
         if partial_obs:
-            obs_dim_accbr = 45 * history_len
+            obs_dim_accbr = 47 * history_len
         else:
-            obs_dim_accbr = 87
-        observation_spaces = {"falcon1": obs_dim_accbr, "falcon2": obs_dim_accbr, "falcon3": obs_dim_accbr}
-        state_space = 84
+            obs_dim_accbr = (
+                125  # + action_dim_accbr * (max_delay + 1) * num_drones # drone states, OH vector + action buffer
+            )
+        observation_spaces = {
+            "falcon1": obs_dim_accbr,
+            "falcon2": obs_dim_accbr,
+            "falcon3": obs_dim_accbr,
+            "falcon4": obs_dim_accbr,
+            "falcon5": obs_dim_accbr,
+        }
+        state_space = 120
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -135,12 +164,12 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
         gravity=(0.0, 0.0, -9.8066),
     )
     # robot
-    robot_cfg: ArticulationCfg = FLYCRANE_CFG.replace(prim_path="/World/envs/env_.*/flycrane")
+    robot_cfg: ArticulationCfg = FLYPENT_CFG.replace(prim_path="/World/envs/env_.*/flypent")
     robot_cfg.spawn.activate_contact_sensors = True
 
     # contact sensors
     contact_forces = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/flycrane/.*", update_period=0.0, history_length=3, debug_vis=False
+        prim_path="/World/envs/env_.*/flypent/.*", update_period=0.0, history_length=3, debug_vis=False
     )
     sensor_cfg = SceneEntityCfg("contact_forces", body_names=".*")
     contact_sensor_threshold = 0.1
@@ -152,15 +181,18 @@ class MARLHoverEnvCfg(DirectMARLEnvCfg):
     # payload name
     payload_name = "load_odometry_sensor_link"
     # rope name and termination terms
-    rope_name = "rope_.*_link"
+    bottom_rope_name = ["rope_1_link_0", "rope_2_link_0", "rope_3_link_0", "rope_4_link_0", "rope_5_link_0"]
+    middle_rope_name = ["rope_1_link_1", "rope_2_link_1", "rope_3_link_1", "rope_4_link_1", "rope_5_link_1"]
+    top_rope_name = ["rope_1_link_2", "rope_2_link_2", "rope_3_link_2", "rope_4_link_2", "rope_5_link_2"]
     cable_angle_limits_drone = 0.0  # cos(angle) limits
     cable_angle_limits_payload = -math.sqrt(2) / 2  # cos(angle) limits
     cable_collision_threshold = 0.2
-    cable_collision_num_points = 10
-    drone_collision_threshold = 0.6
+    cable_collision_num_points = 5
+    drone_collision_threshold = 0.7
     bounding_box_threshold = 5.0
     goal_achieved_range = 0.3
     goal_achieved_ori_range = 0.4
+    rope_tension_threshold = 1.6  # N
 
     # low level control
     low_level_decimation: int = 1
