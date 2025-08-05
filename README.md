@@ -37,6 +37,12 @@ Moreover, a test environment (without agent) for a single drone is also availabl
 
 - Install Isaac Lab, see the [installation guide](https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html).
 
+- Clone and install this fork of [SKRL](https://github.com/jackzeng-robotics/skrl)
+```
+cd skrl
+pip install -e .
+```
+
 - Using a python interpreter that has Isaac Lab installed, install the library
 
 ```
